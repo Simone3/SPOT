@@ -1,0 +1,33 @@
+{
+  "name": "spot",
+  "version": "1.0.0",
+  "description": "Simple Planner & Organizer Tool",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Simone3/SPOT.git"
+  },
+  "keywords": [
+    "SPOT",
+    "Simple",
+    "Planner",
+    "Organizer",
+    "Tool",
+    "TODOs",
+    "Tasks",
+    "Notes"
+  ],
+  "author": "Simone Graziussi",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/Simone3/SPOT/issues"
+  },
+  "homepage": "https://github.com/Simone3/SPOT#readme",
+  "devDependencies": {
+    "electron": "^33.2.0"
+  }
+}
