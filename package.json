@@ -4,6 +4,10 @@
   "description": "Simple Planner & Organizer Tool",
   "main": "main.js",
   "scripts": {
+    "start-react": "react-scripts start",
+    "build-react": "react-scripts build",
+    "test-react": "react-scripts test",
+    "eject-react": "react-scripts eject",
     "start": "electron-forge start",
     "test": "echo \"Error: no test specified\" && exit 1",
     "package": "electron-forge package",
@@ -28,19 +32,43 @@
   "bugs": {
     "url": "https://github.com/Simone3/SPOT/issues"
   },
-  "homepage": "https://github.com/Simone3/SPOT#readme",
-  "devDependencies": {
-    "@electron-forge/cli": "^7.5.0",
-    "@electron-forge/maker-deb": "^7.5.0",
-    "@electron-forge/maker-rpm": "^7.5.0",
-    "@electron-forge/maker-squirrel": "^7.5.0",
-    "@electron-forge/maker-zip": "^7.5.0",
-    "@electron-forge/plugin-auto-unpack-natives": "^7.5.0",
-    "@electron-forge/plugin-fuses": "^7.5.0",
-    "@electron/fuses": "^1.8.0",
-    "electron": "^33.2.0"
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
   },
   "dependencies": {
-    "electron-squirrel-startup": "^1.0.1"
+    "@testing-library/jest-dom": "5.17.0",
+    "@testing-library/react": "13.4.0",
+    "@testing-library/user-event": "13.5.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "react-scripts": "5.0.1",
+    "web-vitals": "2.1.4",
+    "electron-squirrel-startup": "1.0.1"
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "7.5.0",
+    "@electron-forge/maker-deb": "7.5.0",
+    "@electron-forge/maker-rpm": "7.5.0",
+    "@electron-forge/maker-squirrel": "7.5.0",
+    "@electron-forge/maker-zip": "7.5.0",
+    "@electron-forge/plugin-auto-unpack-natives": "7.5.0",
+    "@electron-forge/plugin-fuses": "7.5.0",
+    "@electron/fuses": "1.8.0",
+    "electron": "33.2.0"
   }
 }

@@ -10,7 +10,11 @@ const createWindow = () => {
     }
   })
 
-  win.loadFile('index.html')
+  // TODO https://www.electronjs.org/docs/latest/tutorial/security#18-avoid-usage-of-the-file-protocol-and-prefer-usage-of-custom-protocols
+  const startURL = 'http://localhost:3000'
+  // `file://${path.join(__dirname, '../build/index.html')}`;
+
+  win.loadURL(startURL);
 }
 
 app.whenReady().then(() => {
