@@ -11,7 +11,8 @@
     "start": "electron-forge start",
     "test": "echo \"Error: no test specified\" && exit 1",
     "package": "electron-forge package",
-    "make": "electron-forge make"
+    "make": "electron-forge make",
+		"lint": "eslint 'src/**/*.js'"
   },
   "repository": {
     "type": "git",
@@ -31,12 +32,6 @@
   "license": "Apache-2.0",
   "bugs": {
     "url": "https://github.com/Simone3/SPOT/issues"
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
   },
   "browserslist": {
     "production": [
