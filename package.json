@@ -4,7 +4,7 @@
 	"description": "Simple Planner & Organizer Tool",
 	"main": "main.js",
 	"scripts": {
-		"start-react": "react-scripts start",
+		"start-react": "BROWSER='google chrome' react-scripts start",
 		"build-react": "react-scripts build",
 		"test-react": "react-scripts test",
 		"eject-react": "react-scripts eject",
