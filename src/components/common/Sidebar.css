@@ -2,20 +2,26 @@
 .sidebar {
 	margin: 0;
 	padding: 0;
-	width: 200px;
+	width: 60px;
 	background-color: #f1f1f1;
 	position: fixed;
 	height: 100%;
 	overflow: auto;
 }
 
+.sidebar .bottom {
+	position: absolute;
+	bottom: 0;
+}
+
 .sidebar a {
 	display: block;
 	color: black;
-	padding: 16px;
 	text-decoration: none;
+	padding: 10px;
 }
  
+/*
 .sidebar a.active {
 	background-color: #04AA6D;
 	color: white;
@@ -25,6 +31,15 @@
 	background-color: #555;
 	color: white;
 }
+*/
 
+svg {
+	color: red;
+	width: 100%;
+}
+
+svg:hover {
+	color: yellow;
+}
 
 
