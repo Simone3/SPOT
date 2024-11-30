@@ -1,8 +1,4 @@
 
-.main-content {
-    flex-grow: 1;
-    background-color: #d0e0f0;
-	padding: 1px 16px;
-	background-color: var(--colors-background-primary);
-	color: var(--colors-text-primary);
+#main-content {
+	flex-grow: 1;
 }

@@ -7,7 +7,7 @@ import SidebarElement from './SidebarElement';
 
 const Sidebar = () => {
 	return (
-		<div className='sidebar'>
+		<div id='sidebar'>
 			<div className='top'>
 				<SidebarElement to='/' title='Tasks' icon={<TasksIcon/>}/>
 				<SidebarElement to='/notes' title='Notes' icon={<NotesIcon/>}/>

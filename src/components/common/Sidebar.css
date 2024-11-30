@@ -1,6 +1,6 @@
 
 /* Main sidebar */
-.sidebar {
+#sidebar {
 	margin: 0;
 	padding: 0;
 	width: 60px;
@@ -9,7 +9,7 @@
 }
 
 /* Bottom icons container */
-.sidebar .bottom {
+#sidebar .bottom {
 	position: absolute;
 	bottom: 0;
 }

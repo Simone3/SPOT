@@ -2,7 +2,7 @@ import './MainContent.css';
 
 const MainContent = ({ children }) => {
 	return (
-		<div className='main-content'>
+		<div id='main-content'>
 			{children}
 		</div>
 	);

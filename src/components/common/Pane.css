@@ -1,0 +1,16 @@
+
+.pane {
+	flex: 1;
+	background-color: var(--colors-background-secondary);
+	margin: 20px 10px;
+	border-radius: 20px;
+	padding: 20px;
+}
+
+.pane:first-child {
+	margin-left: 20px;
+}
+
+.pane:last-child {
+	margin-right: 20px;
+}
