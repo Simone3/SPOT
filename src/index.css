@@ -2,3 +2,16 @@
 body {
 	margin: 0;
 }
+
+body {
+	--colors-background-primary: #212529;
+	--colors-background-secondary: #3d434b;
+	--colors-text-primary: white;
+	--colors-accent-primary: #0099ff;
+	--colors-accent-secondary: white;
+}
+
+#root {
+	display: flex;
+    height: 100vh;
+}

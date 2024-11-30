@@ -1,20 +1,20 @@
 import './Sidebar.css';
-import { NavLink } from 'react-router';
 import NotesIcon from '../icons/NotesIcon';
 import SettingsIcon from '../icons/SettingsIcon';
 import TagsIcon from '../icons/TagsIcon';
 import TasksIcon from '../icons/TasksIcon';
+import SidebarElement from './SidebarElement';
 
 const Sidebar = () => {
 	return (
 		<div className='sidebar'>
 			<div className='top'>
-				<NavLink to='/'><TasksIcon/></NavLink>
-				<NavLink to='/notes'><NotesIcon/></NavLink>
-				<NavLink to='/tags'><TagsIcon/></NavLink>
+				<SidebarElement to='/' title='Tasks' icon={<TasksIcon/>}/>
+				<SidebarElement to='/notes' title='Notes' icon={<NotesIcon/>}/>
+				<SidebarElement to='/tags' title='Tags' icon={<TagsIcon/>}/>
 			</div>
 			<div className='bottom'>
-				<NavLink to='/settings'><SettingsIcon/></NavLink>
+				<SidebarElement to='/settings' title='Settings' icon={<SettingsIcon/>}/>
 			</div>
 		</div>
 	);

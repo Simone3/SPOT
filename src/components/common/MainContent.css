@@ -1,6 +1,8 @@
 
 .main-content {
-	margin-left: 200px;
+    flex-grow: 1;
+    background-color: #d0e0f0;
 	padding: 1px 16px;
-	height: 100%;
+	background-color: var(--colors-background-primary);
+	color: var(--colors-text-primary);
 }

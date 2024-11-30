@@ -1,0 +1,69 @@
+
+/* Container */
+.sidebar-element-container {
+	position: relative;
+	display: inline-block;
+}
+
+/* Link */
+.sidebar-element-container a {
+	display: block;
+	text-decoration: none;
+	padding: 10px;
+	border-left: 2px solid transparent;
+	border-right: 2px solid transparent;
+}
+
+/* Active link */
+.sidebar-element-container a.active {
+	border-left-color: var(--colors-accent-primary);
+}
+
+/* Icon */
+.sidebar-element-container a svg {
+	color: var(--colors-accent-secondary);
+	width: 100%;
+}
+ 
+/* Active icon */
+.sidebar-element-container a.active svg {
+	color: var(--colors-accent-primary);
+}
+
+/* Icon on hover */
+.sidebar-element-container a:hover:not(.active) svg {
+	color: var(--colors-accent-primary);
+}
+
+/* Tooltip text */
+.sidebar-element-container .tooltip-text {
+	visibility: hidden;
+	min-width: 120px;
+	border: 1px solid var(--colors-accent-primary);
+	border-radius: 6px;
+	background-color: var(--colors-background-primary);
+	color: var(--colors-text-primary);
+	text-align: center;
+	padding: 5px 0;
+	position: absolute;
+	z-index: 1;
+	top: 10px;
+	left: 110%;
+}
+
+/* Tooltip arrow */
+.sidebar-element-container .tooltip-text::after {
+	content: "";
+	position: absolute;
+	top: 50%;
+	right: 100%;
+	margin-top: -5px;
+	border-width: 5px;
+	border-style: solid;
+	border-color: transparent var(--colors-accent-primary) transparent transparent;
+}
+
+/* Toggle tooltip on hover */
+.sidebar-element-container:hover .tooltip-text {
+	visibility: visible;
+}

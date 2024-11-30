@@ -1,45 +1,15 @@
 
+/* Main sidebar */
 .sidebar {
 	margin: 0;
 	padding: 0;
 	width: 60px;
-	background-color: #f1f1f1;
-	position: fixed;
-	height: 100%;
-	overflow: auto;
+	background-color: var(--colors-background-secondary);
+	position: relative;
 }
 
+/* Bottom icons container */
 .sidebar .bottom {
 	position: absolute;
 	bottom: 0;
 }
-
-.sidebar a {
-	display: block;
-	color: black;
-	text-decoration: none;
-	padding: 10px;
-}
- 
-/*
-.sidebar a.active {
-	background-color: #04AA6D;
-	color: white;
-}
-
-.sidebar a:hover:not(.active) {
-	background-color: #555;
-	color: white;
-}
-*/
-
-svg {
-	color: red;
-	width: 100%;
-}
-
-svg:hover {
-	color: yellow;
-}
-
-
