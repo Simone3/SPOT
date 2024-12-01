@@ -6,6 +6,10 @@ body {
 	--colors-text-primary: white;
 	--colors-accent-primary: #0099ff;
 	--colors-accent-secondary: white;
+	--colors-priority-urgent: red;
+	--colors-priority-high: orange;
+	--colors-priority-normal: yellow;
+	--colors-priority-low: grey;
 }
 
 /* HTML body */

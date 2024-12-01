@@ -1,0 +1,26 @@
+
+.task-container {
+	border-left: 3px solid transparent;
+	margin: 10px 0;
+}
+
+.task-container-urgent {
+	border-color: var(--colors-priority-urgent);
+}
+
+.task-container-high {
+	border-color: var(--colors-priority-high);
+}
+
+.task-container-normal {
+	border-color: var(--colors-priority-normal);
+}
+
+.task-container-low {
+	border-color: var(--colors-priority-low);
+}
+
+svg {
+	width: 15px;
+}
+
