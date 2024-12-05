@@ -5,6 +5,7 @@
 	margin: 20px 10px;
 	border-radius: 20px;
 	padding: 20px;
+	overflow-y: scroll;
 }
 
 .pane:first-child {

@@ -1,6 +1,10 @@
 import { DateUtils } from '../../utils/DateUtils';
 import Checkbox from '../common/Checkbox';
+import Chip from '../common/Chip';
 import EditIcon from '../icons/EditIcon';
+import TagsIcon from '../icons/TagsIcon';
+import CalendarIcon from '../icons/CalendarIcon';
+import OwnerIcon from '../icons/OwnerIcon';
 import './Task.css';
 
 // TODO move this to state and update it every day (setTimeout at midnight plus 1 second or something)
@@ -88,12 +92,16 @@ const Task = ({ task }) => {
 				<EditIcon/>
 			</div>
 			<div className='task-content'>
-				<span className='task-text'>{text}</span>
-				{owner && <span className='task-owner'>Owner: {owner}</span>}
-				{dueDate && <span className='task-due-date'>Due: {DateUtils.toSmartString(dueDate, currentDates)}</span>}
-			</div>
-			<div className='task-tags'>
-				{tags ? tags.join(', ') : ''}
+				<div className='task-text'>
+					{text}
+				</div>
+				{(owner || dueDate || tags.length > 0) &&
+					<div className='task-chips'>
+						{owner && <Chip icon={<OwnerIcon/>} text={owner}/>}
+						{dueDate && <Chip icon={<CalendarIcon/>} text={DateUtils.toSmartString(dueDate, currentDates)}/>}
+						{tags.length > 0 && tags.map((tag) => <Chip key={tag} icon={<TagsIcon/>} text={tag}/>)}
+					</div>
+				}
 			</div>
 		</div>
 	);

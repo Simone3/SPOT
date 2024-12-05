@@ -4,6 +4,7 @@
 	margin: 0;
 	padding: 0;
 	width: 60px;
+	min-width: 60px;
 	background-color: var(--colors-background-secondary);
 	position: relative;
 }

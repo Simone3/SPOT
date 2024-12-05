@@ -1,7 +1,9 @@
 
 .task-container {
 	border-left: 3px solid transparent;
-	margin: 10px 0;
+	margin: 30px 0;
+	padding: 10px 0;
+	display: flex;
 }
 
 .task-container-urgent {
@@ -20,7 +22,37 @@
 	border-color: var(--colors-priority-low);
 }
 
-svg {
+.task-actions {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	flex-direction: column;
+	padding: 0 10px;
+	width: 20px;
+	min-width: 20px;
+}
+
+.task-actions input, .task-actions svg {
 	width: 15px;
+	height: 15px;
+	padding: 0;
+	margin: 5px 0;
+	display: block;
+}
+
+.task-content {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+}
+
+.task-chips {
+	display: flex;
+	flex-wrap: wrap;
+}
+
+.task-chips .chip {
+	margin-right: 5px;
+	margin-top: 10px;
 }
 
