@@ -16,3 +16,7 @@
 .chip-text {
 	display: inline-block;
 }
+
+.chip-invalid {
+	border-color: var(--colors-danger);
+}

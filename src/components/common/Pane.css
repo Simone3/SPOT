@@ -1,17 +1,8 @@
 
 .pane {
 	flex: 1;
-	background-color: var(--colors-background-secondary);
-	margin: 20px 10px;
-	border-radius: 20px;
+	background-color: var(--colors-background-primary);
+	border-left: 2px solid var(--colors-background-secondary);
 	padding: 20px;
 	overflow-y: scroll;
-}
-
-.pane:first-child {
-	margin-left: 20px;
-}
-
-.pane:last-child {
-	margin-right: 20px;
 }

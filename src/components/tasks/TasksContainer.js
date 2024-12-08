@@ -10,6 +10,7 @@ const TasksContainer = () => {
 			<Task task={{ text: 'My fourth task', state: 'ACTIVE', priority: 'LOW', tags: [ 'TAG1' ] }}/>
 			<Task task={{ text: 'My fifth task', state: 'ACTIVE', priority: 'URGENT', owner: 'Some Person', tags: [] }}/>
 			<Task task={{ text: 'My sixth task', state: 'ACTIVE', priority: 'HIGH', dueDate: new Date('2025-05-03'), tags: [] }}/>
+			<Task task={{ text: 'My sixth task', state: 'COMPLETED', priority: 'HIGH', owner: 'Some Person', dueDate: new Date('2024-05-03'), tags: [ 'TAG1', 'TAG2' ] }}/>
 			<Task task={{ text: 'My seventh task', state: 'ACTIVE', priority: 'NORMAL', tags: [] }}/>
 			<Task task={{ text: 'My seventh task', state: 'COMPLETED', priority: 'LOW', tags: [] }}/>
 			<Task task={{ text: 'My very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very long task', state: 'ACTIVE', priority: 'URGENT', owner: 'Me', dueDate: new Date(), tags: [ 'TAG1' ] }}/>

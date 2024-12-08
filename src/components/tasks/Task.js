@@ -81,14 +81,11 @@ const Task = ({ task }) => {
 	if(state) {
 		containerClass += ` task-container-${state.toLowerCase()}`;
 	}
-	if(!completed && dueDate && dueDate.getTime() < Date.now()) {
-		containerClass += ` task-container-overdue`;
-	}
 
 	return (
 		<div className={containerClass}>
 			<div className='task-actions'>
-				<Checkbox checked={completed}/>
+				<Checkbox checked={completed} onChange={() => {}}/>
 				<EditIcon/>
 			</div>
 			<div className='task-content'>
@@ -98,7 +95,7 @@ const Task = ({ task }) => {
 				{(owner || dueDate || tags.length > 0) &&
 					<div className='task-chips'>
 						{owner && <Chip icon={<OwnerIcon/>} text={owner}/>}
-						{dueDate && <Chip icon={<CalendarIcon/>} text={DateUtils.toSmartString(dueDate, currentDates)}/>}
+						{dueDate && <Chip icon={<CalendarIcon/>} text={DateUtils.toSmartString(dueDate, currentDates)} invalid={!completed && dueDate && DateUtils.compareDay(dueDate, new Date()) < 0}/>}
 						{tags.length > 0 && tags.map((tag) => <Chip key={tag} icon={<TagsIcon/>} text={tag}/>)}
 					</div>
 				}

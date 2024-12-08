@@ -22,6 +22,10 @@
 	border-color: var(--colors-priority-low);
 }
 
+.task-container-completed {
+	text-decoration: line-through;
+}
+
 .task-actions {
 	display: flex;
 	justify-content: center;

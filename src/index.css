@@ -10,6 +10,8 @@ body {
 	--colors-priority-high: orange;
 	--colors-priority-normal: yellow;
 	--colors-priority-low: grey;
+	--colors-danger: red;
+	--colors-warn: orange;
 }
 
 /* HTML body */

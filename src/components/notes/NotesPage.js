@@ -1,8 +1,14 @@
+import Page from '../common/Page';
+import Pane from '../common/Pane';
+
 const NotesPage = () => {
+
 	return (
-		<div>
-			This is the Notes page!
-		</div>
+		<Page>
+			<Pane>
+				Something
+			</Pane>
+		</Page>
 	);
 };
 

@@ -1,11 +1,36 @@
 
 export class DateUtils {
 	static isSameDay(date1, date2) {
-		return date1 &&
-			date2 &&
-			date1.getFullYear() === date2.getFullYear() &&
-			date1.getMonth() === date2.getMonth() &&
-			date1.getDate() === date2.getDate();
+		return this.compareDay(date1, date2) === 0;
+	}
+
+	static compareDay(date1, date2) {
+		if(!date1 || !date2) {
+			throw Error('Invalid empty date(s)');
+		}
+
+		if(date1.getFullYear() < date2.getFullYear()) {
+			return -1;
+		}
+		else if(date1.getFullYear() > date2.getFullYear()) {
+			return 1;
+		}
+
+		if(date1.getMonth() < date2.getMonth()) {
+			return -1;
+		}
+		else if(date1.getMonth() > date2.getMonth()) {
+			return 1;
+		}
+
+		if(date1.getDate() < date2.getDate()) {
+			return -1;
+		}
+		else if(date1.getDate() > date2.getDate()) {
+			return 1;
+		}
+
+		return 0;
 	}
 
 	static toSmartString(date, currentDates) {

@@ -1,9 +1,9 @@
 import './Chip.css';
 
-const Chip = ({ icon, text }) => {
+const Chip = ({ icon, text, invalid }) => {
 
 	return (
-		<div className='chip'>
+		<div className={`chip ${invalid ? 'chip-invalid' : 'chip-valid'}`}>
 			{icon}
 			<div class='chip-text'>
 				{text}
