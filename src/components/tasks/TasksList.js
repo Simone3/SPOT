@@ -1,0 +1,16 @@
+import Task from './Task';
+
+const TasksList = ({ title, tasks }) => {
+	if(!tasks || tasks.length === 0) {
+		return null;
+	}
+
+	return (
+		<div>
+			{title && <h3>{title}</h3>}
+			{tasks.map((task) => <Task task={task}/>)}
+		</div>
+	);
+};
+
+export default TasksList;

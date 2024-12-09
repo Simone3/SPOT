@@ -1,8 +1,4 @@
 
-# task list
-empty owner = me
-refactor sections so that the whole thing disappears if no elements in the list
-
 # task filters
 section titles
 just ALL available options without selectboxes
@@ -50,6 +46,7 @@ sort tasks (completed by completion date desc, others by priority / add date / w
 sqllite?
 how often?
 async
+how to split urgent vs. soon? if an urgent task is due today where does it go? merge the two sections?
 
 # notes
 filters with all tags
