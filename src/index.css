@@ -12,6 +12,7 @@ body {
 	--colors-priority-low: grey;
 	--colors-danger: red;
 	--colors-warn: orange;
+	--colors-disabled: grey;
 }
 
 /* HTML body */

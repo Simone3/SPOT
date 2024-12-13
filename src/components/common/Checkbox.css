@@ -1,5 +1,4 @@
 
-
 .checkbox {
 	appearance: none;
 	position: relative;
@@ -7,9 +6,10 @@
 	width: 1em;
 	height: 1em;
 	line-height: 1;
-	background-color: #3d434b;
+	background-color: var(--colors-background-secondary);
 	border-radius: 5px;
 	cursor: pointer;
+	margin: 0;
 }
 
 .checkbox::before {
@@ -23,5 +23,15 @@
 
 .checkbox:checked::before {
 	content: "\2713";
-	color: #0099ff;
+	color: var(--colors-accent-primary);
+}
+
+.label {
+	cursor: pointer;
+	display: flex;
+}
+
+.label-text {
+	margin-left: 8px;
+	line-height: 1em;
 }
