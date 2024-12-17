@@ -1,10 +1,12 @@
 import MultiSelect from '../common/MultiSelect';
 import Checkbox from '../common/Checkbox';
+import TextInput from '../common/TextInput';
 
 const TasksFilters = () => {
 	return (
 		<div>
 			<h3>Search</h3>
+			<TextInput placeholder='Filter tasks...' />
 			<h3>Priority</h3>
 			<MultiSelect options={[
 				{ key: 'Urgent', label: 'Urgent' },
@@ -24,6 +26,7 @@ const TasksFilters = () => {
 			]}/>
 			<h3>Due Date</h3>
 			<MultiSelect options={[
+				{ key: 'None', label: 'None' },
 				{ key: 'Today', label: 'Today' },
 				{ key: 'Tomorrow', label: 'Tomorrow' },
 				{ key: 'February 2, 2025', label: 'February 2, 2025' },
@@ -31,6 +34,7 @@ const TasksFilters = () => {
 			]}/>
 			<h3>Tag</h3>
 			<MultiSelect options={[
+				{ key: 'None', label: 'None' },
 				{ key: 'A tag', label: 'A tag' },
 				{ key: 'Another tag', label: 'Another tag' }
 			]}/>

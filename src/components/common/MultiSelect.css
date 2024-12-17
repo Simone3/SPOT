@@ -8,16 +8,23 @@
 .option {
 	display: flex;
 	border: 0.5px solid white;
-	border-radius: 15px;
 	padding: 6px 10px;
 	cursor: pointer;
 	background: none;
 	font: inherit;
 	color: inherit;
 	margin-bottom: 5px;
+	outline: none;
+}
+
+.option:focus {
+	border-color: var(--colors-accent-primary);
 }
 
 .option-selected {
 	color: var(--colors-accent-primary);
 	border-color: var(--colors-accent-primary);
 }
+
+
+

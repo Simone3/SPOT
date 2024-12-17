@@ -1,27 +1,6 @@
 
 # task filters
-section titles
-	handle empty sections
-just ALL available options without selectboxes
-counters for each filter: total + currently displayed -> "Text (4 of 7)"
-filters
-	text search
-	priority
-	owner: "Me" + all others
-	due date
-	tags
-	show completed
-	---
-	text input
-	checkbox input
-	single/multiple select with chips and counters
 reset to default button
-click = select just that element; crl + click = add/remove to current selection
-gray out values that have no match
-	active -> blue background, standard font/border
-	active greyed out (0) -> blue(ish?) background, grey font/border (?)
-	selectable -> standard background and font/border
-	selectable greyed out (0) -> standard background, grey font/border
 
 # add/edit task
 pencil button cursor pointer
@@ -54,6 +33,10 @@ how to split urgent vs. soon? if an urgent task is due today where does it go?
 	"immediate" and "due soon" (all immediate go on top, due soon just contains high/normal/low)
 current day as state so that everythibg updates at midnight (friendly day names, due soon tasks, etc.)
 filters should, on the same pass, update both task list and current filter counters
+add/delete/complete/edit task should update filters
+show completed should update filters (add many more tags, due dates, etc.)
+	or should it?
+	avoid many past due dates with just an "overdue" option?
 
 # wire in electron main process: save to disk
 sqllite?
@@ -73,6 +56,7 @@ final ui polish inside electron
 handle/block two instances or windows of the app at the same time?
 test mode that allows to set mocked state from a button? e.g. special cases, thousands of rows, etc.
 delayed text search input submit
+focus (tab) on all icons (e.g. edit button)
 
 # maybe in the future
 tag page that allows to set colors, add search keywords for each tag, merge tags, delete tags, etc.
