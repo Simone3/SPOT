@@ -5,7 +5,13 @@ const TextInput = ({ placeholder }) => {
 	const [ value, setValue ] = useState('');
 
 	return (
-		<input className='text-input' type='text' placeholder={placeholder} value={value} onChange={(e) => setValue(e.target.value)}/>
+		<input
+			className='text-input'
+			type='text'
+			placeholder={placeholder}
+			value={value}
+			onChange={(e) => setValue(e.target.value)}
+		/>
 	);
 };
 

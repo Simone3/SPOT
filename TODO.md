@@ -1,27 +1,28 @@
 
 # task filters
 reset to default button
+focus vs. selected filter confusing
 
 # add/edit task
-pencil button cursor pointer
-complete and edit buttons are too close?
-in place (list)
-	how and where to put add new?
-dotted chips for empty values
-add chip for priority too (no empty value allowed)
-owner: empty = me
-directly a text/search input inside chips?
-	for tags most used suggestions, add only if not already there
-	no select boxes but multiple buttons?
-uuid created by FE?
-click outside form?
-during-edit buttons
-	complete (temp inside form)
-	delete
-	confirm
-	discard
-date picker
-tag ID is the text itself?
+add task form
+	text
+		text AREA
+	completed
+		checkbox
+	priority
+		4 exclusive buttons
+	owner
+		text field with options (free)
+		default empty
+	due date
+		text field with datepicker
+		default empty
+	tags
+		other tags: list, click to delete? with confirm popup?
+		add tag: text field with options (free)
+modal
+	save on click outside
+delete button (only edit)
 
 # wire in react state
 reducer + context?
@@ -37,6 +38,7 @@ add/delete/complete/edit task should update filters
 show completed should update filters (add many more tags, due dates, etc.)
 	or should it?
 	avoid many past due dates with just an "overdue" option?
+uuid created by FE?
 
 # wire in electron main process: save to disk
 sqllite?
@@ -57,6 +59,8 @@ handle/block two instances or windows of the app at the same time?
 test mode that allows to set mocked state from a button? e.g. special cases, thousands of rows, etc.
 delayed text search input submit
 focus (tab) on all icons (e.g. edit button)
+check console errors
+scrollbar style?
 
 # maybe in the future
 tag page that allows to set colors, add search keywords for each tag, merge tags, delete tags, etc.
@@ -74,7 +78,9 @@ change default filters
 change default priority (task creation)
 limit total filter chips + way to filter them if many values
 counters in filters (currently shown and total) - are they actually useful?
-
+in-place task form (both edit and update), i.e. merge Task and TaskForm
+	how to save?
+		click outside effect just for form (conditional effects are not allowed though)
 
 
 

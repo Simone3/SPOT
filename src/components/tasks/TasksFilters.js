@@ -16,7 +16,7 @@ const TasksFilters = () => {
 			]}/>
 			<h3>Owner</h3>
 			<MultiSelect options={[
-				{ key: 'Me', label: 'Me' },
+				{ key: 'None (me)', label: 'None (me)' },
 				{ key: 'Some Person', label: 'Some Person' },
 				{ key: 'Somebody', label: 'Somebody' },
 				{ key: 'Guy', label: 'Guy' },

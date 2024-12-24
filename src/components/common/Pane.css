@@ -4,5 +4,5 @@
 	background-color: var(--colors-background-primary);
 	border-left: 2px solid var(--colors-background-secondary);
 	padding: 20px;
-	overflow-y: scroll;
+	overflow-y: auto;
 }

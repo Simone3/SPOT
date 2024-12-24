@@ -5,7 +5,7 @@ const Chip = ({ icon, text, invalid }) => {
 	return (
 		<div className={`chip ${invalid ? 'chip-invalid' : 'chip-valid'}`}>
 			{icon}
-			<div class='chip-text'>
+			<div className='chip-text'>
 				{text}
 			</div>
 		</div>

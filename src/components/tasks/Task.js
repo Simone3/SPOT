@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { DateUtils } from '../../utils/DateUtils';
 import Checkbox from '../common/Checkbox';
+import Clickable from '../common/Clickable';
 import Chip from '../common/Chip';
 import EditIcon from '../icons/EditIcon';
 import TagsIcon from '../icons/TagsIcon';
@@ -7,61 +9,58 @@ import CalendarIcon from '../icons/CalendarIcon';
 import OwnerIcon from '../icons/OwnerIcon';
 import './Task.css';
 
-// TODO move this to state and update it every day (setTimeout at midnight plus 1 second or something)
-const buildCurrentDates = () => {
-	const currentDates = {};
+const Task = ({ task, onEdit }) => {
+	// TODO move this to global state and update it every day (setTimeout at midnight plus 1 second or something)
+	const [ currentDates ] = useState(() => {
+		const initialState = {};
 
-	// Today
-	const today = new Date();
-	today.setHours(0, 0, 0, 0);
-	currentDates.today = {
-		date: today,
-		label: 'Today'
-	};
-
-	// Yesterday
-	const yesterday = new Date(today);
-	yesterday.setDate(yesterday.getDate() - 1);
-	currentDates.yesterday = {
-		date: yesterday,
-		label: 'Yesterday'
-	};
-
-	// Tomorrow
-	const tomorrow = new Date(today);
-	tomorrow.setDate(tomorrow.getDate() + 1);
-	currentDates.tomorrow = {
-		date: tomorrow,
-		label: 'Tomorrow'
-	};
-
-	// The 5 days after tomorrow with weekday labels
-	currentDates.fiveDaysAfterTomorrow = [];
-	const loopDate = new Date(tomorrow);
-	for(let i = 0; i < 5; i++) {
-		loopDate.setDate(loopDate.getDate() + 1);
-		currentDates.fiveDaysAfterTomorrow.push({
-			date: new Date(loopDate),
-			label: new Intl.DateTimeFormat('en-US', { weekday: 'long' }).format(loopDate)
-		});
-	}
-
-	// Next working day (equal to tomorrow unless Sat or Sun)
-	const nextWorkday = new Date(tomorrow);
-	while(nextWorkday.getDay() === 0 || nextWorkday.getDay() === 6) {
-		nextWorkday.setDate(nextWorkday.getDate() + 1);
-	}
-	currentDates.nextWorkingDay = {
-		date: nextWorkday,
-		label: 'Next Workday'
-	};
-
-	return currentDates;
-};
-
-const currentDates = buildCurrentDates();
-
-const Task = ({ task }) => {
+		// Today
+		const today = new Date();
+		today.setHours(0, 0, 0, 0);
+		initialState.today = {
+			date: today,
+			label: 'Today'
+		};
+	
+		// Yesterday
+		const yesterday = new Date(today);
+		yesterday.setDate(yesterday.getDate() - 1);
+		initialState.yesterday = {
+			date: yesterday,
+			label: 'Yesterday'
+		};
+	
+		// Tomorrow
+		const tomorrow = new Date(today);
+		tomorrow.setDate(tomorrow.getDate() + 1);
+		initialState.tomorrow = {
+			date: tomorrow,
+			label: 'Tomorrow'
+		};
+	
+		// The 5 days after tomorrow with weekday labels
+		initialState.fiveDaysAfterTomorrow = [];
+		const loopDate = new Date(tomorrow);
+		for(let i = 0; i < 5; i++) {
+			loopDate.setDate(loopDate.getDate() + 1);
+			initialState.fiveDaysAfterTomorrow.push({
+				date: new Date(loopDate),
+				label: new Intl.DateTimeFormat('en-US', { weekday: 'long' }).format(loopDate)
+			});
+		}
+	
+		// Next working day (equal to tomorrow unless Sat or Sun)
+		const nextWorkday = new Date(tomorrow);
+		while(nextWorkday.getDay() === 0 || nextWorkday.getDay() === 6) {
+			nextWorkday.setDate(nextWorkday.getDate() + 1);
+		}
+		initialState.nextWorkingDay = {
+			date: nextWorkday,
+			label: 'Next Workday'
+		};
+	
+		return initialState;
+	});
 
 	const {
 		text,
@@ -82,21 +81,34 @@ const Task = ({ task }) => {
 		containerClass += ` task-container-${state.toLowerCase()}`;
 	}
 
+	const chips = [];
+	if(owner) {
+		chips.push(<Chip key='owner' icon={<OwnerIcon/>} text={owner}/>);
+	}
+	if(dueDate) {
+		chips.push(<Chip key='due-date' icon={<CalendarIcon/>} text={DateUtils.toSmartString(dueDate, currentDates)} invalid={!completed && dueDate && DateUtils.compareDay(dueDate, new Date()) < 0}/>);
+	}
+	if(tags && tags.length > 0) {
+		for(const tag of tags) {
+			chips.push(<Chip key={`tag-${tag}`} icon={<TagsIcon/>} text={tag}/>);
+		}
+	}
+
 	return (
 		<div className={containerClass}>
 			<div className='task-actions'>
-				<Checkbox checked={completed} onChange={() => {}}/>
-				<EditIcon/>
+				<Checkbox checked={completed}/>
+				<Clickable onClick={onEdit}>
+					<EditIcon/>
+				</Clickable>
 			</div>
 			<div className='task-content'>
 				<div className='task-text'>
 					{text}
 				</div>
-				{(owner || dueDate || tags.length > 0) &&
+				{(chips.length > 0) &&
 					<div className='task-chips'>
-						{owner && <Chip icon={<OwnerIcon/>} text={owner}/>}
-						{dueDate && <Chip icon={<CalendarIcon/>} text={DateUtils.toSmartString(dueDate, currentDates)} invalid={!completed && dueDate && DateUtils.compareDay(dueDate, new Date()) < 0}/>}
-						{tags.length > 0 && tags.map((tag) => <Chip key={tag} icon={<TagsIcon/>} text={tag}/>)}
+						{chips.map((chip) => chip)}
 					</div>
 				}
 			</div>

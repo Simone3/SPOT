@@ -30,7 +30,7 @@ const MultiSelect = ({ options }) => {
 		<div className='multi-select'>
 			{options.map((option, index) => {
 				return (
-					<button key={option.id} onClick={(event) => onClick(event, index)} className={`option ${selected[index] ? 'option-selected' : 'option-unselected'}`}>
+					<button key={option.key} onClick={(event) => onClick(event, index)} className={`option ${selected[index] ? 'option-selected' : 'option-unselected'}`}>
 						{option.label}
 					</button>
 				);
