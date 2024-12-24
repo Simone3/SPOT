@@ -1,0 +1,25 @@
+
+.task-form-title {
+	margin-top: 0;
+}
+
+.task-form-modal-background {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background-color: rgba(0, 0, 0, 0.5);
+	z-index: 100;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.task-form-modal-content {
+	width: 60%;
+	height: 60%;
+	background-color: var(--colors-background-primary);
+	overflow-y: auto;
+	padding: 30px;
+}

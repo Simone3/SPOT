@@ -1,0 +1,16 @@
+
+.text-area {
+	background-color: var(--colors-background-secondary);
+	border: 1px solid var(--colors-background-secondary);
+	padding: 10px;
+	color: var(--colors-text-primary);
+	outline: none;
+	width: 100%;
+	box-sizing: border-box;
+	resize: none;
+	height: 150px;
+}
+
+.text-area:focus {
+	border-color: var(--colors-accent-primary);
+}

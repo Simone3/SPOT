@@ -1,6 +1,6 @@
 import Task from './Task';
 
-const TasksList = ({ title, tasks }) => {
+const TasksList = ({ title, tasks, onEditTask }) => {
 	if(!tasks || tasks.length === 0) {
 		return null;
 	}
@@ -8,7 +8,9 @@ const TasksList = ({ title, tasks }) => {
 	return (
 		<div>
 			{title && <h3>{title}</h3>}
-			{tasks.map((task) => <Task key={task.id} task={task}/>)}
+			{tasks.map((task) => <Task key={task.id} task={task} onEdit={() => {
+				onEditTask(task);
+			}}/>)}
 		</div>
 	);
 };

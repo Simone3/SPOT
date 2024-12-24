@@ -1,6 +1,9 @@
+import { useState } from 'react';
 import TasksList from './TasksList';
+import TaskFormModal from './TaskFormModal';
 
 const TasksContainer = () => {
+	const [ formModalOpen, setFormModalOpen ] = useState(false);
 
 	const urgentTasks = [
 		{ id: 1, text: 'My urgent task', state: 'ACTIVE', priority: 'URGENT', owner: 'Some Person', tags: [] }
@@ -29,12 +32,13 @@ const TasksContainer = () => {
 
 	return (
 		<div>
-			<TasksList title='Urgent' tasks={urgentTasks}/>
-			<TasksList title='Due Soon' tasks={dueSoon}/>
-			<TasksList title='High Priority' tasks={highPriorityTasks}/>
-			<TasksList title='Normal Priority' tasks={normalPriorityTasks}/>
-			<TasksList title='Low Priority' tasks={lowPriorityTasks}/>
-			<TasksList title='Completed' tasks={completedTasks}/>
+			{formModalOpen && <TaskFormModal onSubmit={() => setFormModalOpen(false)}/>}
+			<TasksList title='Urgent' tasks={urgentTasks} onEditTask={() => setFormModalOpen(true)}/>
+			<TasksList title='Due Soon' tasks={dueSoon} onEditTask={() => setFormModalOpen(true)}/>
+			<TasksList title='High Priority' tasks={highPriorityTasks} onEditTask={() => setFormModalOpen(true)}/>
+			<TasksList title='Normal Priority' tasks={normalPriorityTasks} onEditTask={() => setFormModalOpen(true)}/>
+			<TasksList title='Low Priority' tasks={lowPriorityTasks} onEditTask={() => setFormModalOpen(true)}/>
+			<TasksList title='Completed' tasks={completedTasks} onEditTask={() => setFormModalOpen(true)}/>
 		</div>
 	);
 };

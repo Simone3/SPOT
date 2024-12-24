@@ -20,6 +20,7 @@ add task form
 	tags
 		other tags: list, click to delete? with confirm popup?
 		add tag: text field with options (free)
+		or simply a comma-separated textarea?
 modal
 	save on click outside
 delete button (only edit)
@@ -81,7 +82,7 @@ counters in filters (currently shown and total) - are they actually useful?
 in-place task form (both edit and update), i.e. merge Task and TaskForm
 	how to save?
 		click outside effect just for form (conditional effects are not allowed though)
-
+tab to intent inside textareas
 
 
 
