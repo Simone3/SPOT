@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import FreeSelectInput from '../common/FreeSelectInput';
-import TextArea from '../common/TextArea';
+import FreeSelectInput from '../inputs/FreeSelectInput';
+import TextArea from '../inputs/TextArea';
 import './TaskFormModal.css';
 
 const TaskFormModal = ({ initialTask, onSave, onDiscard, onDelete }) => {

@@ -1,6 +1,6 @@
-import MultiSelect from '../common/MultiSelect';
-import Checkbox from '../common/Checkbox';
-import TextInput from '../common/TextInput';
+import MultiSelect from '../inputs/MultiSelect';
+import Checkbox from '../inputs/Checkbox';
+import TextInput from '../inputs/TextInput';
 
 const TasksFilters = () => {
 	return (

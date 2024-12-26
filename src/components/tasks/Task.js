@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { DateUtils } from '../../utils/DateUtils';
-import Checkbox from '../common/Checkbox';
+import Checkbox from '../inputs/Checkbox';
 import Clickable from '../common/Clickable';
 import Chip from '../common/Chip';
 import EditIcon from '../icons/EditIcon';
