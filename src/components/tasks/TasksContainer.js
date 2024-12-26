@@ -30,15 +30,34 @@ const TasksContainer = () => {
 		{ id: 13, text: 'A completed task', state: 'COMPLETED', priority: 'LOW', tags: [] }
 	];
 
+	const onSaveTask = () => {
+		console.log('save here');
+		setFormModalOpen(false);
+	};
+
+	const onDeleteTask = () => {
+		console.log('delete here');
+		setFormModalOpen(false);
+	};
+
+	const onCloseTaskForm = () => {
+		setFormModalOpen(false);
+	};
+
+	const onEditTask = () => {
+		console.log('edit task');
+		setFormModalOpen(true);
+	};
+
 	return (
 		<div>
-			{formModalOpen && <TaskFormModal onSubmit={() => setFormModalOpen(false)}/>}
-			<TasksList title='Urgent' tasks={urgentTasks} onEditTask={() => setFormModalOpen(true)}/>
-			<TasksList title='Due Soon' tasks={dueSoon} onEditTask={() => setFormModalOpen(true)}/>
-			<TasksList title='High Priority' tasks={highPriorityTasks} onEditTask={() => setFormModalOpen(true)}/>
-			<TasksList title='Normal Priority' tasks={normalPriorityTasks} onEditTask={() => setFormModalOpen(true)}/>
-			<TasksList title='Low Priority' tasks={lowPriorityTasks} onEditTask={() => setFormModalOpen(true)}/>
-			<TasksList title='Completed' tasks={completedTasks} onEditTask={() => setFormModalOpen(true)}/>
+			{formModalOpen && <TaskFormModal onSave={onSaveTask} onDiscard={onCloseTaskForm} onDelete={onDeleteTask}/>}
+			<TasksList title='Urgent' tasks={urgentTasks} onEditTask={onEditTask}/>
+			<TasksList title='Due Soon' tasks={dueSoon} onEditTask={onEditTask}/>
+			<TasksList title='High Priority' tasks={highPriorityTasks} onEditTask={onEditTask}/>
+			<TasksList title='Normal Priority' tasks={normalPriorityTasks} onEditTask={onEditTask}/>
+			<TasksList title='Low Priority' tasks={lowPriorityTasks} onEditTask={onEditTask}/>
+			<TasksList title='Completed' tasks={completedTasks} onEditTask={onEditTask}/>
 		</div>
 	);
 };

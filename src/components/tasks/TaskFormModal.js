@@ -1,12 +1,20 @@
+import { useState } from 'react';
+import FreeSelectInput from '../common/FreeSelectInput';
 import TextArea from '../common/TextArea';
 import './TaskFormModal.css';
 
-const TaskFormModal = ({ initialTask, onSubmit }) => {
+const TaskFormModal = ({ initialTask, onSave, onDiscard, onDelete }) => {
+	const [ owner, setOwner ] = useState('');
+
 	return (
-		<div className='task-form-modal-background' onClick={onSubmit}>
-			<div className='task-form-modal-content' onClick={(e) => e.stopPropagation()}>
+		<div className='task-form-modal-background'>
+			<div className='task-form-modal-content'>
 				<h3 className='task-form-title'>Add Task</h3>
 				<TextArea placeholder={'Task content...'}/>
+				<FreeSelectInput placeholder={'No owner (me)'} value={owner} onChange={setOwner} options={[ 'Some Guy', 'Somebody', 'That Guy', 'Someone' ]}/>
+				<button onClick={onSave}>Save</button>
+				<button onClick={onDiscard}>Discard</button>
+				<button onClick={onDelete}>Delete</button>
 			</div>
 		</div>
 	);

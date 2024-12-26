@@ -83,7 +83,7 @@ in-place task form (both edit and update), i.e. merge Task and TaskForm
 	how to save?
 		click outside effect just for form (conditional effects are not allowed though)
 tab to intent inside textareas
-
+icons in inputs
 
 
 
