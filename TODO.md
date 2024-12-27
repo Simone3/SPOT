@@ -21,9 +21,8 @@ add task form
 		other tags: list, click to delete? with confirm popup?
 		add tag: text field with options (free)
 		or simply a comma-separated textarea?
-modal
-	save on click outside
 delete button (only edit)
+input labels (small top left)
 
 # wire in react state
 reducer + context?
@@ -83,12 +82,15 @@ in-place task form (both edit and update), i.e. merge Task and TaskForm
 	how to save?
 		click outside effect just for form (conditional effects are not allowed though)
 tab to intent inside textareas
-icons in inputs
-
-
-
-
-
+icons inside input fields
+responsive for half-screen format (e.g. move filters on top?)
+date picker with "free" text input like https://www.npmjs.com/package/native-datepicker
+	write "today", "tomorrow", etc.?
+	write dates in "any" format like 03/03/2024, 03-03-2024, etc.?
+		new Date already does most of this, but how to "handle" locale?
+	write just day and month and year is assumed to be current (or next) year
+style date picker popup calendar 
+	cannot do it in native date picker? build/import a custom one?
 
 
 
