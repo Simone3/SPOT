@@ -5,24 +5,15 @@ focus vs. selected filter confusing
 
 # add/edit task
 add task form
-	text
-		text AREA
 	completed
 		checkbox
-	priority
-		4 exclusive buttons
-	owner
-		text field with options (free)
-		default empty
-	due date
-		text field with datepicker
-		default empty
 	tags
 		other tags: list, click to delete? with confirm popup?
 		add tag: text field with options (free)
 		or simply a comma-separated textarea?
-delete button (only edit)
 input labels (small top left)
+final form ui
+delete button -> only edit -> with confirm popup!
 
 # wire in react state
 reducer + context?
@@ -81,6 +72,8 @@ counters in filters (currently shown and total) - are they actually useful?
 in-place task form (both edit and update), i.e. merge Task and TaskForm
 	how to save?
 		click outside effect just for form (conditional effects are not allowed though)
+	or always-edit form? how to handle empty chips?
+	edit on hover? same as above
 tab to intent inside textareas
 icons inside input fields
 responsive for half-screen format (e.g. move filters on top?)
@@ -91,7 +84,7 @@ date picker with "free" text input like https://www.npmjs.com/package/native-dat
 	write just day and month and year is assumed to be current (or next) year
 style date picker popup calendar 
 	cannot do it in native date picker? build/import a custom one?
-
+fix tab/focus on all inputs (also: you can focus on inputs under the add task form!)
 
 
 

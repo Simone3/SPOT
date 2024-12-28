@@ -1,9 +1,6 @@
 import './TextInput.css';
-import { useState } from 'react';
 
-const TextInput = ({ placeholder }) => {
-	const [ value, setValue ] = useState('');
-
+const TextInput = ({ placeholder, value, setValue }) => {
 	return (
 		<input
 			className='text-input'

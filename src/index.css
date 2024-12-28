@@ -1,19 +1,31 @@
 
 /* Theme variables */
 body {
+	/* Main colors */
 	--colors-background-primary: #212529;
-	--colors-background-secondary: #3d434b;
-	--colors-text-primary: white;
-	--colors-text-secondary: #bfbfbf;
-	--colors-accent-primary: #0099ff;
-	--colors-accent-secondary: white;
-	--colors-priority-urgent: red;
-	--colors-priority-high: orange;
-	--colors-priority-normal: yellow;
-	--colors-priority-low: grey;
-	--colors-danger: red;
-	--colors-warn: orange;
-	--colors-disabled: grey;
+	--colors-background-secondary: #3D434B;
+	--colors-text-primary: #FFFFFF;
+	--colors-text-secondary: #BFBFBF;
+	--colors-accent-primary: #0099FF;
+	--colors-accent-primary-faded: #0099FF90;
+	--colors-accent-secondary: #FFFFFF;
+
+	/* Priorities */
+	--colors-priority-urgent: #FF0000;
+	--colors-priority-high: #FF4500;
+	--colors-priority-normal: #FFA500;
+	--colors-priority-low: #FFFF00;
+
+	/* Priorities (faded) */
+	--colors-priority-urgent-faded: #FF000090;
+	--colors-priority-high-faded: #FF450090;
+	--colors-priority-normal-faded: #FFA50090;
+	--colors-priority-low-faded: #FFFF0090;
+
+	/* States */
+	--colors-danger: #FF0000;
+	--colors-warn: #FFA500;
+	--colors-disabled: #808080;
 }
 
 /* HTML body */

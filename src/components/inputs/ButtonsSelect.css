@@ -1,0 +1,30 @@
+
+.buttons-select {
+	display: flex;
+	flex-flow: wrap;
+	gap: 5px;
+}
+
+.buttons-select-option {
+	display: flex;
+	padding: 6px 10px;
+	cursor: pointer;
+	font: inherit;
+	margin-bottom: 5px;
+	outline: none;
+	background-color: var(--colors-background-secondary);
+	border: 1px solid var(--colors-background-secondary);
+	color: var(--colors-text-secondary);
+}
+
+.buttons-select-option:focus {
+	border-color: var(--colors-accent-primary);
+}
+
+.buttons-select-option-selected {
+	background-color: var(--colors-accent-primary-faded);
+	color: var(--colors-text-primary);
+}
+
+
+
