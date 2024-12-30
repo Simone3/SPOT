@@ -1,13 +1,13 @@
 import './TextInput.css';
 
-const TextInput = ({ placeholder, value, setValue }) => {
+const TextInput = ({ placeholder, value, onChange }) => {
 	return (
 		<input
 			className='text-input'
 			type='text'
 			placeholder={placeholder}
 			value={value}
-			onChange={(e) => setValue(e.target.value)}
+			onChange={(e) => onChange(e.target.value)}
 		/>
 	);
 };

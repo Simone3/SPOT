@@ -1,11 +1,8 @@
 import './Checkbox.css';
-import { useState } from 'react';
 
-const Checkbox = ({ label, checked }) => {
-	const [ selected, setSelected ] = useState(checked);
-
+const Checkbox = ({ label, value, onChange }) => {
 	const input = (
-		<input className='checkbox' type='checkbox' checked={selected} onChange={() => setSelected(!selected)}/>
+		<input className='checkbox' type='checkbox' checked={value} onChange={() => onChange(!value)}/>
 	);
 
 	if(label) {

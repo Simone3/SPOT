@@ -3,21 +3,34 @@ import FreeSelectInput from '../inputs/FreeSelectInput';
 import TextArea from '../inputs/TextArea';
 import './TaskFormModal.css';
 import DatePicker from '../inputs/DatePicker';
+import Checkbox from '../inputs/Checkbox';
 import ButtonsSelect from '../inputs/ButtonsSelect';
+import TextInput from '../inputs/TextInput';
 
 const TaskFormModal = ({ initialTask, onSave, onDiscard, onDelete }) => {
 	const [ text, setText ] = useState('');
 	const [ owner, setOwner ] = useState('');
 	const [ dueDate, setDueDate ] = useState('');
 	const [ priority, setPriority ] = useState('HIGH');
+	const [ tags, setTags ] = useState('');
+	const [ completed, setCompleted ] = useState(false);
 
 	return (
 		<div className='task-form-modal-background'>
 			<div className='task-form-modal-content'>
 				<h3 className='task-form-title'>Add Task</h3>
-				<TextArea placeholder={'Task content...'} value={text} onChange={setText}/>
-				<FreeSelectInput placeholder='No owner (me)' value={owner} onChange={setOwner} options={[ 'Some Guy', 'Somebody', 'That Guy', 'Someone' ]}/>
-				<DatePicker value={dueDate} onChange={setDueDate}/>
+				<TextArea
+					placeholder='Task content...'
+					value={text}
+					onChange={setText}/>
+				<FreeSelectInput
+					placeholder='No owner (me)'
+					value={owner}
+					onChange={setOwner}
+					options={[ 'Some Guy', 'Somebody', 'That Guy', 'Someone' ]}/>
+				<DatePicker
+					value={dueDate}
+					onChange={setDueDate}/>
 				<ButtonsSelect
 					allowMultiSelect={false}
 					options={[
@@ -26,9 +39,17 @@ const TaskFormModal = ({ initialTask, onSave, onDiscard, onDelete }) => {
 						{ key: 'NORMAL', label: 'Normal', color: 'var(--colors-priority-normal-faded)' },
 						{ key: 'LOW', label: 'Low', color: 'var(--colors-priority-low-faded)' }
 					]}
-					selected={priority}
-					setSelected={setPriority}
+					value={priority}
+					onChange={setPriority}
 				/>
+				<TextInput
+					placeholder='Comma separated tags...'
+					value={tags}
+					onChange={setTags}/>
+				<Checkbox
+					label='Completed'
+					value={completed}
+					onChange={setCompleted}/>
 				<button onClick={onSave}>Save</button>
 				<button onClick={onDiscard}>Discard</button>
 				<button onClick={onDelete}>Delete</button>

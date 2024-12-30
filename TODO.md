@@ -4,13 +4,6 @@ reset to default button
 focus vs. selected filter confusing
 
 # add/edit task
-add task form
-	completed
-		checkbox
-	tags
-		other tags: list, click to delete? with confirm popup?
-		add tag: text field with options (free)
-		or simply a comma-separated textarea?
 input labels (small top left)
 final form ui
 delete button -> only edit -> with confirm popup!

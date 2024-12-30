@@ -9,19 +9,20 @@ const TasksFilters = () => {
 	const [ dueDates, setDueDates ] = useState([]);
 	const [ priorities, setPriorities ] = useState([]);
 	const [ tags, setTags ] = useState([]);
+	const [ showCompleted, setShowCompleted ] = useState(false);
 
 	return (
 		<div>
 			<h3>Search</h3>
 			<TextInput
 				value={text}
-				setValue={setText}
+				onChange={setText}
 				placeholder='Filter tasks...'/>
 			<h3>Priority</h3>
 			<ButtonsSelect
 				allowMultiSelect={true}
-				selected={priorities}
-				setSelected={setPriorities}
+				value={priorities}
+				onChange={setPriorities}
 				options={[
 					{ key: 'URGENT', label: 'Urgent', color: 'var(--colors-priority-urgent-faded)' },
 					{ key: 'HIGH', label: 'High', color: 'var(--colors-priority-high-faded)' },
@@ -31,8 +32,8 @@ const TasksFilters = () => {
 			<h3>Owner</h3>
 			<ButtonsSelect
 				allowMultiSelect={true}
-				selected={owners}
-				setSelected={setOwners}
+				value={owners}
+				onChange={setOwners}
 				options={[
 					{ key: 'None (me)', label: 'None (me)' },
 					{ key: 'Some Person', label: 'Some Person' },
@@ -45,8 +46,8 @@ const TasksFilters = () => {
 			<h3>Due Date</h3>
 			<ButtonsSelect
 				allowMultiSelect={true}
-				selected={dueDates}
-				setSelected={setDueDates}
+				value={dueDates}
+				onChange={setDueDates}
 				options={[
 					{ key: 'None', label: 'None' },
 					{ key: 'Today', label: 'Today' },
@@ -57,15 +58,18 @@ const TasksFilters = () => {
 			<h3>Tag</h3>
 			<ButtonsSelect
 				allowMultiSelect={true}
-				selected={tags}
-				setSelected={setTags}
+				value={tags}
+				onChange={setTags}
 				options={[
 					{ key: 'None', label: 'None' },
 					{ key: 'A tag', label: 'A tag' },
 					{ key: 'Another tag', label: 'Another tag' }
 				]}/>
 			<h3>Completed</h3>
-			<Checkbox label='Show completed'/>
+			<Checkbox
+				label='Show completed'
+				value={showCompleted}
+				onChange={setShowCompleted}/>
 		</div>
 	);
 };

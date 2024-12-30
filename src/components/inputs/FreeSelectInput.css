@@ -2,24 +2,21 @@
 .free-select-input {
 	position: relative;
 	display: block;
-	font-size: 0.9em;
+	width: 100%;
 }
 
 .free-select-input-fixed-container {
 	display: flex;
-	height: 25px;
+	width: 100%;
 }
 
 .free-select-input-value {
 	outline: none;
-	flex: 1;
-	padding: 0px 5px 0px 5px;
-	margin: 0;
-	line-height: 25px;
 	background-color: var(--colors-background-secondary);
 	border: 1px solid var(--colors-background-secondary);
 	color: var(--colors-text-primary);
-	width: calc(100% - 10px);
+	padding: 10px;
+	width: 100%;
 }
 
 .free-select-input-value:focus {

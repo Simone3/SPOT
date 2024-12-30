@@ -1,10 +1,12 @@
 
 .text-input {
+	outline: none;
+	box-sizing: border-box;
 	background-color: var(--colors-background-secondary);
 	border: 1px solid var(--colors-background-secondary);
-	padding: 10px;
 	color: var(--colors-text-primary);
-	outline: none;
+	padding: 10px;
+	width: 100%;
 }
 
 .text-input:focus {
