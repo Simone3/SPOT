@@ -1,5 +1,13 @@
 
-.text-area {
+.textarea-label {
+	font-size: 0.8em;
+    margin-bottom: 5px;
+    display: inline-block;
+    font-weight: bolder;
+    color: var(--colors-text-secondary);
+}
+
+.textarea-input {
 	outline: none;
 	box-sizing: border-box;
 	resize: none;
@@ -11,6 +19,6 @@
 	height: 150px;
 }
 
-.text-area:focus {
+.textarea-input:focus {
 	border-color: var(--colors-accent-primary);
 }

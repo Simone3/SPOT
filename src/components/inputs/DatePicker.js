@@ -1,14 +1,20 @@
+import { useId } from 'react';
 import './DatePicker.css';
 
-const DatePicker = ({ value, onChange }) => {
+const DatePicker = ({ label, value, onChange }) => {
+	const id = useId();
 
 	return (
-		<input
-			className='date-picker'
-			type='date'
-			value={value}
-			onChange={(e) => onChange(e.target.value)}
-		/>
+		<div className='date-picker-container'>
+			{label && <label htmlFor={id} className='date-picker-label'>{label}</label>}
+			<input
+				id={id}
+				className='date-picker-input'
+				type='date'
+				value={value}
+				onChange={(e) => onChange(e.target.value)}
+			/>
+		</div>
 	);
 };
 

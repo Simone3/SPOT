@@ -1,14 +1,20 @@
+import { useId } from 'react';
 import './TextInput.css';
 
-const TextInput = ({ placeholder, value, onChange }) => {
+const TextInput = ({ label, placeholder, value, onChange }) => {
+	const id = useId();
 	return (
-		<input
-			className='text-input'
-			type='text'
-			placeholder={placeholder}
-			value={value}
-			onChange={(e) => onChange(e.target.value)}
-		/>
+		<div className='text-input-container'>
+			{label && <label htmlFor={id} className='text-input-label'>{label}</label>}
+			<input
+				id={id}
+				className='text-input'
+				type='text'
+				placeholder={placeholder}
+				value={value}
+				onChange={(e) => onChange(e.target.value)}
+			/>
+		</div>
 	);
 };
 

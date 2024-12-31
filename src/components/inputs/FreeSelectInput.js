@@ -1,11 +1,12 @@
 import './FreeSelectInput.css';
-import React, { useState } from 'react';
+import React, { useState, useId } from 'react';
 import { useDetectClickOutside } from 'react-detect-click-outside';
 
 /**
  * A dropdown input that also allows free typing (or in other words: a text input with suggestions)
  */
-const FreeSelectInput = ({ placeholder, options, disabled, value, onChange }) => {
+const FreeSelectInput = ({ label, placeholder, options, disabled, value, onChange }) => {
+	const id = useId();
 
 	const [ state, setState ] = useState({
 		open: false,
@@ -35,8 +36,10 @@ const FreeSelectInput = ({ placeholder, options, disabled, value, onChange }) =>
 
 	return (
 		<div className={`free-select-input free-select-input-${state.open ? 'open' : 'closed'}`} ref={ref}>
+			{label && <label htmlFor={id} className='free-select-label'>{label}</label>}
 			<div className='free-select-input-fixed-container'>
 				<input
+					id={id}
 					className='free-select-input-value'
 					disabled={disabled}
 					type='text'

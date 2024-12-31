@@ -1,3 +1,4 @@
+import './Task.css';
 import { useState } from 'react';
 import { DateUtils } from '../../utils/DateUtils';
 import Checkbox from '../inputs/Checkbox';
@@ -7,7 +8,6 @@ import EditIcon from '../icons/EditIcon';
 import TagsIcon from '../icons/TagsIcon';
 import CalendarIcon from '../icons/CalendarIcon';
 import OwnerIcon from '../icons/OwnerIcon';
-import './Task.css';
 
 const Task = ({ task, onEdit }) => {
 	// TODO move this to global state and update it every day (setTimeout at midnight plus 1 second or something)
@@ -71,7 +71,7 @@ const Task = ({ task, onEdit }) => {
 		tags
 	} = task;
 
-	const completed = state === 'COMPLETED';
+	const [ completed, setCompleted ] = useState(state === 'COMPLETED');
 
 	let containerClass = 'task-container';
 	if(priority) {
@@ -97,7 +97,9 @@ const Task = ({ task, onEdit }) => {
 	return (
 		<div className={containerClass}>
 			<div className='task-actions'>
-				<Checkbox checked={completed}/>
+				<Checkbox
+					value={completed}
+					onChange={setCompleted}/>
 				<Clickable onClick={onEdit}>
 					<EditIcon/>
 				</Clickable>

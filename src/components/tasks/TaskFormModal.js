@@ -20,18 +20,22 @@ const TaskFormModal = ({ initialTask, onSave, onDiscard, onDelete }) => {
 			<div className='task-form-modal-content'>
 				<h3 className='task-form-title'>Add Task</h3>
 				<TextArea
-					placeholder='Task content...'
+					label='Content'
+					placeholder='Task content'
 					value={text}
 					onChange={setText}/>
 				<FreeSelectInput
-					placeholder='No owner (me)'
+					label='Owner (optional)'
+					placeholder='Task owner'
 					value={owner}
 					onChange={setOwner}
 					options={[ 'Some Guy', 'Somebody', 'That Guy', 'Someone' ]}/>
 				<DatePicker
+					label='Due date (optional)'
 					value={dueDate}
 					onChange={setDueDate}/>
 				<ButtonsSelect
+					label='Priority'
 					allowMultiSelect={false}
 					options={[
 						{ key: 'URGENT', label: 'Urgent', color: 'var(--colors-priority-urgent-faded)' },
@@ -43,7 +47,8 @@ const TaskFormModal = ({ initialTask, onSave, onDiscard, onDelete }) => {
 					onChange={setPriority}
 				/>
 				<TextInput
-					placeholder='Comma separated tags...'
+					label='Comma-separated tags (optional)'
+					placeholder='TAG1, TAG2, TAG3'
 					value={tags}
 					onChange={setTags}/>
 				<Checkbox

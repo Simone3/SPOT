@@ -1,6 +1,8 @@
+import { useId } from 'react';
 import './ButtonsSelect.css';
 
-const ButtonsSelect = ({ allowMultiSelect, options, value, onChange }) => {
+const ButtonsSelect = ({ label, allowMultiSelect, options, value, onChange }) => {
+	const id = useId();
 	const onClickSingle = (key) => {
 		if(value !== key) {
 			onChange(key);
@@ -30,21 +32,24 @@ const ButtonsSelect = ({ allowMultiSelect, options, value, onChange }) => {
 	};
 
 	return (
-		<div className='buttons-select'>
-			{options.map((option) => {
-				const onClick = allowMultiSelect ? (event) => onClickMultiple(event, option.key) : () => onClickSingle(option.key);
-				const isSelected = allowMultiSelect ? value.includes(option.key) : value === option.key;
-				const extraStyle = isSelected && option.color ? { 'background-color': option.color } : undefined;
-				return (
-					<button
-						key={option.key}
-						onClick={onClick}
-						className={`buttons-select-option ${isSelected ? 'buttons-select-option-selected' : 'buttons-select-option-unselected'}`}
-						style={extraStyle}>
-						{option.label}
-					</button>
-				);
-			})}
+		<div className='buttons-select-container'>
+			{label && <label htmlFor={id} className='buttons-select-label'>{label}</label>}
+			<div id={id} className='buttons-select-options'>
+				{options.map((option) => {
+					const onClick = allowMultiSelect ? (event) => onClickMultiple(event, option.key) : () => onClickSingle(option.key);
+					const isSelected = allowMultiSelect ? value.includes(option.key) : value === option.key;
+					const extraStyle = isSelected && option.color ? { 'background-color': option.color } : undefined;
+					return (
+						<button
+							key={option.key}
+							onClick={onClick}
+							className={`buttons-select-option ${isSelected ? 'buttons-select-option-selected' : 'buttons-select-option-unselected'}`}
+							style={extraStyle}>
+							{option.label}
+						</button>
+					);
+				})}
+			</div>
 		</div>
 	);
 };

@@ -1,5 +1,10 @@
 
-.checkbox {
+.checkbox-container {
+	display: flex;
+}
+
+.checkbox-input {
+	outline: none;
 	appearance: none;
 	position: relative;
 	font-size: 1em;
@@ -8,17 +13,15 @@
 	line-height: 1;
 	background-color: var(--colors-background-secondary);
 	border: 1px solid var(--colors-background-secondary);
-	border-radius: 5px;
 	cursor: pointer;
 	margin: 0;
-	outline: none;
 }
 
-.checkbox:focus {
+.checkbox-input:focus {
 	border-color: var(--colors-accent-primary);
 }
 
-.checkbox::before {
+.checkbox-input::before {
 	position: absolute;
 	width: 100%;
 	height: 100%;
@@ -27,17 +30,14 @@
 	content: " ";
 }
 
-.checkbox:checked::before {
+.checkbox-input:checked::before {
 	content: "\2713";
 	color: var(--colors-accent-primary);
 }
 
-.label {
+.checkbox-label {
 	cursor: pointer;
-	display: flex;
-}
-
-.label-text {
+	display: inline-block;
 	margin-left: 8px;
 	line-height: 1em;
 }

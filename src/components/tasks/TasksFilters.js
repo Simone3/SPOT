@@ -1,3 +1,4 @@
+import './TaskFilters.css';
 import { useState } from 'react';
 import ButtonsSelect from '../inputs/ButtonsSelect';
 import Checkbox from '../inputs/Checkbox';
@@ -12,14 +13,14 @@ const TasksFilters = () => {
 	const [ showCompleted, setShowCompleted ] = useState(false);
 
 	return (
-		<div>
-			<h3>Search</h3>
+		<div className='task-filters-container'>
 			<TextInput
+				label='Filter content'
+				placeholder='Search...'
 				value={text}
-				onChange={setText}
-				placeholder='Filter tasks...'/>
-			<h3>Priority</h3>
+				onChange={setText}/>
 			<ButtonsSelect
+				label='Filter priorities'
 				allowMultiSelect={true}
 				value={priorities}
 				onChange={setPriorities}
@@ -29,8 +30,8 @@ const TasksFilters = () => {
 					{ key: 'NORMAL', label: 'Normal', color: 'var(--colors-priority-normal-faded)' },
 					{ key: 'LOW', label: 'Low', color: 'var(--colors-priority-low-faded)' }
 				]}/>
-			<h3>Owner</h3>
 			<ButtonsSelect
+				label='Filter owners'
 				allowMultiSelect={true}
 				value={owners}
 				onChange={setOwners}
@@ -43,8 +44,8 @@ const TasksFilters = () => {
 					{ key: 'That Guy', label: 'That Guy' },
 					{ key: 'Someone with a long name', label: 'Someone with a long name' }
 				]}/>
-			<h3>Due Date</h3>
 			<ButtonsSelect
+				label='Filter due dates'
 				allowMultiSelect={true}
 				value={dueDates}
 				onChange={setDueDates}
@@ -55,8 +56,8 @@ const TasksFilters = () => {
 					{ key: 'February 2, 2025', label: 'February 2, 2025' },
 					{ key: 'December 11, 2070', label: 'December 11, 2070' }
 				]}/>
-			<h3>Tag</h3>
 			<ButtonsSelect
+				label='Filter tags'
 				allowMultiSelect={true}
 				value={tags}
 				onChange={setTags}
@@ -65,7 +66,6 @@ const TasksFilters = () => {
 					{ key: 'A tag', label: 'A tag' },
 					{ key: 'Another tag', label: 'Another tag' }
 				]}/>
-			<h3>Completed</h3>
 			<Checkbox
 				label='Show completed'
 				value={showCompleted}

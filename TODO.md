@@ -1,12 +1,15 @@
 
-# task filters
-reset to default button
-focus vs. selected filter confusing
-
 # add/edit task
 input labels (small top left)
 final form ui
 delete button -> only edit -> with confirm popup!
+
+# task filters
+reset to default button
+focus vs. selected filter confusing
+
+# task list
+always display owner chip?
 
 # wire in react state
 reducer + context?
@@ -37,6 +40,7 @@ text search
 sorted by date (with a section for each day?)
 
 # others
+better tags input (form) where it suggests existing tags (most used first) - ButtonsSelect-like
 change font
 final ui polish inside electron
 handle/block two instances or windows of the app at the same time?
@@ -78,7 +82,7 @@ date picker with "free" text input like https://www.npmjs.com/package/native-dat
 style date picker popup calendar 
 	cannot do it in native date picker? build/import a custom one?
 fix tab/focus on all inputs (also: you can focus on inputs under the add task form!)
-
+better accessibility (e.g. label + ID) for ButtonsSelect - maybe use the default <select> input styled as buttons?
 
 
 

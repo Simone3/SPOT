@@ -1,8 +1,17 @@
 
-.date-picker {
+.date-picker-label {
+	font-size: 0.8em;
+    margin-bottom: 5px;
+    display: inline-block;
+    font-weight: bolder;
+    color: var(--colors-text-secondary);
+}
+
+.date-picker-input {
 	color-scheme: dark;
 	outline: none;
+	display: block;
 	border: 1px solid var(--colors-background-secondary);
-	border-radius: 0;
 	background-color: var(--colors-background-secondary);
+	border-radius: 0;
 }

@@ -5,6 +5,14 @@
 	width: 100%;
 }
 
+.free-select-label {
+	font-size: 0.8em;
+    margin-bottom: 5px;
+    display: inline-block;
+    font-weight: bolder;
+    color: var(--colors-text-secondary);
+}
+
 .free-select-input-fixed-container {
 	display: flex;
 	width: 100%;
