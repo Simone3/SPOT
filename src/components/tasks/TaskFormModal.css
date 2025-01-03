@@ -1,8 +1,4 @@
 
-.task-form-title {
-	margin-top: 0;
-}
-
 .task-form-modal-background {
 	position: fixed;
 	top: 0;
@@ -17,9 +13,73 @@
 }
 
 .task-form-modal-content {
-	width: 60%;
-	height: 60%;
+	width: 70%;
+	height: 70%;
 	background-color: var(--colors-background-primary);
 	overflow-y: auto;
 	padding: 30px;
 }
+
+.task-form-title {
+	margin: 0;
+}
+
+.task-form-modal-content {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+
+.task-form-other-inputs-line {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	gap: 20px;
+}
+
+.task-form-input-owner, .task-form-input-tag {
+	min-width: 200px;
+}
+
+.task-form-buttons-line {
+	margin-top: 20px;
+	display: flex;
+	justify-content: space-between;
+}
+
+.task-form-buttons {
+	display: flex;
+	gap: 10px;
+}
+
+.task-form-button {
+	outline: none;
+	font: inherit;
+	padding: 10px;
+	cursor: pointer;
+	border: none;
+	color: white;
+}
+
+.task-form-button-save {
+	background-color: #3faf4b;
+}
+
+.task-form-button-discard, .task-form-button-delete {
+	background-color: #ee1a30;
+}
+
+.task-form-button-save:disabled {
+	background-color: #3faf4b80;
+	cursor: initial;
+	color: var(--colors-text-secondary);
+}
+
+.task-form-button-discard:disabled, .task-form-button-delete:disabled {
+	background-color: #ee1a3080;
+	cursor: initial;
+	color: var(--colors-text-secondary);
+}
+
+
+

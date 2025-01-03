@@ -3,7 +3,17 @@ import TasksList from './TasksList';
 import TaskFormModal from './TaskFormModal';
 
 const TasksContainer = () => {
-	const [ formModalOpen, setFormModalOpen ] = useState(false);
+	const DEFAULT_TASK = {
+		id: undefined,
+		text: undefined,
+		state: 'ACTIVE',
+		priority: 'HIGH',
+		owner: undefined,
+		dueDate: undefined,
+		tags: []
+	};
+	
+	const [ taskInForm, setTaskInForm ] = useState(undefined);
 
 	const urgentTasks = [
 		{ id: 1, text: 'My urgent task', state: 'ACTIVE', priority: 'URGENT', owner: 'Some Person', tags: [] }
@@ -30,34 +40,38 @@ const TasksContainer = () => {
 		{ id: 13, text: 'A completed task', state: 'COMPLETED', priority: 'LOW', tags: [] }
 	];
 
-	const onSaveTask = () => {
-		console.log('save here');
-		setFormModalOpen(false);
+	const onSaveTask = (task) => {
+		console.log(`save here: ${JSON.stringify(task)}`);
+		setTaskInForm(undefined);
 	};
 
-	const onDeleteTask = () => {
-		console.log('delete here');
-		setFormModalOpen(false);
+	const onDeleteTask = (taskId) => {
+		console.log(`delete here: ${JSON.stringify(taskId)}`);
+		setTaskInForm(undefined);
 	};
 
 	const onCloseTaskForm = () => {
-		setFormModalOpen(false);
+		setTaskInForm(undefined);
 	};
 
-	const onEditTask = () => {
-		console.log('edit task');
-		setFormModalOpen(true);
+	const onStartAddingTask = () => {
+		setTaskInForm({ ...DEFAULT_TASK });
+	};
+
+	const onStartEditingTask = (task) => {
+		setTaskInForm({ ...task });
 	};
 
 	return (
 		<div>
-			{formModalOpen && <TaskFormModal onSave={onSaveTask} onDiscard={onCloseTaskForm} onDelete={onDeleteTask}/>}
-			<TasksList title='Urgent' tasks={urgentTasks} onEditTask={onEditTask}/>
-			<TasksList title='Due Soon' tasks={dueSoon} onEditTask={onEditTask}/>
-			<TasksList title='High Priority' tasks={highPriorityTasks} onEditTask={onEditTask}/>
-			<TasksList title='Normal Priority' tasks={normalPriorityTasks} onEditTask={onEditTask}/>
-			<TasksList title='Low Priority' tasks={lowPriorityTasks} onEditTask={onEditTask}/>
-			<TasksList title='Completed' tasks={completedTasks} onEditTask={onEditTask}/>
+			{taskInForm && <TaskFormModal initialTask={taskInForm} onSave={onSaveTask} onDiscard={onCloseTaskForm} onDelete={onDeleteTask}/>}
+			<button onClick={onStartAddingTask}>Add new task</button>
+			<TasksList title='Urgent' tasks={urgentTasks} onStartEditingTask={onStartEditingTask}/>
+			<TasksList title='Due Soon' tasks={dueSoon} onStartEditingTask={onStartEditingTask}/>
+			<TasksList title='High Priority' tasks={highPriorityTasks} onStartEditingTask={onStartEditingTask}/>
+			<TasksList title='Normal Priority' tasks={normalPriorityTasks} onStartEditingTask={onStartEditingTask}/>
+			<TasksList title='Low Priority' tasks={lowPriorityTasks} onStartEditingTask={onStartEditingTask}/>
+			<TasksList title='Completed' tasks={completedTasks} onStartEditingTask={onStartEditingTask}/>
 		</div>
 	);
 };

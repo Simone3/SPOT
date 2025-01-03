@@ -2,7 +2,7 @@
 .buttons-select-label {
 	font-size: 0.8em;
     margin-bottom: 5px;
-    display: inline-block;
+    display: block;
     font-weight: bolder;
     color: var(--colors-text-secondary);
 }
@@ -14,12 +14,11 @@
 }
 
 .buttons-select-option {
-	display: flex;
-	padding: 6px 10px;
-	cursor: pointer;
-	font: inherit;
-	margin-bottom: 5px;
 	outline: none;
+	font: inherit;
+	display: flex;
+	padding: 6px;
+	cursor: pointer;
 	background-color: var(--colors-background-secondary);
 	border: 1px solid var(--colors-background-secondary);
 	color: var(--colors-text-secondary);
