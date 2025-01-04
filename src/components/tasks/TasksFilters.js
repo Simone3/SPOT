@@ -25,10 +25,10 @@ const TasksFilters = () => {
 				value={priorities}
 				onChange={setPriorities}
 				options={[
-					{ key: 'URGENT', label: 'Urgent', color: 'var(--colors-priority-urgent-faded)' },
-					{ key: 'HIGH', label: 'High', color: 'var(--colors-priority-high-faded)' },
-					{ key: 'NORMAL', label: 'Normal', color: 'var(--colors-priority-normal-faded)' },
-					{ key: 'LOW', label: 'Low', color: 'var(--colors-priority-low-faded)' }
+					{ key: 'URGENT', label: 'Urgent', color: 'var(--colors-priority-urgent)' },
+					{ key: 'HIGH', label: 'High', color: 'var(--colors-priority-high)' },
+					{ key: 'NORMAL', label: 'Normal', color: 'var(--colors-priority-normal)' },
+					{ key: 'LOW', label: 'Low', color: 'var(--colors-priority-low)' }
 				]}/>
 			<ButtonsSelect
 				label='Filter owners'

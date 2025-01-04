@@ -29,7 +29,7 @@
 }
 
 .buttons-select-option-selected {
-	background-color: var(--colors-accent-primary-faded);
+	background-color: var(--colors-accent-primary);
 	color: var(--colors-text-primary);
 }
 

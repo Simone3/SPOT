@@ -7,20 +7,13 @@ body {
 	--colors-text-primary: #FFFFFF;
 	--colors-text-secondary: #BFBFBF;
 	--colors-accent-primary: #0099FF;
-	--colors-accent-primary-faded: #0099FF90;
 	--colors-accent-secondary: #FFFFFF;
 
 	/* Priorities */
 	--colors-priority-urgent: #FF0000;
-	--colors-priority-high: #FF4500;
-	--colors-priority-normal: #FFA500;
-	--colors-priority-low: #FFFF00;
-
-	/* Priorities (faded) */
-	--colors-priority-urgent-faded: #FF000090;
-	--colors-priority-high-faded: #FF450090;
-	--colors-priority-normal-faded: #FFA50090;
-	--colors-priority-low-faded: #FFFF0090;
+	--colors-priority-high: #F45013FC;
+	--colors-priority-normal: #FF9700;
+	--colors-priority-low: #E5AE00;
 
 	/* States */
 	--colors-danger: #FF0000;
