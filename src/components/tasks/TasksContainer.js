@@ -50,7 +50,7 @@ const TasksContainer = () => {
 		setTaskInForm(undefined);
 	};
 
-	const onCloseTaskForm = () => {
+	const onCloseModal = () => {
 		setTaskInForm(undefined);
 	};
 
@@ -64,7 +64,7 @@ const TasksContainer = () => {
 
 	return (
 		<div>
-			{taskInForm && <TaskFormModal initialTask={taskInForm} onSave={onSaveTask} onDiscard={onCloseTaskForm} onDelete={onDeleteTask}/>}
+			{taskInForm && <TaskFormModal initialTask={taskInForm} onSave={onSaveTask} onDiscard={onCloseModal} onDelete={onDeleteTask}/>}
 			<button onClick={onStartAddingTask}>Add new task</button>
 			<TasksList title='Urgent' tasks={urgentTasks} onStartEditingTask={onStartEditingTask}/>
 			<TasksList title='Due Soon' tasks={dueSoon} onStartEditingTask={onStartEditingTask}/>

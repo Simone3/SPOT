@@ -19,6 +19,7 @@
 
 .checkbox-input:focus {
 	border-color: var(--colors-accent-primary);
+	box-shadow: 0 0 4px var(--colors-accent-primary);
 }
 
 .checkbox-input::before {

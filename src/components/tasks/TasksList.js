@@ -8,9 +8,14 @@ const TasksList = ({ title, tasks, onStartEditingTask }) => {
 	return (
 		<div>
 			{title && <h3>{title}</h3>}
-			{tasks.map((task) => <Task key={task.id} task={task} onEdit={() => {
-				onStartEditingTask(task);
-			}}/>)}
+			{tasks.map((task) =>
+				<Task
+					key={task.id}
+					task={task}
+					onEdit={() => {
+						onStartEditingTask(task);
+				}}/>
+			)}
 		</div>
 	);
 };

@@ -18,16 +18,13 @@
 	background-color: var(--colors-background-primary);
 	overflow-y: auto;
 	padding: 30px;
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
 }
 
 .task-form-title {
 	margin: 0;
-}
-
-.task-form-modal-content {
-	display: flex;
-	flex-direction: column;
-	gap: 20px;
 }
 
 .task-form-other-inputs-line {

@@ -1,6 +1,7 @@
 import './FreeSelectInput.css';
-import React, { useState, useId } from 'react';
+import React, { useState, useId, useContext, useEffect } from 'react';
 import { useDetectClickOutside } from 'react-detect-click-outside';
+import { ClickOutsideContext } from '../../contexts/ClickOutsideContext';
 
 /**
  * A dropdown input that also allows free typing (or in other words: a text input with suggestions)
@@ -8,34 +9,54 @@ import { useDetectClickOutside } from 'react-detect-click-outside';
 const FreeSelectInput = ({ label, placeholder, options, disabled, value, onChange }) => {
 	const id = useId();
 
-	const [ state, setState ] = useState({
-		open: false,
-		changedAfterOpen: false
-	});
+	const [ open, setOpen ] = useState(false);
+	const [ changedAfterOpen, setChangedAfterOpen ] = useState(false);
+
+	// Update counter in the global context when this component opens/closes
+	const clickOutsideOpenCounterRef = useContext(ClickOutsideContext);
+	useEffect(() => {
+		if(open) {
+			clickOutsideOpenCounterRef.current += 1;
+		}
+		return () => {
+			if(open) {
+				clickOutsideOpenCounterRef.current -= 1;
+			}
+		};
+	}, [ clickOutsideOpenCounterRef, open, setOpen ]);
+
+	const doOpen = () => {
+		if(!open) {
+			setOpen(true);
+		}
+	};
+
+	const doClose = () => {
+		if(open) {
+			setOpen(false);
+			setChangedAfterOpen(false);
+		}
+	};
+
+	const doSetChanged = () => {
+		if(open && !changedAfterOpen) {
+			setChangedAfterOpen(true);
+		}
+	};
 
 	const ref = useDetectClickOutside({
-		onTriggered: (e) => {
-			if(state.open) {
-				e.stopPropagation();
-				setState(() => {
-					return {
-						open: false,
-						changedAfterOpen: false
-					};
-				});
-			}
-		}
+		onTriggered: doClose
 	});
 
 	// Filter dropdown options, but only after the user typed something in the free text input
-	const filteredOptions = state.changedAfterOpen && value ?
+	const filteredOptions = changedAfterOpen && value ?
 		options.filter((option) => {
 			return option.toLowerCase().indexOf(value.toLowerCase()) !== -1;
 		}) :
 		options;
 
 	return (
-		<div className={`free-select-input free-select-input-${state.open ? 'open' : 'closed'}`} ref={ref}>
+		<div className={`free-select-input free-select-input-${open ? 'open' : 'closed'}`} ref={ref}>
 			{label && <label htmlFor={id} className='free-select-label'>{label}</label>}
 			<div className='free-select-input-fixed-container'>
 				<input
@@ -51,23 +72,9 @@ const FreeSelectInput = ({ label, placeholder, options, disabled, value, onChang
 					value={value || ''}
 					onChange={(e) => {
 						onChange(e.target.value);
-						if(state.open && !state.changedAfterOpen) {
-							setState(() => {
-								return {
-									open: true,
-									changedAfterOpen: true
-								};
-							});
-						}
+						doSetChanged();
 					}}
-					onFocus={() => {
-						setState(() => {
-							return {
-								open: true,
-								changedAfterOpen: false
-							};
-						});
-					}}
+					onFocus={doOpen}
 				/>
 			</div>
 			<div className='free-select-input-dropdown-container'>
@@ -79,12 +86,7 @@ const FreeSelectInput = ({ label, placeholder, options, disabled, value, onChang
 									key={index}
 									className='free-select-input-option'
 									onClick={() => {
-										setState(() => {
-											return {
-												open: false,
-												changedAfterOpen: false
-											};
-										});
+										doClose();
 										onChange(option);
 									}}>
 									{option}

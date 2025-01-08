@@ -38,7 +38,7 @@ const ButtonsSelect = ({ label, allowMultiSelect, options, value, onChange }) =>
 				{options.map((option) => {
 					const onClick = allowMultiSelect ? (event) => onClickMultiple(event, option.key) : () => onClickSingle(option.key);
 					const isSelected = allowMultiSelect ? value.includes(option.key) : value === option.key;
-					const extraStyle = isSelected && option.color ? { 'background-color': option.color } : undefined;
+					const extraStyle = isSelected && option.color ? { backgroundColor: option.color } : undefined;
 					return (
 						<button
 							key={option.key}

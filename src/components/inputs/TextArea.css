@@ -23,4 +23,13 @@
 
 .textarea-input:focus {
 	border-color: var(--colors-accent-primary);
+	box-shadow: 0 0 4px var(--colors-accent-primary);
+}
+
+.textarea-container-invalid .textarea-input {
+	border-color: var(--colors-danger);
+}
+
+.textarea-container-invalid .textarea-input:focus {
+	box-shadow: 0 0 4px var(--colors-danger);
 }

@@ -17,3 +17,8 @@
 	background-color: var(--colors-background-secondary);
 	border-radius: 0;
 }
+
+.date-picker-input:focus {
+	border-color: var(--colors-accent-primary);
+	box-shadow: 0 0 4px var(--colors-accent-primary);
+}
