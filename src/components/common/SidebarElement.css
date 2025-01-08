@@ -40,7 +40,6 @@
 	visibility: hidden;
 	min-width: 120px;
 	border: 1px solid var(--colors-accent-primary);
-	border-radius: 6px;
 	background-color: var(--colors-background-primary);
 	color: var(--colors-text-primary);
 	text-align: center;

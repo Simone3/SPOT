@@ -7,6 +7,8 @@ import DatePicker from '../inputs/DatePicker';
 import ButtonsSelect from '../inputs/ButtonsSelect';
 import { DateUtils } from '../../utils/DateUtils';
 import { ClickOutsideContext } from '../../contexts/ClickOutsideContext';
+import DeleteIcon from '../icons/DeleteIcon';
+import Clickable from '../common/Clickable';
 
 const TaskFormModal = ({ initialTask, onSave, onDiscard, onDelete }) => {
 	const [ text, setText ] = useState(initialTask.text || '');
@@ -15,6 +17,7 @@ const TaskFormModal = ({ initialTask, onSave, onDiscard, onDelete }) => {
 	const [ priority, setPriority ] = useState(initialTask.priority);
 	const [ tags, setTags ] = useState(initialTask.tags.length === 0 ? [ '' ] : [ ...initialTask.tags, '' ]);
 	
+	const [ showDeleteConfirmation, setShowDeleteConfirmation ] = useState(false);
 	const [ submitErrorInvalid, setSubmitErrorInvalid ] = useState(false);
 
 	const setTagValue = (index, value) => {
@@ -62,10 +65,27 @@ const TaskFormModal = ({ initialTask, onSave, onDiscard, onDelete }) => {
 		}
 	};
 
+	const doDelete = () => {
+		if(initialTask.id) {
+			setShowDeleteConfirmation(true);
+		}
+		else {
+			onDiscard();
+		}
+	};
+
+	const doCancelDelete = () => {
+		setShowDeleteConfirmation(false);
+	};
+
+	const doConfirmDelete = () => {
+		onDelete(initialTask.id);
+	};
+
 	const clickOutsideClicksCounterRef = useRef(0);
 
 	const ref = useDetectClickOutside({
-		onTriggered: () => {
+		onTriggered: (e) => {
 			// Hack 1: save on click outside only after the second click, so that the edit icon click (tasks list) does not immediately trigger the form close
 			if(clickOutsideClicksCounterRef.current === 0) {
 				clickOutsideClicksCounterRef.current += 1;
@@ -74,6 +94,7 @@ const TaskFormModal = ({ initialTask, onSave, onDiscard, onDelete }) => {
 
 			// Hack 2: save on click outside only when the modal is the only opened component, so that an accidental FreeSelectInput dismissal does not trigger the form submit
 			if(clickOutsideOpenCounterRef.current === 1) {
+				console.log(e);
 				doSave();
 			}
 		}
@@ -82,7 +103,23 @@ const TaskFormModal = ({ initialTask, onSave, onDiscard, onDelete }) => {
 	return (
 		<div className='task-form-modal-background'>
 			<div className='task-form-modal-content' ref={ref}>
-				<h3 className='task-form-title'>{initialTask.id ? 'Edit Task' : 'Add Task'}</h3>
+				<div className='task-form-header-line'>
+					<h3 className='task-form-title'>{initialTask.id ? 'Edit Task' : 'Add Task'}</h3>
+					<div className='task-form-header-icons'>
+						<Clickable onClick={doDelete}>
+							<DeleteIcon />
+						</Clickable>
+						<div className={`task-delete-confirm-popover ${!showDeleteConfirmation && 'task-delete-confirm-popover-hidden'}`}>
+							<div>
+								Are you sure you want to delete this task?
+							</div>
+							<div className='task-delete-confirm-popover-buttons'>
+								<Clickable onClick={doConfirmDelete}>Delete task</Clickable>
+								<Clickable onClick={doCancelDelete}>Keep task</Clickable>
+							</div>
+						</div>
+					</div>
+				</div>
 				<div className='task-form-text-line'>
 					<TextArea
 						label='Task'
@@ -132,18 +169,6 @@ const TaskFormModal = ({ initialTask, onSave, onDiscard, onDelete }) => {
 								onChange={(value) => setTagValue(index, value)}
 								options={[ 'Some tag', 'Another tag', 'Tag', 'Here\'s another tag!' ]}/>
 						</div>)}
-				</div>
-				<div className='task-form-buttons-line'>
-					<div className='task-form-buttons'>
-						{initialTask.id &&
-							<button
-								className='task-form-button task-form-button-delete'
-								onClick={() => {
-									onDelete(initialTask.id);
-								}}>
-								Delete
-							</button>}
-					</div>
 				</div>
 			</div>
 		</div>

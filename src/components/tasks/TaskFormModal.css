@@ -23,8 +23,56 @@
 	gap: 20px;
 }
 
+.task-form-header-line {
+	display: flex;
+	justify-content: space-between;
+}
+
 .task-form-title {
 	margin: 0;
+}
+
+.task-form-header-icons svg {
+	display: block;
+	height: 18px;
+	color: var(--colors-danger);
+}
+
+.task-form-header-icons {
+	position: relative;
+}
+
+.task-delete-confirm-popover {
+	min-width: 150px;
+	border: 1px solid var(--colors-danger);
+	background-color: var(--colors-background-primary);
+	color: var(--colors-text-primary);
+	padding: 10px;
+	position: absolute;
+	z-index: 300;
+	top: 30px;
+	right: 0;
+}
+
+.task-delete-confirm-popover-buttons {
+	margin-top: 16px;
+	display: flex;
+	justify-content: space-between;
+}
+
+.task-delete-confirm-popover-hidden {
+	display: none;
+}
+
+.task-delete-confirm-popover::after {
+	content: "";
+    position: absolute;
+    top: -6px;
+    right: 2.5px;
+    margin-top: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: transparent transparent var(--colors-danger) transparent;
 }
 
 .task-form-other-inputs-line {
@@ -37,46 +85,3 @@
 .task-form-input-owner, .task-form-input-tag {
 	min-width: 200px;
 }
-
-.task-form-buttons-line {
-	margin-top: 20px;
-	display: flex;
-	justify-content: space-between;
-}
-
-.task-form-buttons {
-	display: flex;
-	gap: 10px;
-}
-
-.task-form-button {
-	outline: none;
-	font: inherit;
-	padding: 10px;
-	cursor: pointer;
-	border: none;
-	color: white;
-}
-
-.task-form-button-save {
-	background-color: #3faf4b;
-}
-
-.task-form-button-discard, .task-form-button-delete {
-	background-color: #ee1a30;
-}
-
-.task-form-button-save:disabled {
-	background-color: #3faf4b80;
-	cursor: initial;
-	color: var(--colors-text-secondary);
-}
-
-.task-form-button-discard:disabled, .task-form-button-delete:disabled {
-	background-color: #ee1a3080;
-	cursor: initial;
-	color: var(--colors-text-secondary);
-}
-
-
-
