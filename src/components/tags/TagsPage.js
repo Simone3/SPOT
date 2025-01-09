@@ -1,14 +1,14 @@
 import Page from '../common/Page';
 import Pane from '../common/Pane';
 
-const NotesPage = () => {
+const TagsPage = () => {
 	return (
 		<Page>
 			<Pane>
-				Notes: work in progress
+				Tags: work in progress
 			</Pane>
 		</Page>
 	);
 };
 
-export default NotesPage;
+export default TagsPage;

@@ -1,14 +1,14 @@
 import Page from '../common/Page';
 import Pane from '../common/Pane';
 
-const NotesPage = () => {
+const SettingsPage = () => {
 	return (
 		<Page>
 			<Pane>
-				Notes: work in progress
+				Settings: work in progress
 			</Pane>
 		</Page>
 	);
 };
 
-export default NotesPage;
+export default SettingsPage;
