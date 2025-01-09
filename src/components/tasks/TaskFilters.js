@@ -3,8 +3,11 @@ import { useState } from 'react';
 import ButtonsSelect from '../inputs/ButtonsSelect';
 import Checkbox from '../inputs/Checkbox';
 import TextInput from '../inputs/TextInput';
+import Clickable from '../common/Clickable';
+import ResetIcon from '../icons/ResetIcon';
+import Tooltipped from '../common/Tooltipped';
 
-const TasksFilters = () => {
+const TaskFilters = () => {
 	const [ text, setText ] = useState('');
 	const [ owners, setOwners ] = useState([]);
 	const [ dueDates, setDueDates ] = useState([]);
@@ -12,8 +15,27 @@ const TasksFilters = () => {
 	const [ tags, setTags ] = useState([]);
 	const [ showCompleted, setShowCompleted ] = useState(false);
 
+	const doResetDefaults = () => {
+		setText('');
+		setOwners([]);
+		setDueDates([]);
+		setPriorities([]);
+		setTags([]);
+		setShowCompleted(false);
+	};
+
 	return (
 		<div className='task-filters-container'>
+			<div className='task-filters-header-line'>
+				<h3 className='task-filters-title'>Filters</h3>
+				<div className='task-filters-header-icons'>
+					<Tooltipped text={'Reset to default'}>
+						<Clickable onClick={doResetDefaults}>
+							<ResetIcon />
+						</Clickable>
+					</Tooltipped>
+				</div>
+			</div>
 			<TextInput
 				label='Filter content'
 				placeholder='Search...'
@@ -74,4 +96,4 @@ const TasksFilters = () => {
 	);
 };
 
-export default TasksFilters;
+export default TaskFilters;

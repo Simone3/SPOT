@@ -4,3 +4,23 @@
 	flex-direction: column;
 	gap: 30px;
 }
+
+.task-filters-header-line {
+	display: flex;
+}
+
+.task-filters-title {
+	margin: 0 10px 0 0;
+}
+
+.task-filters-header-icons, .task-filters-header-icons .clickable {
+	display: flex;
+    justify-content: center;
+    flex-direction: column;
+}
+
+.task-filters-header-icons svg {
+	display: block;
+	height: 18px;
+	color: var(--colors-text-primary);
+}

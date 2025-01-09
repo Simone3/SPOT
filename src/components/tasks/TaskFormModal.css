@@ -32,6 +32,13 @@
 	margin: 0;
 }
 
+.task-form-header-icons .clickable {
+	display: flex;
+    justify-content: center;
+    flex-direction: column;
+	height: 100%;
+}
+
 .task-form-header-icons svg {
 	display: block;
 	height: 18px;

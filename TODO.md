@@ -1,13 +1,4 @@
 
-# add/edit task
-final form ui -> buttons on top? no discard?
-ctrl+s (mac vs. win)
-"fixed" width form?
-
-# task filters
-reset to default button
-dont show filters if no tasks, leave just text search
-
 # task list
 always display owner chip?
 h3 margin, align with filters
@@ -37,6 +28,7 @@ form save
 	validate/transform data: trim, empty strings, format date, tags (remove empty + check unique), etc.
 	also: emit only a delta event?
 		don't save anything if nothing changed
+dont show filters if no tasks, leave just text search
 
 # wire in electron main process: save to disk
 sqllite?
@@ -120,7 +112,7 @@ better task add/edit
 	leave form but also add quick-edit
 		double click on text to show textarea, double click on owner to show popup with select, etc.
 		no problem here with click-outside because single field
-
+	add ctrl+s to save?
 
 
 

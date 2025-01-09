@@ -1,0 +1,39 @@
+
+/* Container for the triggering component, with relative position */
+.tooltipped-container {
+	position: relative;
+	display: inline-block;
+}
+
+/* Container for the tooltip itself, with absolute position */
+.tooltip-text-container {
+	position: absolute;
+	z-index: 300;
+	min-height: 100%; /* height equal to the relative parent */
+	top: 0; /* at the same level of the relative parent */
+	left: 100%; /* right of the relative parent */
+	visibility: hidden;
+	display: flex;
+	flex-direction: column;
+	justify-content: center; /* center the actual tooltip text in this absolute container that is as high as the relative parent */
+}
+
+/* Show the tooltip container on hover */
+.tooltipped-container:hover .tooltip-text-container {
+	visibility: visible;
+	transition-delay: 1s;
+}
+
+/* The tooltip text itself */
+.tooltip-text {
+	display: inline-block;
+	border: 1px solid var(--colors-accent-primary);
+	background-color: var(--colors-background-primary);
+	color: var(--colors-text-primary);
+	text-align: center;
+	padding: 5px;
+	width: fit-content;
+	text-wrap: nowrap;
+}
+
+
