@@ -5,9 +5,9 @@
  * LICENSE: MIT License
  * AUTHOR: Iconsax
  */
-const TasksIcon = () => {
+const TasksIcon = ({ className }) => {
 	return (
-		<svg viewBox='0 0 24 24' fill='none'>
+		<svg viewBox='0 0 24 24' fill='none' className={className}>
 			<path d='M12.37 8.87988H17.62' stroke='currentColor' strokeWidth='1.5' strokeLinecap='round' strokeLinejoin='round'/>
 			<path d='M6.38 8.87988L7.13 9.62988L9.38 7.37988' stroke='currentColor' strokeWidth='1.5' strokeLinecap='round' strokeLinejoin='round'/>
 			<path d='M12.37 15.8799H17.62' stroke='currentColor' strokeWidth='1.5' strokeLinecap='round' strokeLinejoin='round'/>

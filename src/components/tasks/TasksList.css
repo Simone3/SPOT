@@ -1,0 +1,27 @@
+
+.tasks-list-header-line {
+	display: flex;
+	justify-content: space-between;
+}
+
+.tasks-list-title {
+	margin: 0;
+}
+
+.tasks-list-actions, .tasks-list-actions .clickable {
+	display: flex;
+    justify-content: center;
+    flex-direction: row;
+	color: var(--colors-text-secondary);
+}
+
+.tasks-list-add-icon {
+	display: block;
+	height: 18px;
+	margin-right: 3px;
+}
+
+.tasks-list-add-icon, .tasks-list-add-label {
+	align-self: center;
+}
+

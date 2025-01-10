@@ -1,8 +1,4 @@
 
-# task list
-always display owner chip?
-h3 margin, align with filters
-
 # wire in react state
 reducer + context?
 split current tasks from completed? split by sections (i.e. by priority)?
@@ -29,6 +25,7 @@ form save
 	also: emit only a delta event?
 		don't save anything if nothing changed
 dont show filters if no tasks, leave just text search
+move "currentDates" to global state and update it every day (setTimeout at midnight plus 1 second or something)
 
 # wire in electron main process: save to disk
 sqllite?
@@ -53,7 +50,7 @@ check browser console errors
 check spaces vs. tabs
 check linter
 select options and modal conflict when at the bottom of the content - also the entire content gets longer
-change inputs on hover (e.g. change font to white?)
+change inputs, buttons and clickables on hover (e.g. change font to white?)
 show notification popups
 	"back-end" error
 	save task

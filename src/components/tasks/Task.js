@@ -10,7 +10,6 @@ import CalendarIcon from '../icons/CalendarIcon';
 import OwnerIcon from '../icons/OwnerIcon';
 
 const Task = ({ task, onEdit }) => {
-	// TODO move this to global state and update it every day (setTimeout at midnight plus 1 second or something)
 	const [ currentDates ] = useState(() => {
 		const initialState = {};
 
@@ -82,9 +81,7 @@ const Task = ({ task, onEdit }) => {
 	}
 
 	const chips = [];
-	if(owner) {
-		chips.push(<Chip key='owner' icon={<OwnerIcon/>} text={owner}/>);
-	}
+	chips.push(<Chip key='owner' icon={<OwnerIcon/>} text={owner || 'Me'}/>);
 	if(dueDate) {
 		chips.push(<Chip key='due-date' icon={<CalendarIcon/>} text={DateUtils.toSmartString(dueDate, currentDates)} invalid={!completed && dueDate && DateUtils.compareDay(dueDate, new Date()) < 0}/>);
 	}

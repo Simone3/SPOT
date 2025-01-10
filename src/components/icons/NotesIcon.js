@@ -5,9 +5,9 @@
  * LICENSE: MIT License
  * AUTHOR: Iconsax
  */
-const NotesIcon = () => {
+const NotesIcon = ({ className }) => {
 	return (
-		<svg viewBox='0 0 24 24' fill='none'>
+		<svg viewBox='0 0 24 24' fill='none' className={className}>
 			<path d='M8 2V5' stroke='currentColor' strokeWidth='1.5' strokeMiterlimit='10' strokeLinecap='round' strokeLinejoin='round'/>
 			<path d='M16 2V5' stroke='currentColor' strokeWidth='1.5' strokeMiterlimit='10' strokeLinecap='round' strokeLinejoin='round'/>
 			<path d='M7 13H15' stroke='currentColor' strokeWidth='1.5' strokeMiterlimit='10' strokeLinecap='round' strokeLinejoin='round'/>

@@ -28,12 +28,11 @@ const TaskFilters = () => {
 		<div className='task-filters-container'>
 			<div className='task-filters-header-line'>
 				<h3 className='task-filters-title'>Filters</h3>
-				<div className='task-filters-header-icons'>
-					<Tooltipped text={'Reset to default'}>
-						<Clickable onClick={doResetDefaults}>
-							<ResetIcon />
-						</Clickable>
-					</Tooltipped>
+				<div className='task-filters-actions'>
+					<Clickable onClick={doResetDefaults}>
+						<ResetIcon className='task-filters-reset-icon'/>
+						<div className='task-filters-reset-label'>Reset to default</div>
+					</Clickable>
 				</div>
 			</div>
 			<TextInput

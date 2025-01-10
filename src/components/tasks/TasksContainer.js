@@ -19,9 +19,9 @@ const TasksContainer = () => {
 		{ id: 1, text: 'My urgent task', state: 'ACTIVE', priority: 'URGENT', owner: 'Some Person', tags: [] }
 	];
 	const dueSoon = [
-		{ id: 2, text: 'My first due soon task', state: 'ACTIVE', priority: 'URGENT', owner: 'Me', dueDate: new Date(), tags: [ 'TAG1' ] },
+		{ id: 2, text: 'My first due soon task', state: 'ACTIVE', priority: 'URGENT', owner: 'Some guy', dueDate: new Date(), tags: [ 'TAG1' ] },
 		{ id: 3, text: 'My second due soon task', state: 'ACTIVE', priority: 'NORMAL', dueDate: new Date('2024-11-30'), tags: [ 'TAG1' ] },
-		{ id: 4, text: 'My very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very long task', state: 'ACTIVE', priority: 'URGENT', owner: 'Me', dueDate: new Date(), tags: [ 'TAG1' ] },
+		{ id: 4, text: 'My very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very very long task', state: 'ACTIVE', priority: 'URGENT', owner: 'That Guy', dueDate: new Date(), tags: [ 'TAG1' ] },
 		{ id: 5, text: 'My third due soon task', state: 'ACTIVE', priority: 'LOW', dueDate: new Date(), tags: [ 'TAG1' ] }
 	];
 	const highPriorityTasks = [
@@ -65,8 +65,7 @@ const TasksContainer = () => {
 	return (
 		<div>
 			{taskInForm && <TaskFormModal initialTask={taskInForm} onSave={onSaveTask} onDiscard={onCloseModal} onDelete={onDeleteTask}/>}
-			<button onClick={onStartAddingTask}>Add new task</button>
-			<TasksList title='Urgent' tasks={urgentTasks} onStartEditingTask={onStartEditingTask}/>
+			<TasksList title='Urgent' tasks={urgentTasks} onStartEditingTask={onStartEditingTask} showAddTaskButton={true} onStartAddingTask={onStartAddingTask}/>
 			<TasksList title='Due Soon' tasks={dueSoon} onStartEditingTask={onStartEditingTask}/>
 			<TasksList title='High Priority' tasks={highPriorityTasks} onStartEditingTask={onStartEditingTask}/>
 			<TasksList title='Normal Priority' tasks={normalPriorityTasks} onStartEditingTask={onStartEditingTask}/>

@@ -7,20 +7,27 @@
 
 .task-filters-header-line {
 	display: flex;
+	justify-content: space-between;
 }
 
 .task-filters-title {
 	margin: 0 10px 0 0;
 }
 
-.task-filters-header-icons, .task-filters-header-icons .clickable {
+.task-filters-actions, .task-filters-actions .clickable {
 	display: flex;
     justify-content: center;
-    flex-direction: column;
+    flex-direction: row;
+	color: var(--colors-text-secondary);
 }
 
-.task-filters-header-icons svg {
+.task-filters-reset-icon {
 	display: block;
 	height: 18px;
-	color: var(--colors-text-primary);
+	margin-right: 5px;
 }
+
+.task-filters-reset-icon, .task-filters-reset-label {
+	align-self: center;
+}
+
