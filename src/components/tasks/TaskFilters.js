@@ -5,7 +5,6 @@ import Checkbox from '../inputs/Checkbox';
 import TextInput from '../inputs/TextInput';
 import Clickable from '../common/Clickable';
 import ResetIcon from '../icons/ResetIcon';
-import Tooltipped from '../common/Tooltipped';
 
 const TaskFilters = () => {
 	const [ text, setText ] = useState('');

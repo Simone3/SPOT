@@ -1,31 +1,116 @@
 
 # wire in react state
-reducer + context?
-split current tasks from completed? split by sections (i.e. by priority)?
-sort tasks (completed by completion date desc, others by priority / add date / what?)
-"soon" also considers the next working day
-how to split urgent vs. soon? if an urgent task is due today where does it go?
-	merge the two sections? -> single "top priority" section?
-	"immediate" and "due soon" (all immediate go on top, due soon just contains high/normal/low)
-current day as state so that everythibg updates at midnight (friendly day names, due soon tasks, etc.)
-filters should, on the same pass, update both task list and current filter counters
-add/delete/complete/edit task should update filters
-show completed should update filters (add many more tags, due dates, etc.)
-	or should it?
-	avoid many past due dates with just an "overdue" option?
-uuid created by FE?
-owners in select inputs should be ALL ever used (completed too!) ordered by frequency / last use
-	a newly added one should be on top even if just 1 use?
-	limit total values to top 10 or something?
-	something like first 7 are most used ones desc and last 3 the most recent ones?
-	remove values that have not been used in a long time?
-	be careful when filtering options: should this display ALL values? so maybe better to put all with count desc
-form save
-	validate/transform data: trim, empty strings, format date, tags (remove empty + check unique), etc.
-	also: emit only a delta event?
-		don't save anything if nothing changed
-dont show filters if no tasks, leave just text search
-move "currentDates" to global state and update it every day (setTimeout at midnight plus 1 second or something)
+state
+	dates
+		global with context
+		---
+		timeout at midnight + 1 second -> nodejs side, see also node-cron maybe
+		this should also refresh tasks! e.g. move to due soon sublist -> trigger first load but with current filters
+	tasks
+		filters + list + form status in TasksPage
+		form inputs in TaskFormModal
+		---
+		first load
+			input
+				raw list of tasks
+			output
+				5 lists of all tasks: urgent & due soon [also considers the next working day], high, medium, low, completed
+					urgent&ds: sorted by priority desc, due date desc, creation date asc
+					high/medium/low: sorted by due date desc, creation date asc
+					completed: sorted by completion date desc
+				5 lists of visible tasks
+					like above
+				4 lists of active+completed domains for filters (completed on): owners, priorities, tags, due dates
+					owners, tags: sorted alphabetically
+					priorities: sorted by value (not necessarily ALL priorities)
+					due dates: sorted by date
+				4 lists of active domains for filters (completed off): owners, priorities, tags, due dates
+					like above
+				3 lists of all domains for input fields: owners, priorities (constant), tags
+					owners, tags: sorted by count desc
+					priorities: sorted by value
+				6 values for default filters
+			logic
+				build default filters
+				for each task
+					get correct task arrays based on status/priority
+					push to full array
+					if matches default filters
+						push to visible array
+					add or update counter for owner, priority, tags, due date in all domains for filters
+					add or update counter for owners, tags in all domains for inputs
+					if active
+						add or update counter for owner, priority, tags, due date in active domains for filters
+				sort all arrays
+				set new arrays to state
+		change filter (single or reset to default)
+			input
+				new filter values
+			output
+				updated lists of tasks
+				updated filter values
+				updated filter domains (if show completed changes)
+			logic
+				update filters object
+				if show completed changed
+					switch domains between active and active+completed
+				for each list of tasks
+					if filters completely remove the whole list (e.g. completed), exit
+					reset empty list
+					for each task
+						if matches filters
+							push to visible array
+		save new task
+			input
+				new task
+			output
+				updated lists of tasks
+				updated filter domains (if new values)
+			logic
+				(in the form?) validate/transform data: trim, empty strings, format date, tags (remove empty + check unique), etc.
+				create and set new uuid
+				[same logic of an iteration of first load]
+				sort arrays (not all but 1-2 tasks and any domains changed - re-sort all for simplicity?)
+				set form status as closed
+				clear form inputs
+		delete task
+			input
+				task id
+			output
+				updated lists of tasks
+				updated filter domains (if only value)
+			logic
+				get correct task arrays based on status/priority
+				remove from full array
+				if was active
+					remove from visible array
+				delete or update counter for owner, priority, tags, due date in all domains for filters
+				delete or update counter for owners, tags in all domains for inputs
+				if was active
+					add or update counter for owner, priority, tags, due date in active domains for filters
+				sort arrays (not all but 1-2 tasks and any domains changed - re-sort all for simplicity?)
+		update task
+			input
+				new task
+			output
+				updated lists of tasks
+				updated filter domains (if changed)
+			logic
+				[same logic of an iteration of delete]
+				[same logic of an iteration of first load]
+				sort arrays (not all but 2-4 tasks and any domains changed - re-sort all for simplicity?)
+				set form status as closed
+				clear form inputs
+		complete task
+			[same as updating, without the form clear]
+		open/close form
+			input
+				(nothing)
+			output
+				updated form status
+			logic
+				set form status as closed
+				set form inputs
 
 # wire in electron main process: save to disk
 sqllite?
@@ -37,6 +122,7 @@ error handling
 	allow to retry the action from the notification?
 	or suggest to try to submit form again (careful if form submits only changed data though!)?
 allow to reload from disk with a button in settings
+optional logging to filesystem
 
 # others
 change font
@@ -110,7 +196,7 @@ better task add/edit
 		double click on text to show textarea, double click on owner to show popup with select, etc.
 		no problem here with click-outside because single field
 	add ctrl+s to save?
-
+avoid many past due dates when show completed = true with just an "overdue" option?
 
 
 
