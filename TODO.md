@@ -1,116 +1,67 @@
 
-# wire in react state
-state
-	dates
-		global with context
-		---
-		timeout at midnight + 1 second -> nodejs side, see also node-cron maybe
-		this should also refresh tasks! e.g. move to due soon sublist -> trigger first load but with current filters
-	tasks
-		filters + list + form status in TasksPage
-		form inputs in TaskFormModal
-		---
-		first load
-			input
-				raw list of tasks
-			output
-				5 lists of all tasks: urgent & due soon [also considers the next working day], high, medium, low, completed
-					urgent&ds: sorted by priority desc, due date desc, creation date asc
-					high/medium/low: sorted by due date desc, creation date asc
-					completed: sorted by completion date desc
-				5 lists of visible tasks
-					like above
-				4 lists of active+completed domains for filters (completed on): owners, priorities, tags, due dates
-					owners, tags: sorted alphabetically
-					priorities: sorted by value (not necessarily ALL priorities)
-					due dates: sorted by date
-				4 lists of active domains for filters (completed off): owners, priorities, tags, due dates
-					like above
-				3 lists of all domains for input fields: owners, priorities (constant), tags
-					owners, tags: sorted by count desc
-					priorities: sorted by value
-				6 values for default filters
-			logic
-				build default filters
-				for each task
-					get correct task arrays based on status/priority
-					push to full array
-					if matches default filters
-						push to visible array
-					add or update counter for owner, priority, tags, due date in all domains for filters
-					add or update counter for owners, tags in all domains for inputs
-					if active
-						add or update counter for owner, priority, tags, due date in active domains for filters
-				sort all arrays
-				set new arrays to state
-		change filter (single or reset to default)
-			input
-				new filter values
-			output
-				updated lists of tasks
-				updated filter values
-				updated filter domains (if show completed changes)
-			logic
-				update filters object
-				if show completed changed
-					switch domains between active and active+completed
-				for each list of tasks
-					if filters completely remove the whole list (e.g. completed), exit
-					reset empty list
-					for each task
-						if matches filters
-							push to visible array
-		save new task
-			input
-				new task
-			output
-				updated lists of tasks
-				updated filter domains (if new values)
-			logic
-				(in the form?) validate/transform data: trim, empty strings, format date, tags (remove empty + check unique), etc.
-				create and set new uuid
-				[same logic of an iteration of first load]
-				sort arrays (not all but 1-2 tasks and any domains changed - re-sort all for simplicity?)
-				set form status as closed
-				clear form inputs
-		delete task
-			input
-				task id
-			output
-				updated lists of tasks
-				updated filter domains (if only value)
-			logic
-				get correct task arrays based on status/priority
-				remove from full array
-				if was active
-					remove from visible array
-				delete or update counter for owner, priority, tags, due date in all domains for filters
-				delete or update counter for owners, tags in all domains for inputs
-				if was active
-					add or update counter for owner, priority, tags, due date in active domains for filters
-				sort arrays (not all but 1-2 tasks and any domains changed - re-sort all for simplicity?)
-		update task
-			input
-				new task
-			output
-				updated lists of tasks
-				updated filter domains (if changed)
-			logic
-				[same logic of an iteration of delete]
-				[same logic of an iteration of first load]
-				sort arrays (not all but 2-4 tasks and any domains changed - re-sort all for simplicity?)
-				set form status as closed
-				clear form inputs
-		complete task
-			[same as updating, without the form clear]
-		open/close form
-			input
-				(nothing)
-			output
-				updated form status
-			logic
-				set form status as closed
-				set form inputs
+# new state logic
+
+load raw
+	create task object
+		sortPosition from saved value
+	add to activeTasks or completedTasks
+		compute visibility based on current filters
+	add/update priorities domains
+	add/update owners domains
+	add/update due dates domains
+	add/update tags domains
+	sort all lists
+	
+add task
+	same as load raw
+		except: sortPosition = 1st sort position - X
+		except: no need to sort tasks
+
+delete task
+	remove from activeTasks or completedTasks
+	remove/update priorities domains
+	remove/update owners domains
+	remove/update due dates domains
+	remove/update tags domains
+	NO need to sort
+
+update task
+	same as delete (old)
+	same as add (new)
+		this must be a different object
+
+change filter
+	change current filters
+	loop activeTasks and completedTasks to update visibility
+		if visibility changes, the object needs to be cloned
+
+complete task
+	same as update
+
+move active task (sort)
+	update activeTasks
+	if next.sortPosition - prev.sortPosition <= 1
+		reload ALL sortPositions of activeTasks (start from 0 and then +X)
+	else
+		this.sortPosition = prev.sortPosition + round((next.sortPosition - prev.sortPosition) / 2)
+
+reset sort
+	sort activeTasks (with custom sort function!)
+	reload ALL sortPosition of activeTasks (start from 0 and then +X)
+
+# refactor
+2 lists: active and completed
+manual sort (active) + fixed sort (completed)
+button to auto-sort active tasks
+	if priority is the same, keep original manual sort!
+edit in place only (only for active tasks?)
+	textarea for text
+		same as text?
+		auto-fit height and width?
+	on hover
+		show chip placeholders
+		show actions (left?): move (drag&drop + arrows?), edit priority (slider? arrows?), complete, delete?
+form: validate/transform data: trim, empty strings, remove double/weird spaces, format date, tags (remove empty + check unique), etc.
 
 # wire in electron main process: save to disk
 sqllite?
@@ -161,7 +112,7 @@ shortcuts like ctrl+f
 light theme
 global search for both tasks and notes
 drag&drop from outlook
-search by keyword split + quotes for exact match
+search by keyword split + quotes for exact match (or at least fix searching if spaces do not exactly match in the two strings)
 undo / history / redo
 customize working days
 change default filters

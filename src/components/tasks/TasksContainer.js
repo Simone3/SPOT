@@ -7,7 +7,7 @@ const SAMPLE_RAW_INPUT_TASKS = [
 		id: 'd4e92b5e-6879-4c49-bb76-3c7af2a0cbf2',
 		text: 'Buy groceries',
 		state: 'ACTIVE',
-		priority: 'MEDIUM',
+		priority: 'NORMAL',
 		owner: 'Alice',
 		dueDate: new Date('2025-11-12'),
 		tags: [ 'shopping', 'errands' ]
@@ -25,6 +25,7 @@ const SAMPLE_RAW_INPUT_TASKS = [
 		id: 'f624563c-0e6a-4c1e-bb7c-885e46be4998',
 		text: 'Call the plumber',
 		state: 'COMPLETED',
+		completionDate: new Date('2024-06-01'),
 		priority: 'LOW',
 		tags: [ 'home' ]
 	},
@@ -49,6 +50,7 @@ const SAMPLE_RAW_INPUT_TASKS = [
 		id: '3fd9be50-c51d-4fd1-a8c1-4b351cfd76f9',
 		text: 'Send invitations for birthday party',
 		state: 'COMPLETED',
+		completionDate: new Date('2024-03-01'),
 		priority: 'HIGH',
 		tags: [ 'party', 'personal' ]
 	},
@@ -56,7 +58,7 @@ const SAMPLE_RAW_INPUT_TASKS = [
 		id: '9b62f7de-2b65-432c-8675-4867a0e3c71c',
 		text: 'Prepare for team meeting',
 		state: 'ACTIVE',
-		priority: 'MEDIUM',
+		priority: 'NORMAL',
 		owner: 'Bob',
 		tags: [ 'work' ]
 	},
@@ -71,7 +73,7 @@ const SAMPLE_RAW_INPUT_TASKS = [
 		id: '11af6ed8-29f3-4e37-a1a2-4bc6a5749cb6',
 		text: 'Book flight tickets',
 		state: 'ACTIVE',
-		priority: 'MEDIUM',
+		priority: 'NORMAL',
 		owner: 'Charlie',
 		tags: [ 'travel', 'urgent' ]
 	},
@@ -79,7 +81,7 @@ const SAMPLE_RAW_INPUT_TASKS = [
 		id: 'b73f0208-bb2e-426c-b654-d362ace38e72',
 		text: 'Research new laptop models',
 		state: 'ACTIVE',
-		priority: 'MEDIUM',
+		priority: 'NORMAL',
 		tags: []
 	},
 	{
@@ -95,6 +97,7 @@ const SAMPLE_RAW_INPUT_TASKS = [
 		id: 'c87f4a31-4696-4982-bd2c-cd48de8f0cf3',
 		text: 'Organize bookshelves',
 		state: 'COMPLETED',
+		completionDate: new Date('2024-05-01'),
 		priority: 'LOW',
 		tags: [ 'home' ]
 	},
@@ -127,6 +130,7 @@ const SAMPLE_RAW_INPUT_TASKS = [
 		id: '92edc91a-d98c-4a66-b45f-2a7ae0cc79a3',
 		text: 'Pick up dry cleaning',
 		state: 'COMPLETED',
+		completionDate: new Date('2024-01-01'),
 		priority: 'LOW',
 		owner: 'John',
 		dueDate: new Date('2023-01-23'),
@@ -136,7 +140,7 @@ const SAMPLE_RAW_INPUT_TASKS = [
 		id: 'be38d889-70de-4621-9fbf-295e5c90338b',
 		text: 'Write thank-you notes',
 		state: 'ACTIVE',
-		priority: 'MEDIUM',
+		priority: 'NORMAL',
 		tags: [ 'personal' ]
 	},
 	{
@@ -152,7 +156,7 @@ const SAMPLE_RAW_INPUT_TASKS = [
 		id: 'de6b1e97-d46b-420c-8cc1-f0c69bfb116e',
 		text: 'Plan family dinner menu',
 		state: 'ACTIVE',
-		priority: 'MEDIUM',
+		priority: 'NORMAL',
 		owner: 'Emily',
 		tags: [ 'family', 'food' ]
 	},
@@ -184,11 +188,6 @@ const DEFAULT_TASK = {
 	tags: []
 };
 
-const isDueSoon = (task) => {
-	// TODO compare with pre-computed dates
-	return task.dueDate && task.dueDate <= new Date();
-};
-
 const matchesFilters = (task, filters) => {
 	if(task.state === 'COMPLETED' && !filters.showCompleted) {
 		return false;
@@ -217,182 +216,140 @@ const matchesFilters = (task, filters) => {
 	return true;
 };
 
-const TASK_SUBLISTS = [{
-		key: 'completed',
-		checkTask: (task) => task.state === 'COMPLETED',
-	}, {
-		key: 'urgent',
-		checkTask: (task) => task.state === 'URGENT' || isDueSoon(task),
-	}, {
-		key: 'highPriority',
-		checkTask: (task) => task.state === 'HIGH',
-	}, {
-		key: 'mediumPriority',
-		checkTask: (task) => task.state === 'MEDIUM',
-	}, {
-		key: 'lowPriority',
-		checkTask: (task) => task.state === 'LOW',
+const addTask = (rawTask, activeTasks, completedTasks) => {
+	const task = {
+		id: rawTask.id,
+		text: rawTask.text,
+		state: rawTask.state,
+		priority: rawTask.priority,
+		owner: rawTask.owner,
+		dueDate: rawTask.dueDate,
+		tags: [ ...rawTask.tags ],
+		completionDate: rawTask.completionDate,
+		sortPosition: rawTask.sortPosition,
+		visible: false
+	};
+
+	if(task.state === 'ACTIVE') {
+		activeTasks.push(task);
 	}
-];
+	else {
+		completedTasks.push(task);
+	}
+
+	return task;
+};
+
+const addDomain = (domainValue, domainList, updateCount, updateActiveCount) => {
+	if(domainValue) {
+		const domainId = domainValue.toLowerCase();
+		let domain = domainList.find((value) => value.id === domainId);
+		if(!domain) {
+			domain = {
+				id: domainId,
+				label: domainValue,
+				count: 0,
+				activeCount: 0
+			};
+			domainList.push(domain);
+		}
+
+		domain.count += updateCount;
+		domain.activeCount += updateActiveCount;
+	}
+};
+
+const activeTasksCompareFunction = (taskA, taskB) => {
+	const position = taskA.sortPosition - taskB.sortPosition;
+	if(position !== 0) {
+		return position;
+	}
+	if(taskA.id < taskB.id) {
+		return -1;
+	}
+	if(taskA.id > taskB.id) {
+		return 1;
+	}
+	return 0;
+};
+
+const completedTasksCompareFunction = (taskA, taskB) => {
+	return taskA.completionDate - taskB.completionDate;
+};
+
+const domainCompareFunction = (domainA, domainB) => {
+	if(domainA.id < domainB.id) {
+		return -1;
+	}
+	if(domainA.id > domainB.id) {
+		return 1;
+	}
+	return 0;
+};
 
 const TasksContainer = () => {
 
-	const [ isFormOpen, setFormOpen ] = useState(false);
+	const [ activeTasks, setActiveTasks ] = useState([]);
+	const [ completedTasks, setCompletedTasks ] = useState([]);
 
-	const allTasksRef = useRef({
-		urgentAndDueSoon: [],
-		highPriority: [],
-		mediumPriority: [],
-		lowPriority: [],
-		completed: []
+	const [ priorities, setPriorities ] = useState(() => {
+		const initialPriorities = [];
+		addDomain('URGENT', initialPriorities, 0, 0);
+		addDomain('HIGH', initialPriorities, 0, 0);
+		addDomain('MEDIUM', initialPriorities, 0, 0);
+		addDomain('LOW', initialPriorities, 0, 0);
+		return initialPriorities;
 	});
+	const [ owners, setOwners ] = useState([]);
+	const [ dueDates, setDueDates ] = useState([]);
+	const [ tags, setTags ] = useState([]);
 
-	const [ visibleTasks, setVisibleTasks ] = useState({
-		urgentAndDueSoon: [],
-		highPriority: [],
-		mediumPriority: [],
-		lowPriority: [],
-		completed: []
-	});
+	const currentFilters = useState({ ...DEFAULT_FILTERS });
 
-	const domainMapsRef = useRef({
-		priorities: {},
-		owners: {},
-		dueDates: {},
-		tags: {}
-	});
+	const loadRawTasksIntoState = (rawTasks) => {
+		const newActiveTasks = [ ...activeTasks ];
+		const newCompletedTasks = [ ...completedTasks ];
+		const newPriorities = [ ...priorities ];
+		const newOwners = [ ...owners ];
+		const newDueDates = [ ...dueDates ];
+		const newTags = [ ...tags ];
 
-	const [ filterDomains, setFilterDomains ] = useState({
-		priorities: [],
-		owners: [],
-		dueDates: [],
-		tags: []
-	});
-
-	const [ inputDomains, setInputDomains ] = useState({
-		priorities: [ 'URGENT', 'HIGH', 'MEDIUM', 'LOW' ],
-		owners: [],
-		tags: []
-	});
-
-	const currentFilters = useState({
-		...DEFAULT_FILTERS
-	});
-
-	const loadRawTasksIntoRefs = () => {
-		const allTasks = allTasksRef.current;
-		// TODO also need list to pre-sort them?
-		const domainMaps = domainMapsRef.current;
-
-		for(const rawTask of SAMPLE_RAW_INPUT_TASKS) {
-			const task = {
-				id: rawTask.id,
-				text: rawTask.text,
-				state: rawTask.state,
-				priority: rawTask.priority,
-				owner: rawTask.owner,
-				dueDate: rawTask.dueDate,
-				tags: [ ...rawTask.tags ]
-			};
-
-			if(task.state === 'COMPLETED') {
-				allTasks.completed.push(task);
+		// Add task and domains for each row task
+		for(const rawTask of rawTasks) {
+			const task = addTask(rawTask, newActiveTasks, newCompletedTasks);
+			const updateCount = 1;
+			const updateActiveCount = task.state === 'ACTIVE' ? 1 : 0;
+			addDomain(task.priority, newPriorities, updateCount, updateActiveCount);
+			addDomain(task.owner, newOwners, updateCount, updateActiveCount);
+			addDomain(task.dueDate, newDueDates, updateCount, updateActiveCount);
+			for(const tag of task.tags) {
+				addDomain(tag, newTags, updateCount, updateActiveCount);
 			}
-			else if(task.priority === 'URGENT' || isDueSoon(task)) {
-				allTasks.urgentAndDueSoon.push(task);
-			}
-			else if(task.priority === 'HIGH') {
-				allTasks.highPriority.push(task);
-			}
-			else if(task.priority === 'MEDIUM') {
-				allTasks.mediumPriority.push(task);
-			}
-			else if(task.priority === 'LOW') {
-				allTasks.lowPriority.push(task);
-			}
-			else {
-				throw Error('Did not match a valid tasks list');
-			}
-
-			// if(task.owner) {
-			// 	const ownersMap = domainMaps.owners;
-			// 	const domainId = task.owner.toLowerCase();
-			// 	let ownerDomain = ownersMap[domainId];
-			// 	if(!ownerDomain) {
-			// 		ownerDomain = {
-			// 			id: domainId,
-			// 			label: task.owner,
-			// 			count: 0,
-			// 			activeCount: 0
-			// 		};
-			// 		ownersMap[domainId] = ownerDomain;
-			// 	}
-				
-			// 	ownerDomain.count += 1;
-			// 	if(task.state === 'ACTIVE') {
-			// 		ownerDomain.activeCount += 1;
-			// 	}
-			// }
-
-			//  extract logic above (domain access) into generic structures
 		}
 
-		// TODO sort
+		// Sort all lists (except priorities, which are already sorted by default)
+		newActiveTasks.sort(activeTasksCompareFunction);
+		newCompletedTasks.sort(completedTasksCompareFunction);
+		newOwners.sort(domainCompareFunction);
+		newDueDates.sort(domainCompareFunction);
+		newTags.sort(domainCompareFunction);
+
+		// Update state
+		setActiveTasks(newActiveTasks);
+		setCompletedTasks(newCompletedTasks);
+		setPriorities(newPriorities);
+		setOwners(newOwners);
+		setDueDates(newDueDates);
+		setTags(newTags);
 	};
 
-	const refreshVisibleTasks = () => {
-		const allTasks = allTasksRef.current;
-		const newVisibleTasks = {};
-
-		if(currentFilters.showCompleted) {
-			newVisibleTasks.completed = allTasks.completed.filter(matchesFilters);
-		}
-		else {
-			newVisibleTasks.completed = [];
-		}
-
-		newVisibleTasks.urgentAndDueSoon = allTasks.urgentAndDueSoon.filter(matchesFilters);
-
-		if(currentFilters.priorities.length === 0 || currentFilters.priorities.contains('HIGH')) {
-			newVisibleTasks.highPriority = allTasks.highPriority.filter(matchesFilters);
-		}
-		else {
-			newVisibleTasks.highPriority = [];
-		}
-
-		// HERE extract logic above (sublists) into generic structures
-		// or remove sublists? list optimizations, other aggregation options, etc.
-
-		setVisibleTasks(newVisibleTasks);
-	};
-
-	const loadRawTasks = () => {
-		loadRawTasksIntoRefs();
-
-		// TODO transform refs into state (reusable in any use case of reload - split domains and tasks)
+	const refreshVisibility = () => {
 		
-		const newVisibleTasks = {
-			urgent: [ ...visibleTasks.urgent ],
-			highPriority: [ ...visibleTasks.highPriority ],
-			mediumPriority: [ ...visibleTasks.mediumPriority ],
-			lowPriority: [ ...visibleTasks.lowPriority ],
-			completed: [ ...visibleTasks.completed ]
-		};
+		// TODO apply to first load or afterwards?
+		// think about all interactions (load raw task, delete task, add task, etc.) and draw a graph
 
-		const newFilterDomains = {
-			priorities: [ ...filterDomains.priorities ],
-			owners: [ ...filterDomains.owners ],
-			dueDates: [ ...filterDomains.dueDates ],
-			tags: [ ...filterDomains.tags ]
-		};
+		task.visible = matchesFilters(task, currentFilters);
 
-		const newInputDomains = {
-			priorities: inputDomains.priorities,
-			owners: [ ...inputDomains.owners ],
-			tags: [ ...inputDomains.tags ]
-		};
-
-		
 	};
 
 
@@ -427,13 +384,8 @@ const TasksContainer = () => {
 
 	return (
 		<div>
-			{taskInForm && <TaskFormModal initialTask={taskInForm} onSave={onSaveTask} onDiscard={onCloseModal} onDelete={onDeleteTask}/>}
-			<TasksList title='Urgent' tasks={urgentTasks} onStartEditingTask={onStartEditingTask} showAddTaskButton={true} onStartAddingTask={onStartAddingTask}/>
-			<TasksList title='Due Soon' tasks={dueSoon} onStartEditingTask={onStartEditingTask}/>
-			<TasksList title='High Priority' tasks={highPriorityTasks} onStartEditingTask={onStartEditingTask}/>
-			<TasksList title='Normal Priority' tasks={normalPriorityTasks} onStartEditingTask={onStartEditingTask}/>
-			<TasksList title='Low Priority' tasks={lowPriorityTasks} onStartEditingTask={onStartEditingTask}/>
-			<TasksList title='Completed' tasks={completedTasks} onStartEditingTask={onStartEditingTask}/>
+			{/*taskInForm && <TaskFormModal initialTask={taskInForm} onSave={onSaveTask} onDiscard={onCloseModal} onDelete={onDeleteTask}/>*/}
+			<TasksList tasks={SAMPLE_RAW_INPUT_TASKS} onStartEditingTask={() => {}} showAddTaskButton={true} onStartAddingTask={() => {}}/>
 		</div>
 	);
 };
