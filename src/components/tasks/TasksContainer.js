@@ -1,8 +1,9 @@
 import { useRef, useState } from 'react';
 import TasksList from './TasksList';
 import TaskFormModal from './TaskFormModal';
+import { getInitialDomains, addAllDomains, sortAllDomains, cloneDomains } from '../../logic/DomainsLogic';
 
-const SAMPLE_RAW_INPUT_TASKS = [
+const SAMPLE_INPUT_TASKS = [
 	{
 		id: 'd4e92b5e-6879-4c49-bb76-3c7af2a0cbf2',
 		text: 'Buy groceries',
@@ -188,199 +189,73 @@ const DEFAULT_TASK = {
 	tags: []
 };
 
-const matchesFilters = (task, filters) => {
-	if(task.state === 'COMPLETED' && !filters.showCompleted) {
-		return false;
-	}
-
-	if(filters.priorities.length > 0 && !filters.priorities.includes(task.priority)) {
-		return false;
-	}
-
-	if(filters.owners.length > 0 && !filters.owners.includes(task.priority)) {
-		return false;
-	}
-
-	if(filters.dueDates.length > 0 && !filters.dueDates.includes(task.priority)) {
-		return false;
-	}
-
-	if(filters.tags.length > 0 && task.tags.length > 0 && task.tags.every((tag) => !filters.tags.includes(tag))) {
-		return false;
-	}
-
-	if(filters.text && !new RegExp(filters.text, 'i').test(task.text)) {
-		return false;
-	}
-
-	return true;
-};
-
-const addTask = (rawTask, activeTasks, completedTasks) => {
-	const task = {
-		id: rawTask.id,
-		text: rawTask.text,
-		state: rawTask.state,
-		priority: rawTask.priority,
-		owner: rawTask.owner,
-		dueDate: rawTask.dueDate,
-		tags: [ ...rawTask.tags ],
-		completionDate: rawTask.completionDate,
-		sortPosition: rawTask.sortPosition,
-		visible: false
-	};
-
-	if(task.state === 'ACTIVE') {
-		activeTasks.push(task);
-	}
-	else {
-		completedTasks.push(task);
-	}
-
-	return task;
-};
-
-const addDomain = (domainValue, domainList, updateCount, updateActiveCount) => {
-	if(domainValue) {
-		const domainId = domainValue.toLowerCase();
-		let domain = domainList.find((value) => value.id === domainId);
-		if(!domain) {
-			domain = {
-				id: domainId,
-				label: domainValue,
-				count: 0,
-				activeCount: 0
-			};
-			domainList.push(domain);
-		}
-
-		domain.count += updateCount;
-		domain.activeCount += updateActiveCount;
-	}
-};
-
-const activeTasksCompareFunction = (taskA, taskB) => {
-	const position = taskA.sortPosition - taskB.sortPosition;
-	if(position !== 0) {
-		return position;
-	}
-	if(taskA.id < taskB.id) {
-		return -1;
-	}
-	if(taskA.id > taskB.id) {
-		return 1;
-	}
-	return 0;
-};
-
-const completedTasksCompareFunction = (taskA, taskB) => {
-	return taskA.completionDate - taskB.completionDate;
-};
-
-const domainCompareFunction = (domainA, domainB) => {
-	if(domainA.id < domainB.id) {
-		return -1;
-	}
-	if(domainA.id > domainB.id) {
-		return 1;
-	}
-	return 0;
-};
-
 const TasksContainer = () => {
-
 	const [ activeTasks, setActiveTasks ] = useState([]);
 	const [ completedTasks, setCompletedTasks ] = useState([]);
 
-	const [ priorities, setPriorities ] = useState(() => {
-		const initialPriorities = [];
-		addDomain('URGENT', initialPriorities, 0, 0);
-		addDomain('HIGH', initialPriorities, 0, 0);
-		addDomain('MEDIUM', initialPriorities, 0, 0);
-		addDomain('LOW', initialPriorities, 0, 0);
-		return initialPriorities;
-	});
-	const [ owners, setOwners ] = useState([]);
-	const [ dueDates, setDueDates ] = useState([]);
-	const [ tags, setTags ] = useState([]);
+	const [ domains, setDomains ] = useState(getInitialDomains);
 
 	const currentFilters = useState({ ...DEFAULT_FILTERS });
 
-	const loadRawTasksIntoState = (rawTasks) => {
+	const loadInitialTasks = (tasks) => {
 		const newActiveTasks = [ ...activeTasks ];
 		const newCompletedTasks = [ ...completedTasks ];
-		const newPriorities = [ ...priorities ];
-		const newOwners = [ ...owners ];
-		const newDueDates = [ ...dueDates ];
-		const newTags = [ ...tags ];
+		const newDomains = cloneDomains(domains);
 
-		// Add task and domains for each row task
-		for(const rawTask of rawTasks) {
-			const task = addTask(rawTask, newActiveTasks, newCompletedTasks);
-			const updateCount = 1;
-			const updateActiveCount = task.state === 'ACTIVE' ? 1 : 0;
-			addDomain(task.priority, newPriorities, updateCount, updateActiveCount);
-			addDomain(task.owner, newOwners, updateCount, updateActiveCount);
-			addDomain(task.dueDate, newDueDates, updateCount, updateActiveCount);
-			for(const tag of task.tags) {
-				addDomain(tag, newTags, updateCount, updateActiveCount);
-			}
+		// Add task and domains for each input task
+		for(const task of tasks) {
+			task.visible = matchesFilters(task, currentFilters);
+			addTask(task, newActiveTasks, newCompletedTasks);
+			addAllDomains(task, newDomains);
 		}
 
 		// Sort all lists (except priorities, which are already sorted by default)
 		newActiveTasks.sort(activeTasksCompareFunction);
 		newCompletedTasks.sort(completedTasksCompareFunction);
-		newOwners.sort(domainCompareFunction);
-		newDueDates.sort(domainCompareFunction);
-		newTags.sort(domainCompareFunction);
+		sortAllDomains(newDomains);
 
 		// Update state
 		setActiveTasks(newActiveTasks);
 		setCompletedTasks(newCompletedTasks);
-		setPriorities(newPriorities);
-		setOwners(newOwners);
-		setDueDates(newDueDates);
-		setTags(newTags);
+		setDomains(newDomains);
 	};
 
-	const refreshVisibility = () => {
-		
-		// TODO apply to first load or afterwards?
-		// think about all interactions (load raw task, delete task, add task, etc.) and draw a graph
-
-		task.visible = matchesFilters(task, currentFilters);
-
+	const saveNewTask = (task) => {
+		// clone state
+		// create uuid
+		// set sort position
+		// set visible
+		// add to one of the two task lists (clone)
+		// add all domains
+		// re-sort tasks
+		// if domains changed, re-sort domains
+		// update state
 	};
 
-
-
-
-
-	/*
-
-	const onSaveTask = (task) => {
-		console.log(`save here: ${JSON.stringify(task)}`);
-		setTaskInForm(undefined);
+	const deleteTask = (taskId) => {
+		// clone state
+		// remove from list
+		// remove all domains
+		// if domains changed, re-sort domains
+		// update state
 	};
 
-	const onDeleteTask = (taskId) => {
-		console.log(`delete here: ${JSON.stringify(taskId)}`);
-		setTaskInForm(undefined);
+	const updateTask = (oldTask, newTask) => {
+		// clone state
+		// set visible
+		// if state changes, move from one list to the other
+		// for each changed domain, remove and then add
+		// if domains changed, re-sort domains
+		// if lists changed, re-sort tasks
+		// update state
 	};
 
-	const onCloseModal = () => {
-		setTaskInForm(undefined);
+	const changeFilters = (newFiltrs) => {
+		// clone state
+		// change filter values
+		// set visibile for all tasks (shortcuts for two lists?)
+		// update state
 	};
-
-	const onStartAddingTask = () => {
-		setTaskInForm({ ...DEFAULT_TASK });
-	};
-
-	const onStartEditingTask = (task) => {
-		setTaskInForm({ ...task });
-	};
-
-	*/
 
 	return (
 		<div>
