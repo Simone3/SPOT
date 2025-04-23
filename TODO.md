@@ -1,54 +1,4 @@
 
-# new state logic
-
-load raw
-	create task object
-		sortPosition from saved value
-	add to activeTasks or completedTasks
-		compute visibility based on current filters
-	add/update priorities domains
-	add/update owners domains
-	add/update due dates domains
-	add/update tags domains
-	sort all lists
-	
-add task
-	same as load raw
-		except: sortPosition = 1st sort position - X
-		except: no need to sort tasks
-
-delete task
-	remove from activeTasks or completedTasks
-	remove/update priorities domains
-	remove/update owners domains
-	remove/update due dates domains
-	remove/update tags domains
-	NO need to sort
-
-update task
-	same as delete (old)
-	same as add (new)
-		this must be a different object
-
-change filter
-	change current filters
-	loop activeTasks and completedTasks to update visibility
-		if visibility changes, the object needs to be cloned
-
-complete task
-	same as update
-
-move active task (sort)
-	update activeTasks
-	if next.sortPosition - prev.sortPosition <= 1
-		reload ALL sortPositions of activeTasks (start from 0 and then +X)
-	else
-		this.sortPosition = prev.sortPosition + round((next.sortPosition - prev.sortPosition) / 2)
-
-reset sort
-	sort activeTasks (with custom sort function!)
-	reload ALL sortPosition of activeTasks (start from 0 and then +X)
-
 # refactor
 2 lists: active and completed
 manual sort (active) + fixed sort (completed)
@@ -56,8 +6,9 @@ button to auto-sort active tasks
 	if priority is the same, keep original manual sort!
 edit in place only (only for active tasks?)
 	textarea for text
-		same as text?
+		css same as text?
 		auto-fit height and width?
+		delayed update of main state? save on focus out?
 	on hover
 		show chip placeholders
 		show actions (left?): move (drag&drop + arrows?), edit priority (slider? arrows?), complete, delete?
@@ -73,7 +24,8 @@ error handling
 	allow to retry the action from the notification?
 	or suggest to try to submit form again (careful if form submits only changed data though!)?
 allow to reload from disk with a button in settings
-optional logging to filesystem
+log to filesystem each change (with max lifetime/size)
+batch update/insert events for multiple changes
 
 # others
 change font

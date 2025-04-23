@@ -179,7 +179,7 @@ module.exports = {
 				throw: { after: true }
 			}
 		}],
-		'line-comment-position': [ 1, { position: 'above' }],
+		'line-comment-position': 0,
 		'lines-around-comment': [ 1, {
 			beforeBlockComment: false,
 			afterBlockComment: false,
@@ -206,7 +206,7 @@ module.exports = {
 		'no-array-constructor': 1,
 		'no-bitwise': 1,
 		'no-continue': 0,
-		'no-inline-comments': 1,
+		'no-inline-comments': 0,
 		'no-lonely-if': 1,
 		'no-mixed-spaces-and-tabs': [ 1 ],
 		'no-multiple-empty-lines': [ 1, { max: 1 }],

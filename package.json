@@ -9,7 +9,7 @@
 		"test-react": "react-scripts test",
 		"eject-react": "react-scripts eject",
 		"start": "electron-forge start",
-		"test": "echo \"Error: no test specified\" && exit 1",
+		"test": "react-scripts test",
 		"package": "electron-forge package",
 		"make": "electron-forge make",
 		"lint": "eslint 'src/**/*.js'"
