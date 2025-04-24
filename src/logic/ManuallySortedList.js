@@ -1,5 +1,10 @@
 const SORT_POSITION_STEP = 100;
 
+/**
+ * Inserts an item at position "index" (shifting all following elements, the current "index" element included).
+ * It also sets the "sortPosition" field in the new element.
+ * It may recompute the "sortPosition" fields of other elements if space needs to be made.
+ */
 export const insertIntoManuallySortedList = (list, element, index) => {
 	if(!Array.isArray(list)) {
 		throw Error('List is not an array');
@@ -56,6 +61,11 @@ export const insertIntoManuallySortedList = (list, element, index) => {
 	return list;
 };
 
+/**
+ * Moves the item at position "fromIndex" to position "toIndex" (i.e. it will be placed in the position BEFORE the current "toIndex" element).
+ * It also updates the "sortPosition" field in the moved element.
+ * It may recompute the "sortPosition" fields of other elements if space needs to be made.
+ */
 export const moveInManuallySortedList = (list, fromIndex, toIndex) => {
 	if(!Array.isArray(list)) {
 		throw Error('List is not an array');
@@ -69,8 +79,8 @@ export const moveInManuallySortedList = (list, fromIndex, toIndex) => {
 		return list;
 	}
 
-	// Remove from toIndex and re-add to toIndex (this can probably be implemented more efficiently but enough for now...)
-	const element = list.splice(fromIndex, 1)[0];
+	// Remove element from toIndex, clone it and re-add it to toIndex (this can probably be implemented more efficiently but enough for now...)
+	const element = { ...list.splice(fromIndex, 1)[0] };
 	insertIntoManuallySortedList(list, element, fromIndex < toIndex ? toIndex - 1 : toIndex);
 	return list;
 };

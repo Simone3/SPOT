@@ -1,6 +1,6 @@
 import { addAllTaskDomains, sortAllDomainLists, cloneDomainLists } from './DomainsLogic';
 import { matchesFilters } from './FiltersLogic';
-import { insertIntoManuallySortedList } from './ManuallySortedList';
+import { insertIntoManuallySortedList, moveInManuallySortedList } from './ManuallySortedList';
 
 /*
 	const task = {
@@ -108,16 +108,27 @@ export const loadBackEndTasks = (backEndTasks, taskLists, domainLists, filters) 
 	sortAllDomainLists(domainLists);
 };
 
+/**
+ * Adds a new task to the beginning of the completed tasks list (and also sets the completion date to now)
+ */
 const saveNewCompletedTask = (taskLists, task) => {
 	task.completionDate = new Date();
 	taskLists.completed.unshift(task);
 };
 
+/**
+ * Adds a new task to the beginning of the (manually sorted) active tasks list (and also removes any completion date)
+ */
 const saveNewActiveTask = (taskLists, task) => {
 	task.completionDate = undefined;
 	insertIntoManuallySortedList(taskLists.active, task, 0);
 };
 
+/**
+ * Adds a new task to the proper tasks lists.
+ * It also sets some task fields: id, visible, completionDate, sortPosition.
+ * It also adds any domain to the domains lists and re-sorts them.
+ */
 export const saveNewTask = (task, taskLists, domainLists, filters) => {
 	task.id = crypto.randomUUID();
 	task.visible = matchesFilters(task, filters);
@@ -130,17 +141,44 @@ export const saveNewTask = (task, taskLists, domainLists, filters) => {
 	}
 
 	addAllTaskDomains(task, domainLists);
-
-	// set sort position
-
-	// add to one of the two task lists (clone)
-
-	// add all domains
-
-	// re-sort tasks
-	// if domains changed, re-sort domains
+	sortAllDomainLists(domainLists);
 };
 
+/**
+ * Moves an active task at position "fromIndex" to position "toIndex" (i.e. it will be placed in the position BEFORE the current "toIndex" element).
+ * It also updates the "sortPosition" field in the moved task.
+ * It may recompute the "sortPosition" fields of other tasks if space needs to be made.
+ */
 export const moveActiveTask = (taskLists, fromIndex, toIndex) => {
+	moveInManuallySortedList(taskLists.active, fromIndex, toIndex);
+};
 
+/**
+ * Helper for "refreshTasksVisibility" to handle both lists in the same way.
+ */
+const refreshTasksVisibilityHelper = (taskList, filters) => {
+	for(let i = 0; i < taskList.length; i++) {
+		const task = taskList[i];
+		const newVisibility = matchesFilters(task, filters);
+		if(task.visible !== newVisibility) {
+			taskList[i] = {
+				...task,
+				visible: newVisibility
+			};
+		}
+	}
+};
+
+/**
+ * Refreshes the "visibile" field of all tasks based on the new filters.
+ * It clones any changed task.
+ */
+export const refreshTasksVisibility = (taskLists, oldFilters, newFilters) => {
+	// Always refresh active tasks
+	refreshTasksVisibilityHelper(taskLists.active, newFilters);
+
+	// Refresh completed tasks only if showCompleted is active and/or showCompleted changed just now
+	if(newFilters.showCompleted || newFilters.showCompleted !== oldFilters.showCompleted) {
+		refreshTasksVisibilityHelper(taskLists.completed, newFilters);
+	}
 };

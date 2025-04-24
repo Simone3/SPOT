@@ -26,6 +26,7 @@ error handling
 allow to reload from disk with a button in settings
 log to filesystem each change (with max lifetime/size)
 batch update/insert events for multiple changes
+	careful with "sortPosition" updates in ManuallySortedList...
 
 # others
 change font

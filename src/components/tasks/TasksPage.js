@@ -4,7 +4,7 @@ import Pane from '../common/Pane';
 import TaskFilters from './TaskFilters';
 import TasksContainer from './TasksContainer';
 import { getInitialDomainLists, cloneDomainLists } from '../../logic/DomainsLogic';
-import { getInitialTaskLists, cloneTaskLists, loadBackEndTasks, saveNewTask } from '../../logic/TasksLogic';
+import { getInitialTaskLists, cloneTaskLists, loadBackEndTasks, saveNewTask, refreshTasksVisibility } from '../../logic/TasksLogic';
 import { getInitialFilters } from '../../logic/FiltersLogic';
 
 const SAMPLE_INPUT_TASKS = [
@@ -192,11 +192,15 @@ const TasksPage = () => {
 		<Page>
 			<Pane relativeSize={1}>
 				<TaskFilters
-					onFilterChange={(newFiltrs) => {
-						// clone state
-						// change filter values
-						// set visibile for all tasks (shortcuts for two lists?)
-						// update state
+					onFilterChange={(changedFilters) => {
+						const newTaskLists = cloneTaskLists(taskLists);
+						const newFilters = {
+							...filters,
+							...changedFilters
+						};
+						refreshTasksVisibility(newTaskLists, filters, newFilters);
+						setFilters(newFilters);
+						setTaskLists(newTaskLists);
 					}}
 				/>
 			</Pane>
