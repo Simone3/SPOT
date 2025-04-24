@@ -1,25 +1,29 @@
 const SORT_POSITION_STEP = 100;
 
 export const insertIntoManuallySortedList = (list, element, index) => {
+	if(!Array.isArray(list)) {
+		throw Error('List is not an array');
+	}
+
 	// Empty list: start with position 0
 	if(list.length === 0) {
 		element.sortPosition = 0;
 		list.push(element);
-		return;
+		return list;
 	}
 
 	// Add at the start of the list: position is the current first element minus the step
 	if(index <= 0) {
 		element.sortPosition = list[0].sortPosition - SORT_POSITION_STEP;
 		list.unshift(element);
-		return;
+		return list;
 	}
 
 	// Add at the end of the list: position is the current last element plus the step
 	if(index >= list.length) {
 		element.sortPosition = list[list.length - 1].sortPosition + SORT_POSITION_STEP;
 		list.push(element);
-		return;
+		return list;
 	}
 
 	// Add in the middle of the list and there's space for the new element: position is the mid point between the previous and next elements
@@ -28,7 +32,7 @@ export const insertIntoManuallySortedList = (list, element, index) => {
 	if(nextSortPosition - prevSortPosition > 1) {
 		element.sortPosition = prevSortPosition + Math.round((nextSortPosition - prevSortPosition) / 2);
 		list.splice(index, 0, element);
-		return;
+		return list;
 	}
 
 	// Add in the middle of the list but there's no space for the new element: reset all positions before or after the new element (included)
@@ -49,4 +53,24 @@ export const insertIntoManuallySortedList = (list, element, index) => {
 		}
 	}
 	list.splice(index, 0, element);
+	return list;
+};
+
+export const moveInManuallySortedList = (list, fromIndex, toIndex) => {
+	if(!Array.isArray(list)) {
+		throw Error('List is not an array');
+	}
+
+	if(fromIndex < 0 || fromIndex >= list.length) {
+		throw Error('Index out of bound');
+	}
+
+	if(fromIndex === toIndex || fromIndex === toIndex - 1) {
+		return list;
+	}
+
+	// Remove from toIndex and re-add to toIndex (this can probably be implemented more efficiently but enough for now...)
+	const element = list.splice(fromIndex, 1)[0];
+	insertIntoManuallySortedList(list, element, fromIndex < toIndex ? toIndex - 1 : toIndex);
+	return list;
 };
