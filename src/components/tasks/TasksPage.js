@@ -4,7 +4,7 @@ import Pane from '../common/Pane';
 import TaskFilters from './TaskFilters';
 import TasksContainer from './TasksContainer';
 import { getInitialDomainLists, cloneDomainLists } from '../../logic/DomainsLogic';
-import { getInitialTaskLists, cloneTaskLists, loadBackEndTasks, saveNewTask, refreshTasksVisibility } from '../../logic/TasksLogic';
+import { getInitialTaskLists, cloneTaskLists, loadBackEndTasks, saveNewTask, refreshTasksVisibility, deleteTask, updateTask } from '../../logic/TasksLogic';
 import { getInitialFilters } from '../../logic/FiltersLogic';
 
 const SAMPLE_INPUT_TASKS = [
@@ -213,22 +213,19 @@ const TasksPage = () => {
 						setTaskLists(newTaskLists);
 						setDomainLists(newDomainLists);
 					}}
-					onUpdateTask={(oldTask, newTask) => {
-						// clone state
-						// set visible
-						// if state changes, move from one list to the other
-						// if state changes, set/reset completion date
-						// for each changed domain, remove and then add
-						// if domains changed, re-sort domains
-						// if lists changed, re-sort tasks
-						// update state
+					onUpdateTask={(oldTask, changedValues) => {
+						const newTaskLists = cloneTaskLists(taskLists);
+						const newDomainLists = cloneDomainLists(domainLists);
+						updateTask(newTaskLists, newDomainLists, filters, oldTask, changedValues);
+						setTaskLists(newTaskLists);
+						setDomainLists(newDomainLists);
 					}}
-					onDeleteTask={(taskId) => {
-						// clone state
-						// remove from list
-						// remove all domains
-						// if domains changed, re-sort domains
-						// update state
+					onDeleteTask={(task) => {
+						const newTaskLists = cloneTaskLists(taskLists);
+						const newDomainLists = cloneDomainLists(domainLists);
+						deleteTask(task, newTaskLists, newDomainLists);
+						setTaskLists(newTaskLists);
+						setDomainLists(newDomainLists);
 					}}
 				/>
 			</Pane>

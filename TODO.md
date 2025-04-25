@@ -27,6 +27,7 @@ allow to reload from disk with a button in settings
 log to filesystem each change (with max lifetime/size)
 batch update/insert events for multiple changes
 	careful with "sortPosition" updates in ManuallySortedList...
+move deleted tasks into another table?
 
 # others
 change font
@@ -48,6 +49,9 @@ show notification popups
 		task updated
 		task completed
 		empty task discarded
+improve performance if needed
+	moveInManuallySortedList removes and adds (splice twice)
+	updateTask always refreshes all domains even if none changed
 
 # notes
 filters with all tags

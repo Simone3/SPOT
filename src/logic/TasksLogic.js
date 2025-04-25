@@ -1,31 +1,6 @@
-import { addAllTaskDomains, sortAllDomainLists, cloneDomainLists } from './DomainsLogic';
+import { addAllTaskDomains, sortAllDomainLists, removeAllDomains } from './DomainsLogic';
 import { matchesFilters } from './FiltersLogic';
 import { insertIntoManuallySortedList, moveInManuallySortedList } from './ManuallySortedList';
-
-/*
-	const task = {
-		id: rawTask.id,
-		text: rawTask.text,
-		state: rawTask.state,
-		priority: rawTask.priority,
-		owner: rawTask.owner,
-		dueDate: rawTask.dueDate,
-		tags: [ ...rawTask.tags ],
-		completionDate: rawTask.completionDate,
-		sortPosition: rawTask.sortPosition,
-		visible: undefined
-	};
-
-	const DEFAULT_TASK = {
-		id: undefined,
-		text: undefined,
-		state: 'ACTIVE',
-		priority: 'HIGH',
-		owner: undefined,
-		dueDate: undefined,
-		tags: []
-	};
-*/
 
 /**
  * Returns the initial task lists.
@@ -42,8 +17,8 @@ export const getInitialTaskLists = () => {
  */
 export const cloneTaskLists = (taskLists) => {
 	return {
-		active: [ taskLists.active ],
-		completed: [ taskLists.completed ]
+		active: [ ...taskLists.active ],
+		completed: [ ...taskLists.completed ]
 	};
 };
 
@@ -109,17 +84,17 @@ export const loadBackEndTasks = (backEndTasks, taskLists, domainLists, filters) 
 };
 
 /**
- * Adds a new task to the beginning of the completed tasks list (and also sets the completion date to now)
+ * Adds a task to the beginning of the completed tasks list (and also sets the completion date to now).
  */
-const saveNewCompletedTask = (taskLists, task) => {
+const insertCompletedTask = (taskLists, task) => {
 	task.completionDate = new Date();
 	taskLists.completed.unshift(task);
 };
 
 /**
- * Adds a new task to the beginning of the (manually sorted) active tasks list (and also removes any completion date)
+ * Adds a task to the beginning of the (manually sorted) active tasks list (and also removes any completion date).
  */
-const saveNewActiveTask = (taskLists, task) => {
+const insertActiveTask = (taskLists, task) => {
 	task.completionDate = undefined;
 	insertIntoManuallySortedList(taskLists.active, task, 0);
 };
@@ -134,10 +109,10 @@ export const saveNewTask = (task, taskLists, domainLists, filters) => {
 	task.visible = matchesFilters(task, filters);
 
 	if(task.state === 'ACTIVE') {
-		saveNewActiveTask(taskLists, task);
+		insertActiveTask(taskLists, task);
 	}
 	else {
-		saveNewCompletedTask(taskLists, task);
+		insertCompletedTask(taskLists, task);
 	}
 
 	addAllTaskDomains(task, domainLists);
@@ -154,7 +129,7 @@ export const moveActiveTask = (taskLists, fromIndex, toIndex) => {
 };
 
 /**
- * Helper for "refreshTasksVisibility" to handle both lists in the same way.
+ * Helper to refresh the "visibile" field in an array based on the new filters.
  */
 const refreshTasksVisibilityHelper = (taskList, filters) => {
 	for(let i = 0; i < taskList.length; i++) {
@@ -181,4 +156,56 @@ export const refreshTasksVisibility = (taskLists, oldFilters, newFilters) => {
 	if(newFilters.showCompleted || newFilters.showCompleted !== oldFilters.showCompleted) {
 		refreshTasksVisibilityHelper(taskLists.completed, newFilters);
 	}
+};
+
+/**
+ * Helper to remove a task from an array.
+ */
+const removeTaskFromList = (taskList, task) => {
+	const index = taskList.findIndex((arrayTask) => task.id === arrayTask.id);
+	if(index === -1) {
+		throw Error(`Task ${task.id} does not exist, cannot remove from list!`);
+	}
+	taskList.splice(index);
+};
+
+/**
+ * Removes a task from its task list.
+ * It also removes any domain from the domains lists and re-sorts them.
+ */
+export const deleteTask = (taskLists, domainLists, task) => {
+	if(task.state === 'ACTIVE') {
+		removeTaskFromList(taskLists.active, task);
+	}
+	else {
+		removeTaskFromList(taskLists.completed, task);
+	}
+
+	removeAllDomains(task, domainLists);
+	sortAllDomainLists(domainLists);
+};
+
+export const updateTask = (taskLists, domainLists, filters, oldTask, changedValues) => {
+	const newTask = {
+		...oldTask,
+		...changedValues
+	};
+	newTask.visible = matchesFilters(newTask, filters);
+
+	// If state changes, move the task from one list to the other (and set/reset the completion date)
+	if(oldTask.state !== newTask.state) {
+		if(oldTask.state === 'ACTIVE') {
+			removeTaskFromList(taskLists.active, oldTask);
+			insertCompletedTask(taskLists, newTask);
+		}
+		else {
+			removeTaskFromList(taskLists.completed, oldTask);
+			insertActiveTask(taskLists, newTask);
+		}
+	}
+
+	// Refresh domains (this can be implemented more efficiently but good enough for now...)
+	removeAllDomains(oldTask, domainLists);
+	addAllTaskDomains(newTask, domainLists);
+	sortAllDomainLists(domainLists);
 };
