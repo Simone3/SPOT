@@ -9,22 +9,25 @@ import MainContent from './components/common/MainContent';
 import { ClickOutsideContextProvider } from './contexts/ClickOutsideContext';
 import TagsPage from './components/tags/TagsPage';
 import SettingsPage from './components/settings/SettingsPage';
+import { DatesContextProvider } from './contexts/DatesContexr';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
 	<React.StrictMode>
-		<ClickOutsideContextProvider>
-			<BrowserRouter>
-				<Sidebar/>
-				<MainContent>
-					<Routes>
-						<Route path='/' element={<TasksPage/>}/>
-						<Route path='/notes' element={<NotesPage/>}/>
-						<Route path='/tags' element={<TagsPage/>}/>
-						<Route path='/settings' element={<SettingsPage/>}/>
-					</Routes>
-				</MainContent>
-			</BrowserRouter>
-		</ClickOutsideContextProvider>
+		<DatesContextProvider>
+			<ClickOutsideContextProvider>
+				<BrowserRouter>
+					<Sidebar/>
+					<MainContent>
+						<Routes>
+							<Route path='/' element={<TasksPage/>}/>
+							<Route path='/notes' element={<NotesPage/>}/>
+							<Route path='/tags' element={<TagsPage/>}/>
+							<Route path='/settings' element={<SettingsPage/>}/>
+						</Routes>
+					</MainContent>
+				</BrowserRouter>
+			</ClickOutsideContextProvider>
+		</DatesContextProvider>
 	</React.StrictMode>
 );

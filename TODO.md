@@ -61,6 +61,8 @@ text search
 sorted by date (with a section for each day?)
 
 # maybe in the future
+animations when task list changes
+lang / translations (define all strings in lang file)
 tag page that allows to set colors, add search keywords for each tag, merge tags, delete tags, etc.
 timeline section for events with dates
 localization
@@ -71,7 +73,7 @@ global search for both tasks and notes
 drag&drop from outlook
 search by keyword split + quotes for exact match (or at least fix searching if spaces do not exactly match in the two strings)
 undo / history / redo
-customize working days
+working days should account for holidays (regional?) + customize working days (user)
 change default filters
 change default priority (task creation)
 limit total filter chips + way to filter them if many values

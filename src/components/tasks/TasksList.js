@@ -3,30 +3,37 @@ import Task from './Task';
 import Clickable from '../common/Clickable';
 import AddIcon from '../icons/AddIcon';
 
-const TasksList = ({ title, tasks, onStartEditingTask, showAddTaskButton, onStartAddingTask }) => {
-	if(!tasks || tasks.length === 0) {
-		return null;
-	}
-
+const TasksList = ({ title, tasks, showAddNew, onSaveNewTask, onUpdateTask, onDeleteTask }) => {
 	return (
 		<div>
 			<div className='tasks-list-header-line'>
 				<h3 className='tasks-list-title'>{title}</h3>
-				{showAddTaskButton && <div className='tasks-list-actions'>
-					<Clickable onClick={onStartAddingTask}>
+				{showAddNew && <div className='tasks-list-actions'>
+					<Clickable onClick={onSaveNewTask}>
 						<AddIcon className='tasks-list-add-icon'/>
-						<div className='tasks-list-add-label'>Add new task</div>
+						<div className='tasks-list-add-label'>TODO: add new task to be placed here!</div>
 					</Clickable>
 				</div>}
 			</div>
-			{tasks.map((task) =>
-				<Task
-					key={task.id}
-					task={task}
-					onEdit={() => {
-						onStartEditingTask(task);
-				}}/>
-			)}
+			{tasks.map((task) => {
+				if(task.visible) {
+					return (
+						<Task
+							key={task.id}
+							task={task}
+							onSave={(newValues) => {
+								onUpdateTask(task, newValues);
+							}}
+							onDelete={() => {
+								onDeleteTask(task);
+							}}
+						/>
+					);
+				}
+				else {
+					return undefined;
+				}
+			})}
 		</div>
 	);
 };

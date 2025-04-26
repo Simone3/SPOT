@@ -3,7 +3,7 @@ import { matchesFilters } from './FiltersLogic';
 import { insertIntoManuallySortedList, moveInManuallySortedList } from './ManuallySortedList';
 
 /**
- * Returns the initial task lists.
+ * Returns a new object containing the initial task lists.
  */
 export const getInitialTaskLists = () => {
 	return {

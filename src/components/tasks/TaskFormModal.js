@@ -10,6 +10,9 @@ import { ClickOutsideContext } from '../../contexts/ClickOutsideContext';
 import DeleteIcon from '../icons/DeleteIcon';
 import Clickable from '../common/Clickable';
 
+/**
+ * FIXME delete me
+ */
 const TaskFormModal = ({ initialTask, onSave, onDiscard, onDelete }) => {
 	const [ text, setText ] = useState(initialTask.text || '');
 	const [ owner, setOwner ] = useState(initialTask.owner || '');

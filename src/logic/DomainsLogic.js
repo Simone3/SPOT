@@ -89,7 +89,7 @@ export const removeAllDomains = (task, domainLists) => {
 };
 
 /**
- * Returns the initial domains.
+ * Returns a new object containing the initial domains.
  */
 export const getInitialDomainLists = () => {
 	const priorities = [];

@@ -1,6 +1,6 @@
 
 /**
- * Returns the initial filters.
+ * Returns a new object containing the initial filters.
  */
 export const getInitialFilters = () => {
 	return {

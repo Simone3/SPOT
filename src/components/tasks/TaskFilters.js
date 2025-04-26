@@ -1,34 +1,17 @@
 import './TaskFilters.css';
-import { useState } from 'react';
 import ButtonsSelect from '../inputs/ButtonsSelect';
 import Checkbox from '../inputs/Checkbox';
 import TextInput from '../inputs/TextInput';
 import Clickable from '../common/Clickable';
 import ResetIcon from '../icons/ResetIcon';
 
-const TaskFilters = () => {
-	const [ text, setText ] = useState('');
-	const [ owners, setOwners ] = useState([]);
-	const [ dueDates, setDueDates ] = useState([]);
-	const [ priorities, setPriorities ] = useState([]);
-	const [ tags, setTags ] = useState([]);
-	const [ showCompleted, setShowCompleted ] = useState(false);
-
-	const doResetDefaults = () => {
-		setText('');
-		setOwners([]);
-		setDueDates([]);
-		setPriorities([]);
-		setTags([]);
-		setShowCompleted(false);
-	};
-
+const TaskFilters = ({ filters, onFilterChange, onResetDefaultFilters }) => {
 	return (
 		<div className='task-filters-container'>
 			<div className='task-filters-header-line'>
 				<h3 className='task-filters-title'>Filters</h3>
 				<div className='task-filters-actions'>
-					<Clickable onClick={doResetDefaults}>
+					<Clickable onClick={onResetDefaultFilters}>
 						<ResetIcon className='task-filters-reset-icon'/>
 						<div className='task-filters-reset-label'>Reset to default</div>
 					</Clickable>
@@ -37,13 +20,13 @@ const TaskFilters = () => {
 			<TextInput
 				label='Filter content'
 				placeholder='Search...'
-				value={text}
-				onChange={setText}/>
+				value={filters.text}
+				onChange={(value) => onFilterChange({ text: value })}/>
 			<ButtonsSelect
 				label='Filter priorities'
 				allowMultiSelect={true}
-				value={priorities}
-				onChange={setPriorities}
+				value={filters.priorities}
+				onChange={(value) => onFilterChange({ priorities: value })}
 				options={[
 					{ key: 'URGENT', label: 'Urgent', color: 'var(--colors-priority-urgent)' },
 					{ key: 'HIGH', label: 'High', color: 'var(--colors-priority-high)' },
@@ -53,8 +36,8 @@ const TaskFilters = () => {
 			<ButtonsSelect
 				label='Filter owners'
 				allowMultiSelect={true}
-				value={owners}
-				onChange={setOwners}
+				value={filters.owners}
+				onChange={(value) => onFilterChange({ owners: value })}
 				options={[
 					{ key: 'None (me)', label: 'None (me)' },
 					{ key: 'Some Person', label: 'Some Person' },
@@ -67,8 +50,8 @@ const TaskFilters = () => {
 			<ButtonsSelect
 				label='Filter due dates'
 				allowMultiSelect={true}
-				value={dueDates}
-				onChange={setDueDates}
+				value={filters.dueDates}
+				onChange={(value) => onFilterChange({ dueDates: value })}
 				options={[
 					{ key: 'None', label: 'None' },
 					{ key: 'Today', label: 'Today' },
@@ -79,8 +62,8 @@ const TaskFilters = () => {
 			<ButtonsSelect
 				label='Filter tags'
 				allowMultiSelect={true}
-				value={tags}
-				onChange={setTags}
+				value={filters.tags}
+				onChange={(value) => onFilterChange({ tags: value })}
 				options={[
 					{ key: 'None', label: 'None' },
 					{ key: 'A tag', label: 'A tag' },
@@ -88,8 +71,8 @@ const TaskFilters = () => {
 				]}/>
 			<Checkbox
 				label='Show completed'
-				value={showCompleted}
-				onChange={setShowCompleted}/>
+				value={filters.showCompleted}
+				onChange={(value) => onFilterChange({ showCompleted: value })}/>
 		</div>
 	);
 };

@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react';
 import Page from '../common/Page';
 import Pane from '../common/Pane';
 import TaskFilters from './TaskFilters';
-import TasksContainer from './TasksContainer';
 import { getInitialDomainLists, cloneDomainLists } from '../../logic/DomainsLogic';
 import { getInitialTaskLists, cloneTaskLists, loadBackEndTasks, saveNewTask, refreshTasksVisibility, deleteTask, updateTask } from '../../logic/TasksLogic';
 import { getInitialFilters } from '../../logic/FiltersLogic';
+import TasksList from './TasksList';
 
 const SAMPLE_INPUT_TASKS = [
 	{
@@ -175,9 +175,9 @@ const SAMPLE_INPUT_TASKS = [
 ];
 
 const TasksPage = () => {
-	const [ taskLists, setTaskLists ] = useState(getInitialTaskLists);
-	const [ domainLists, setDomainLists ] = useState(getInitialDomainLists);
-	const [ filters, setFilters ] = useState(getInitialFilters);
+	const [ taskLists, setTaskLists ] = useState(getInitialTaskLists());
+	const [ domainLists, setDomainLists ] = useState(getInitialDomainLists());
+	const [ filters, setFilters ] = useState(getInitialFilters());
 
 	// FIXME: load from DB + fix the empty dependency array
 	useEffect(() => {
@@ -187,6 +187,30 @@ const TasksPage = () => {
 		setTaskLists(newTaskLists);
 		setDomainLists(newDomainLists);
 	}, []);
+
+	const onSaveNewTask = (task) => {
+		const newTaskLists = cloneTaskLists(taskLists);
+		const newDomainLists = cloneDomainLists(domainLists);
+		saveNewTask(task, newTaskLists, newDomainLists, filters);
+		setTaskLists(newTaskLists);
+		setDomainLists(newDomainLists);
+	};
+
+	const onUpdateTask = (oldTask, changedValues) => {
+		const newTaskLists = cloneTaskLists(taskLists);
+		const newDomainLists = cloneDomainLists(domainLists);
+		updateTask(newTaskLists, newDomainLists, filters, oldTask, changedValues);
+		setTaskLists(newTaskLists);
+		setDomainLists(newDomainLists);
+	};
+
+	const onDeleteTask = (task) => {
+		const newTaskLists = cloneTaskLists(taskLists);
+		const newDomainLists = cloneDomainLists(domainLists);
+		deleteTask(task, newTaskLists, newDomainLists);
+		setTaskLists(newTaskLists);
+		setDomainLists(newDomainLists);
+	};
 
 	return (
 		<Page>
@@ -202,32 +226,30 @@ const TasksPage = () => {
 						setFilters(newFilters);
 						setTaskLists(newTaskLists);
 					}}
+					onResetDefaultFilters={() => {
+						setFilters(getInitialFilters());
+					}}
 				/>
 			</Pane>
 			<Pane relativeSize={2}>
-				<TasksContainer
-					onSaveNewTask={(task) => {
-						const newTaskLists = cloneTaskLists(taskLists);
-						const newDomainLists = cloneDomainLists(domainLists);
-						saveNewTask(task, newTaskLists, newDomainLists, filters);
-						setTaskLists(newTaskLists);
-						setDomainLists(newDomainLists);
-					}}
-					onUpdateTask={(oldTask, changedValues) => {
-						const newTaskLists = cloneTaskLists(taskLists);
-						const newDomainLists = cloneDomainLists(domainLists);
-						updateTask(newTaskLists, newDomainLists, filters, oldTask, changedValues);
-						setTaskLists(newTaskLists);
-						setDomainLists(newDomainLists);
-					}}
-					onDeleteTask={(task) => {
-						const newTaskLists = cloneTaskLists(taskLists);
-						const newDomainLists = cloneDomainLists(domainLists);
-						deleteTask(task, newTaskLists, newDomainLists);
-						setTaskLists(newTaskLists);
-						setDomainLists(newDomainLists);
-					}}
+				<TasksList
+					title='Tasks'
+					tasks={taskLists.active}
+					showAddNew={true}
+					onSaveNewTask={onSaveNewTask}
+					onUpdateTask={onUpdateTask}
+					onDeleteTask={onDeleteTask}
 				/>
+				{filters.showCompleted &&
+					<TasksList
+						title='Completed Tasks'
+						tasks={taskLists.completed}
+						showAddNew={false}
+						onSaveNewTask={onSaveNewTask}
+						onUpdateTask={onUpdateTask}
+						onDeleteTask={onDeleteTask}
+					/>
+				}
 			</Pane>
 		</Page>
 	);
