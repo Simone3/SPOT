@@ -1,61 +1,141 @@
 
 /**
+ * Returns a new object containing the initial domains.
+ */
+export const getInitialDomainLists = () => {
+	return {
+		priorities: [{
+			key: 'urgent',
+			value: 'URGENT',
+			label: 'Urgent',
+			color: 'var(--colors-priority-urgent)',
+			persistent: true,
+			count: 0,
+			activeCount: 0
+		}, {
+			key: 'high',
+			value: 'HIGH',
+			label: 'High',
+			color: 'var(--colors-priority-high)',
+			persistent: true,
+			count: 0,
+			activeCount: 0
+		}, {
+			key: 'normal',
+			value: 'NORMAL',
+			label: 'Normal',
+			color: 'var(--colors-priority-normal)',
+			persistent: true,
+			count: 0,
+			activeCount: 0
+		}, {
+			key: 'low',
+			value: 'LOW',
+			label: 'Low',
+			color: 'var(--colors-priority-low)',
+			persistent: true,
+			count: 0,
+			activeCount: 0
+		}],
+		owners: [{
+			key: `no-owner-${crypto.randomUUID()}`,
+			value: undefined,
+			label: 'None (me)',
+			color: undefined,
+			persistent: true,
+			count: 0,
+			activeCount: 0
+		}],
+		dueDates: [{
+			key: `no-due-date-${crypto.randomUUID()}`,
+			value: undefined,
+			label: 'None',
+			color: undefined,
+			persistent: true,
+			count: 0,
+			activeCount: 0
+		}],
+		tags: []
+	};
+};
+
+/**
+ * Clones the object and the contained lists (but not each domain entry).
+ */
+export const cloneDomainLists = (domainLists) => {
+	return {
+		priorities: [ ...domainLists.priorities ],
+		owners: [ ...domainLists.owners ],
+		dueDates: [ ...domainLists.dueDates ],
+		tags: [ ...domainLists.tags ]
+	};
+};
+
+/**
  * Adds a domain value to the domains list (either by creating a new entry or by cloning + updating an existing entry counter).
- * Does nothing for an empty domain value.
  */
 const addDomain = (domainValue, domainList, updateCount, updateActiveCount) => {
-	if(domainValue) {
-		// Find domain by ID
-		const domainId = domainValue.toLowerCase();
-		const domainIndex = domainList.findIndex((value) => value.id === domainId);
+	// Set falsey values to undefined
+	if(!domainValue) {
+		domainValue = undefined;
+	}
 
-		let domain;
-		if(domainIndex === -1) {
-			// Create new domain and add it to the list
-			domain = {
-				id: domainId,
-				label: domainValue,
-				count: 0,
-				activeCount: 0
-			};
-			domainList.push(domain);
-		}
-		else {
-			// Clone domain and update the list
-			domain = { ...domainList[domainIndex] };
-			domainList[domainIndex] = domain;
-		}
+	// Find domain by value
+	const domainIndex = domainList.findIndex((domain) => domain.value === domainValue);
 
-		// Update counters
+	// Skip empty domain value if there's no predefined domain value for it
+	if(domainIndex === -1 && !domainValue) {
+		return;
+	}
+
+	let domain;
+	if(domainIndex === -1) {
+		// Create new domain and add it to the list
+		domain = {
+			key: String(domainValue),
+			value: domainValue,
+			label: domainValue,
+			color: undefined,
+			persistent: false,
+			count: updateCount,
+			activeCount: updateActiveCount
+		};
+		domainList.push(domain);
+	}
+	else {
+		// Clone domain, update counters and update the list
+		domain = { ...domainList[domainIndex] };
 		domain.count += updateCount;
 		domain.activeCount += updateActiveCount;
+		domainList[domainIndex] = domain;
 	}
 };
 
 /**
  * Removes a domain value from the domains list (either by removing the entry altogether or by cloning + updating the entry counter).
- * Does nothing for an empty domain value.
  */
 const removeDomain = (domainValue, domainList, updateCount, updateActiveCount) => {
-	if(domainValue) {
-		// Find domain by ID
-		const domainId = domainValue.toLowerCase();
-		const domainIndex = domainList.findIndex((value) => value.id === domainId);
+	// Set falsey values to undefined
+	if(!domainValue) {
+		domainValue = undefined;
+	}
 
-		if(domainIndex !== -1) {
-			let domain = domainList[domainIndex];
+	// Find domain by value
+	const domainIndex = domainList.findIndex((domain) => domain.value === domainValue);
 
-			if(domain.count - updateCount <= 0) {
-				// Completely remove the domain from the list
-				domainList.splice(domainIndex, 1);
-			}
-			else {
-				// Clone domain, update counters and update the list
-				domain = { ...domain };
-				domain.count -= updateCount;
-				domain.activeCount -= updateActiveCount;
-				domainList[domainIndex] = domain;
-			}
+	if(domainIndex !== -1) {
+		let domain = domainList[domainIndex];
+
+		if(domain.count - updateCount <= 0 && !domain.persistent) {
+			// Completely remove the domain from the list
+			domainList.splice(domainIndex, 1);
+		}
+		else {
+			// Clone domain, update counters and update the list
+			domain = { ...domain };
+			domain.count -= updateCount;
+			domain.activeCount -= updateActiveCount;
+			domainList[domainIndex] = domain;
 		}
 	}
 };
@@ -70,7 +150,9 @@ const doForAllDomains = (task, action, domainLists) => {
 	action(task.owner, domainLists.owners, updateCount, updateActiveCount);
 	action(task.dueDate, domainLists.dueDates, updateCount, updateActiveCount);
 	for(const tag of task.tags) {
-		action(tag, domainLists.tags, updateCount, updateActiveCount);
+		if(tag) {
+			action(tag, domainLists.tags, updateCount, updateActiveCount);
+		}
 	}
 };
 
@@ -89,43 +171,13 @@ export const removeAllDomains = (task, domainLists) => {
 };
 
 /**
- * Returns a new object containing the initial domains.
- */
-export const getInitialDomainLists = () => {
-	const priorities = [];
-	addDomain('URGENT', priorities, 0, 0);
-	addDomain('HIGH', priorities, 0, 0);
-	addDomain('MEDIUM', priorities, 0, 0);
-	addDomain('LOW', priorities, 0, 0);
-
-	return {
-		priorities: priorities,
-		owners: [],
-		dueDates: [],
-		tags: []
-	};
-};
-
-/**
- * Clones the object and the contained lists (but not each domain entry).
- */
-export const cloneDomainLists = (domainLists) => {
-	return {
-		priorities: [ ...domainLists.priorities ],
-		owners: [ ...domainLists.owners ],
-		dueDates: [ ...domainLists.dueDates ],
-		tags: [ ...domainLists.tags ]
-	};
-};
-
-/**
- * Comparator for domains (sort by ID).
+ * Comparator for domains (sort by value).
  */
 const domainCompareFunction = (domainA, domainB) => {
-	if(domainA.id < domainB.id) {
+	if(domainA.value < domainB.value) {
 		return -1;
 	}
-	if(domainA.id > domainB.id) {
+	if(domainA.value > domainB.value) {
 		return 1;
 	}
 	return 0;

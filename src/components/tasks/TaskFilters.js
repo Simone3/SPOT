@@ -1,11 +1,21 @@
 import './TaskFilters.css';
+import { useContext } from 'react';
 import ButtonsSelect from '../inputs/ButtonsSelect';
 import Checkbox from '../inputs/Checkbox';
 import TextInput from '../inputs/TextInput';
 import Clickable from '../common/Clickable';
 import ResetIcon from '../icons/ResetIcon';
+import { DatesContext } from '../../contexts/DatesContexr';
+import { DateUtils } from '../../utils/DateUtils';
 
-const TaskFilters = ({ filters, onFilterChange, onResetDefaultFilters }) => {
+const TaskFilters = ({ domainLists, filters, onFilterChange, onResetDefaultFilters }) => {
+	const currentDates = useContext(DatesContext);
+
+	const filterVisibleDomains = (domain) => {
+		// Domains are visible in filters only if they are persistent or if they match the current task state (i.e. all if showing both completed and active, only those of active tasks if showing active tasks only)
+		return domain.persistent || filters.showCompleted || domain.activeCount > 0;
+	};
+
 	return (
 		<div className='task-filters-container'>
 			<div className='task-filters-header-line'>
@@ -27,48 +37,28 @@ const TaskFilters = ({ filters, onFilterChange, onResetDefaultFilters }) => {
 				allowMultiSelect={true}
 				value={filters.priorities}
 				onChange={(value) => onFilterChange({ priorities: value })}
-				options={[
-					{ key: 'URGENT', label: 'Urgent', color: 'var(--colors-priority-urgent)' },
-					{ key: 'HIGH', label: 'High', color: 'var(--colors-priority-high)' },
-					{ key: 'NORMAL', label: 'Normal', color: 'var(--colors-priority-normal)' },
-					{ key: 'LOW', label: 'Low', color: 'var(--colors-priority-low)' }
-				]}/>
+				options={domainLists.priorities.filter(filterVisibleDomains)}/>
 			<ButtonsSelect
 				label='Filter owners'
 				allowMultiSelect={true}
 				value={filters.owners}
 				onChange={(value) => onFilterChange({ owners: value })}
-				options={[
-					{ key: 'None (me)', label: 'None (me)' },
-					{ key: 'Some Person', label: 'Some Person' },
-					{ key: 'Somebody', label: 'Somebody' },
-					{ key: 'Guy', label: 'Guy' },
-					{ key: 'Person', label: 'Person' },
-					{ key: 'That Guy', label: 'That Guy' },
-					{ key: 'Someone with a long name', label: 'Someone with a long name' }
-				]}/>
+				options={domainLists.owners.filter(filterVisibleDomains)}/>
 			<ButtonsSelect
 				label='Filter due dates'
 				allowMultiSelect={true}
 				value={filters.dueDates}
 				onChange={(value) => onFilterChange({ dueDates: value })}
-				options={[
-					{ key: 'None', label: 'None' },
-					{ key: 'Today', label: 'Today' },
-					{ key: 'Tomorrow', label: 'Tomorrow' },
-					{ key: 'February 2, 2025', label: 'February 2, 2025' },
-					{ key: 'December 11, 2070', label: 'December 11, 2070' }
-				]}/>
+				options={domainLists.dueDates
+					.filter(filterVisibleDomains)
+					.map((dueDateDomain) => ({ ...dueDateDomain, label: !dueDateDomain.value ? dueDateDomain.label : DateUtils.toSmartString(new Date(dueDateDomain.value), currentDates) }))
+				}/>
 			<ButtonsSelect
 				label='Filter tags'
 				allowMultiSelect={true}
 				value={filters.tags}
 				onChange={(value) => onFilterChange({ tags: value })}
-				options={[
-					{ key: 'None', label: 'None' },
-					{ key: 'A tag', label: 'A tag' },
-					{ key: 'Another tag', label: 'Another tag' }
-				]}/>
+				options={domainLists.tags.filter(filterVisibleDomains)}/>
 			<Checkbox
 				label='Show completed'
 				value={filters.showCompleted}

@@ -22,6 +22,8 @@ const Task = ({ task, onSave, onDelete }) => {
 		tags
 	} = task;
 
+	const parsedDueDate = dueDate ? new Date(dueDate) : undefined;
+
 	let containerClass = 'task-container';
 	if(priority) {
 		containerClass += ` task-container-${priority.toLowerCase()}`;
@@ -31,13 +33,32 @@ const Task = ({ task, onSave, onDelete }) => {
 	}
 
 	const chips = [];
-	chips.push(<Chip key='owner' icon={<OwnerIcon/>} text={owner || 'Me'}/>);
-	if(dueDate) {
-		chips.push(<Chip key='due-date' icon={<CalendarIcon/>} text={DateUtils.toSmartString(dueDate, currentDates)} invalid={!completed && dueDate && DateUtils.compareDay(dueDate, new Date()) < 0}/>);
+	chips.push(
+		<Chip
+			key='owner'
+			icon={<OwnerIcon/>}
+			text={owner || 'Me'}
+		/>
+	);
+	if(parsedDueDate) {
+		chips.push(
+			<Chip
+				key='due-date'
+				icon={<CalendarIcon/>}
+				text={DateUtils.toSmartString(parsedDueDate, currentDates)}
+				invalid={task.state === 'ACTIVE' && DateUtils.compareDay(parsedDueDate, new Date()) < 0}
+			/>
+		);
 	}
 	if(tags && tags.length > 0) {
 		for(const tag of tags) {
-			chips.push(<Chip key={`tag-${tag}`} icon={<TagsIcon/>} text={tag}/>);
+			chips.push(
+				<Chip
+					key={`tag-${tag}`}
+					icon={<TagsIcon/>}
+					text={tag}
+				/>
+			);
 		}
 	}
 
@@ -45,7 +66,7 @@ const Task = ({ task, onSave, onDelete }) => {
 		<div className={containerClass}>
 			<div className='task-actions'>
 				<Checkbox
-					value={task.state === 'ACTIVE'}
+					value={task.state === 'COMPLETED'}
 					onChange={() => {
 						onSave({
 							state: task.state === 'ACTIVE' ? 'COMPLETED' : 'ACTIVE'

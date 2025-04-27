@@ -25,15 +25,15 @@ export const matchesFilters = (task, filters) => {
 		return false;
 	}
 
-	if(filters.owners.length > 0 && !filters.owners.includes(task.priority)) {
+	if(filters.owners.length > 0 && !filters.owners.includes(task.owner)) {
 		return false;
 	}
 
-	if(filters.dueDates.length > 0 && !filters.dueDates.includes(task.priority)) {
+	if(filters.dueDates.length > 0 && !filters.dueDates.includes(task.dueDate)) {
 		return false;
 	}
 
-	if(filters.tags.length > 0 && task.tags.length > 0 && task.tags.every((tag) => !filters.tags.includes(tag))) {
+	if(filters.tags.length > 0 && (task.tags.length === 0 || task.tags.every((tag) => !filters.tags.includes(tag)))) {
 		return false;
 	}
 

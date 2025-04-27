@@ -1,4 +1,8 @@
 
+.tasks-list-container {
+	margin-bottom: 50px;
+}
+
 .tasks-list-header-line {
 	display: flex;
 	justify-content: space-between;
@@ -25,3 +29,7 @@
 	align-self: center;
 }
 
+.tasks-list-empty-message {
+	font-style: italic;
+	margin-top: 20px;
+}

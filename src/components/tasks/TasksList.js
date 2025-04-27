@@ -4,8 +4,9 @@ import Clickable from '../common/Clickable';
 import AddIcon from '../icons/AddIcon';
 
 const TasksList = ({ title, tasks, showAddNew, onSaveNewTask, onUpdateTask, onDeleteTask }) => {
+	const visibleTasks = tasks.filter((task) => task.visible);
 	return (
-		<div>
+		<div className='tasks-list-container'>
 			<div className='tasks-list-header-line'>
 				<h3 className='tasks-list-title'>{title}</h3>
 				{showAddNew && <div className='tasks-list-actions'>
@@ -15,25 +16,19 @@ const TasksList = ({ title, tasks, showAddNew, onSaveNewTask, onUpdateTask, onDe
 					</Clickable>
 				</div>}
 			</div>
-			{tasks.map((task) => {
-				if(task.visible) {
-					return (
-						<Task
-							key={task.id}
-							task={task}
-							onSave={(newValues) => {
-								onUpdateTask(task, newValues);
-							}}
-							onDelete={() => {
-								onDeleteTask(task);
-							}}
-						/>
-					);
-				}
-				else {
-					return undefined;
-				}
-			})}
+			{visibleTasks.map((task) =>
+				<Task
+					key={task.id}
+					task={task}
+					onSave={(newValues) => {
+						onUpdateTask(task, newValues);
+					}}
+					onDelete={() => {
+						onDeleteTask(task);
+					}}
+				/>)
+			}
+			{visibleTasks.length === 0 && !showAddNew && <div className='tasks-list-empty-message'>No tasks to display</div>}
 		</div>
 	);
 };

@@ -3,18 +3,18 @@ import './ButtonsSelect.css';
 
 const ButtonsSelect = ({ label, allowMultiSelect, options, value, onChange }) => {
 	const id = useId();
-	const onClickSingle = (key) => {
-		if(value !== key) {
-			onChange(key);
+	const onClickSingle = (optionValue) => {
+		if(value !== optionValue) {
+			onChange(optionValue);
 		}
 	};
 
-	const onClickMultiple = (event, key) => {
-		const selectedIndex = value.indexOf(key);
+	const onClickMultiple = (event, optionValue) => {
+		const selectedIndex = value.indexOf(optionValue);
 		if(event.metaKey || event.ctrlKey) {
 			if(selectedIndex === -1) {
 				// CTRL+click and user clicked on an unselected option: add that option to the array
-				onChange([ ...value, key ]);
+				onChange([ ...value, optionValue ]);
 			}
 			else {
 				// CTRL+click and user clicked on a selected option: remove that option from the array
@@ -27,7 +27,7 @@ const ButtonsSelect = ({ label, allowMultiSelect, options, value, onChange }) =>
 		}
 		else {
 			// Simple click and user clicked either on an unselected option or on one of the selected options: that option gets selected
-			onChange([ key ]);
+			onChange([ optionValue ]);
 		}
 	};
 
@@ -36,8 +36,8 @@ const ButtonsSelect = ({ label, allowMultiSelect, options, value, onChange }) =>
 			{label && <label htmlFor={id} className='buttons-select-label'>{label}</label>}
 			<div id={id} className='buttons-select-options'>
 				{options.map((option) => {
-					const onClick = allowMultiSelect ? (event) => onClickMultiple(event, option.key) : () => onClickSingle(option.key);
-					const isSelected = allowMultiSelect ? value.includes(option.key) : value === option.key;
+					const onClick = allowMultiSelect ? (event) => onClickMultiple(event, option.value) : () => onClickSingle(option.value);
+					const isSelected = allowMultiSelect ? value.includes(option.value) : value === option.value;
 					const extraStyle = isSelected && option.color ? { backgroundColor: option.color } : undefined;
 					return (
 						<button

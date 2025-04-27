@@ -6,6 +6,7 @@ import { getInitialDomainLists, cloneDomainLists } from '../../logic/DomainsLogi
 import { getInitialTaskLists, cloneTaskLists, loadBackEndTasks, saveNewTask, refreshTasksVisibility, deleteTask, updateTask } from '../../logic/TasksLogic';
 import { getInitialFilters } from '../../logic/FiltersLogic';
 import TasksList from './TasksList';
+import { DateUtils } from '../../utils/DateUtils';
 
 const SAMPLE_INPUT_TASKS = [
 	{
@@ -14,7 +15,7 @@ const SAMPLE_INPUT_TASKS = [
 		state: 'ACTIVE',
 		priority: 'NORMAL',
 		owner: 'Alice',
-		dueDate: new Date('2025-11-12'),
+		dueDate: DateUtils.toStandardYearMonthDay(new Date('2025-11-12')),
 		tags: [ 'shopping', 'errands' ]
 	},
 	{
@@ -23,7 +24,7 @@ const SAMPLE_INPUT_TASKS = [
 		state: 'ACTIVE',
 		priority: 'HIGH',
 		owner: 'Bob',
-		dueDate: new Date(new Date().setHours(0, 0, 0, 0)),
+		dueDate: DateUtils.toStandardYearMonthDay(new Date(new Date().setHours(0, 0, 0, 0))),
 		tags: [ 'work' ]
 	},
 	{
@@ -48,7 +49,7 @@ const SAMPLE_INPUT_TASKS = [
 		state: 'ACTIVE',
 		priority: 'HIGH',
 		owner: 'Charlie',
-		dueDate: new Date('2024-01-19'),
+		dueDate: DateUtils.toStandardYearMonthDay(new Date('2024-01-19')),
 		tags: [ 'travel' ]
 	},
 	{
@@ -95,7 +96,7 @@ const SAMPLE_INPUT_TASKS = [
 		state: 'ACTIVE',
 		priority: 'LOW',
 		owner: 'John',
-		dueDate: new Date('2024-01-19'),
+		dueDate: DateUtils.toStandardYearMonthDay(new Date('2024-01-19')),
 		tags: [ 'pets', 'exercise' ]
 	},
 	{
@@ -112,7 +113,7 @@ const SAMPLE_INPUT_TASKS = [
 		state: 'ACTIVE',
 		priority: 'URGENT',
 		owner: 'Jane',
-		dueDate: new Date('2025-11-20'),
+		dueDate: DateUtils.toStandardYearMonthDay(new Date('2025-11-20')),
 		tags: [ 'finance', 'important' ]
 	},
 	{
@@ -121,7 +122,7 @@ const SAMPLE_INPUT_TASKS = [
 		state: 'ACTIVE',
 		priority: 'HIGH',
 		owner: 'Emily',
-		dueDate: new Date('2025-01-23'),
+		dueDate: DateUtils.toStandardYearMonthDay(new Date('2025-01-23')),
 		tags: [ 'work' ]
 	},
 	{
@@ -138,7 +139,7 @@ const SAMPLE_INPUT_TASKS = [
 		completionDate: new Date('2024-01-01'),
 		priority: 'LOW',
 		owner: 'John',
-		dueDate: new Date('2023-01-23'),
+		dueDate: DateUtils.toStandardYearMonthDay(new Date('2023-01-23')),
 		tags: [ 'errands' ]
 	},
 	{
@@ -154,7 +155,7 @@ const SAMPLE_INPUT_TASKS = [
 		state: 'ACTIVE',
 		priority: 'URGENT',
 		owner: 'Jane',
-		dueDate: new Date('2025-01-25'),
+		dueDate: DateUtils.toStandardYearMonthDay(new Date('2025-01-25')),
 		tags: [ 'work' ]
 	},
 	{
@@ -216,6 +217,8 @@ const TasksPage = () => {
 		<Page>
 			<Pane relativeSize={1}>
 				<TaskFilters
+					domainLists={domainLists}
+					filters={filters}
 					onFilterChange={(changedFilters) => {
 						const newTaskLists = cloneTaskLists(taskLists);
 						const newFilters = {
@@ -227,7 +230,11 @@ const TasksPage = () => {
 						setTaskLists(newTaskLists);
 					}}
 					onResetDefaultFilters={() => {
-						setFilters(getInitialFilters());
+						const newTaskLists = cloneTaskLists(taskLists);
+						const newFilters = getInitialFilters();
+						refreshTasksVisibility(newTaskLists, filters, newFilters);
+						setFilters(newFilters);
+						setTaskLists(newTaskLists);
 					}}
 				/>
 			</Pane>
