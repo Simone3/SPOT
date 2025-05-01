@@ -1,5 +1,3 @@
-import { addAllTaskDomains, sortAllDomainLists, removeAllDomains } from './DomainsLogic';
-import { matchesFilters } from './FiltersLogic';
 import { insertIntoManuallySortedList, moveInManuallySortedList } from './ManuallySortedList';
 
 /**
@@ -65,22 +63,19 @@ const sortAllTaskLists = (taskLists) => {
 };
 
 /**
- * Adds a list of back-end tasks into the task and domain lists.
+ * Adds a list of back-end tasks into the task lists.
  */
-export const loadBackEndTasks = (backEndTasks, taskLists, domainLists, filters) => {
+export const loadBackEndTasks = (taskLists, backEndTasks) => {
 	for(const task of backEndTasks) {
-		task.visible = matchesFilters(task, filters);
 		if(task.state === 'ACTIVE') {
 			taskLists.active.push(task);
 		}
 		else {
 			taskLists.completed.push(task);
 		}
-		addAllTaskDomains(task, domainLists);
 	}
 
 	sortAllTaskLists(taskLists);
-	sortAllDomainLists(domainLists);
 };
 
 /**
@@ -101,12 +96,11 @@ const insertActiveTask = (taskLists, task) => {
 
 /**
  * Adds a new task to the proper tasks lists.
- * It also sets some task fields: id, visible, completionDate, sortPosition.
- * It also adds any domain to the domains lists and re-sorts them.
+ * It also sets some task fields: id, completionDate, sortPosition.
  */
-export const saveNewTask = (task, taskLists, domainLists, filters) => {
+export const saveNewTask = (taskLists, task) => {
 	task.id = crypto.randomUUID();
-	task.visible = matchesFilters(task, filters);
+	task.visible = false;
 
 	if(task.state === 'ACTIVE') {
 		insertActiveTask(taskLists, task);
@@ -114,9 +108,6 @@ export const saveNewTask = (task, taskLists, domainLists, filters) => {
 	else {
 		insertCompletedTask(taskLists, task);
 	}
-
-	addAllTaskDomains(task, domainLists);
-	sortAllDomainLists(domainLists);
 };
 
 /**
@@ -129,36 +120,6 @@ export const moveActiveTask = (taskLists, fromIndex, toIndex) => {
 };
 
 /**
- * Helper to refresh the "visibile" field in an array based on the new filters.
- */
-const refreshTasksVisibilityHelper = (taskList, filters) => {
-	for(let i = 0; i < taskList.length; i++) {
-		const task = taskList[i];
-		const newVisibility = matchesFilters(task, filters);
-		if(task.visible !== newVisibility) {
-			taskList[i] = {
-				...task,
-				visible: newVisibility
-			};
-		}
-	}
-};
-
-/**
- * Refreshes the "visibile" field of all tasks based on the new filters.
- * It clones any changed task.
- */
-export const refreshTasksVisibility = (taskLists, oldFilters, newFilters) => {
-	// Always refresh active tasks
-	refreshTasksVisibilityHelper(taskLists.active, newFilters);
-
-	// Refresh completed tasks only if showCompleted is active and/or showCompleted changed just now
-	if(newFilters.showCompleted || newFilters.showCompleted !== oldFilters.showCompleted) {
-		refreshTasksVisibilityHelper(taskLists.completed, newFilters);
-	}
-};
-
-/**
  * Helper to remove a task from an array.
  */
 const removeTaskFromList = (taskList, task) => {
@@ -166,31 +127,42 @@ const removeTaskFromList = (taskList, task) => {
 	if(index === -1) {
 		throw Error(`Task ${task.id} does not exist, cannot remove from list!`);
 	}
-	taskList.splice(index);
+	taskList.splice(index, 1);
+};
+
+/**
+ * Helper to replace a task from an array.
+ */
+const replaceTaskInList = (taskList, oldTask, newTask) => {
+	const index = taskList.findIndex((arrayTask) => oldTask.id === arrayTask.id);
+	if(index === -1) {
+		throw Error(`Task ${oldTask.id} does not exist, cannot remove from list!`);
+	}
+	taskList[index] = newTask;
 };
 
 /**
  * Removes a task from its task list.
- * It also removes any domain from the domains lists and re-sorts them.
  */
-export const deleteTask = (taskLists, domainLists, task) => {
+export const deleteTask = (taskLists, task) => {
 	if(task.state === 'ACTIVE') {
 		removeTaskFromList(taskLists.active, task);
 	}
 	else {
 		removeTaskFromList(taskLists.completed, task);
 	}
-
-	removeAllDomains(task, domainLists);
-	sortAllDomainLists(domainLists);
 };
 
-export const updateTask = (taskLists, domainLists, filters, oldTask, changedValues) => {
+/**
+ * Updates a task.
+ * Returns the new task.
+ */
+export const updateTask = (taskLists, oldTask, changedValues) => {
 	const newTask = {
 		...oldTask,
-		...changedValues
+		...changedValues,
+		visible: false
 	};
-	newTask.visible = matchesFilters(newTask, filters);
 
 	// If state changes, move the task from one list to the other (and set/reset the completion date)
 	if(oldTask.state !== newTask.state) {
@@ -204,8 +176,13 @@ export const updateTask = (taskLists, domainLists, filters, oldTask, changedValu
 		}
 	}
 
-	// Refresh domains (this can be implemented more efficiently but good enough for now...)
-	removeAllDomains(oldTask, domainLists);
-	addAllTaskDomains(newTask, domainLists);
-	sortAllDomainLists(domainLists);
+	// Otherwise just replace the old task with the new task in the same list
+	else if(oldTask.state === 'ACTIVE') {
+		replaceTaskInList(taskLists.active, oldTask, newTask);
+	}
+	else {
+		replaceTaskInList(taskLists.completed, oldTask, newTask);
+	}
+
+	return newTask;
 };

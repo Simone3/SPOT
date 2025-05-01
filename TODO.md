@@ -1,9 +1,9 @@
 
 # refactor
-2 lists: active and completed
-manual sort (active) + fixed sort (completed)
-button to auto-sort active tasks
-	if priority is the same, keep original manual sort!
+fix bug where a selected filter disappears (e.g. unselect completed)
+display filters only if at least one option
+show confirm popup on delete
+review task element ui
 edit in place only (only for active tasks?)
 	textarea for text
 		css same as text?
@@ -13,6 +13,10 @@ edit in place only (only for active tasks?)
 		show chip placeholders
 		show actions (left?): move (drag&drop + arrows?), edit priority (slider? arrows?), complete, delete?
 form: validate/transform data: trim, empty strings, remove double/weird spaces, format date, tags (remove empty + check unique), etc.
+refactor new task and remove modal companent
+implement manual sort for active tasks
+button to auto-sort active tasks
+	if priority is the same, keep original manual sort?
 
 # wire in electron main process: save to disk
 sqllite?
@@ -42,6 +46,7 @@ check spaces vs. tabs
 check linter
 select options and modal conflict when at the bottom of the content - also the entire content gets longer
 change inputs, buttons and clickables on hover (e.g. change font to white?)
+feedback on click for buttons etc.
 show notification popups
 	"back-end" error
 	save task
