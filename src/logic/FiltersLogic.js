@@ -54,7 +54,7 @@ export const refreshTaskVisibility = (task, filters) => {
 /**
  * Helper to refresh the "visibile" field in an array based on the new filters.
  */
-const refreshTaskListsVisibilityHelper = (taskList, filters) => {
+const refreshTasksVisibilityHelper = (taskList, filters) => {
 	for(let i = 0; i < taskList.length; i++) {
 		const task = taskList[i];
 		const newVisibility = matchesFilters(task, filters);
@@ -71,12 +71,12 @@ const refreshTaskListsVisibilityHelper = (taskList, filters) => {
  * Refreshes the "visibile" field of all tasks based on the new filters.
  * It clones any changed task.
  */
-export const refreshTaskListsVisibility = (taskLists, oldFilters, newFilters) => {
+export const refreshTasksVisibility = (tasksContainer, oldFilters, newFilters) => {
 	// Always refresh active tasks
-	refreshTaskListsVisibilityHelper(taskLists.active, newFilters);
+	refreshTasksVisibilityHelper(tasksContainer.active, newFilters);
 
 	// Refresh completed tasks only if showCompleted is active and/or showCompleted changed just now
 	if(newFilters.showCompleted || newFilters.showCompleted !== oldFilters.showCompleted) {
-		refreshTaskListsVisibilityHelper(taskLists.completed, newFilters);
+		refreshTasksVisibilityHelper(tasksContainer.completed, newFilters);
 	}
 };

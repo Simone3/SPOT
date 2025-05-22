@@ -3,7 +3,7 @@ import { insertIntoManuallySortedList, moveInManuallySortedList } from './Manual
 /**
  * Returns a new object containing the initial task lists.
  */
-export const getInitialTaskLists = () => {
+export const getInitialTasks = () => {
 	return {
 		active: [],
 		completed: []
@@ -13,10 +13,10 @@ export const getInitialTaskLists = () => {
 /**
  * Clones the object and the contained lists (but not each task).
  */
-export const cloneTaskLists = (taskLists) => {
+export const cloneTasks = (tasksContainer) => {
 	return {
-		active: [ ...taskLists.active ],
-		completed: [ ...taskLists.completed ]
+		active: [ ...tasksContainer.active ],
+		completed: [ ...tasksContainer.completed ]
 	};
 };
 
@@ -57,56 +57,56 @@ const completedTasksCompareFunction = (taskA, taskB) => {
 /**
  * Sorts all task lists.
  */
-const sortAllTaskLists = (taskLists) => {
-	taskLists.active.sort(activeTasksCompareFunction);
-	taskLists.completed.sort(completedTasksCompareFunction);
+const sortAllTasks = (tasksContainer) => {
+	tasksContainer.active.sort(activeTasksCompareFunction);
+	tasksContainer.completed.sort(completedTasksCompareFunction);
 };
 
 /**
  * Adds a list of back-end tasks into the task lists.
  */
-export const loadBackEndTasks = (taskLists, backEndTasks) => {
+export const loadBackEndTasks = (tasksContainer, backEndTasks) => {
 	for(const task of backEndTasks) {
 		if(task.state === 'ACTIVE') {
-			taskLists.active.push(task);
+			tasksContainer.active.push(task);
 		}
 		else {
-			taskLists.completed.push(task);
+			tasksContainer.completed.push(task);
 		}
 	}
 
-	sortAllTaskLists(taskLists);
+	sortAllTasks(tasksContainer);
 };
 
 /**
  * Adds a task to the beginning of the completed tasks list (and also sets the completion date to now).
  */
-const insertCompletedTask = (taskLists, task) => {
+const insertCompletedTask = (tasksContainer, task) => {
 	task.completionDate = new Date();
-	taskLists.completed.unshift(task);
+	tasksContainer.completed.unshift(task);
 };
 
 /**
  * Adds a task to the beginning of the (manually sorted) active tasks list (and also removes any completion date).
  */
-const insertActiveTask = (taskLists, task) => {
+const insertActiveTask = (tasksContainer, task) => {
 	task.completionDate = undefined;
-	insertIntoManuallySortedList(taskLists.active, task, 0);
+	insertIntoManuallySortedList(tasksContainer.active, task, 0);
 };
 
 /**
  * Adds a new task to the proper tasks lists.
  * It also sets some task fields: id, completionDate, sortPosition.
  */
-export const saveNewTask = (taskLists, task) => {
+export const saveNewTask = (tasksContainer, task) => {
 	task.id = crypto.randomUUID();
 	task.visible = false;
 
 	if(task.state === 'ACTIVE') {
-		insertActiveTask(taskLists, task);
+		insertActiveTask(tasksContainer, task);
 	}
 	else {
-		insertCompletedTask(taskLists, task);
+		insertCompletedTask(tasksContainer, task);
 	}
 };
 
@@ -115,8 +115,8 @@ export const saveNewTask = (taskLists, task) => {
  * It also updates the "sortPosition" field in the moved task.
  * It may recompute the "sortPosition" fields of other tasks if space needs to be made.
  */
-export const moveActiveTask = (taskLists, fromIndex, toIndex) => {
-	moveInManuallySortedList(taskLists.active, fromIndex, toIndex);
+export const moveActiveTask = (tasksContainer, fromIndex, toIndex) => {
+	moveInManuallySortedList(tasksContainer.active, fromIndex, toIndex);
 };
 
 /**
@@ -144,12 +144,12 @@ const replaceTaskInList = (taskList, oldTask, newTask) => {
 /**
  * Removes a task from its task list.
  */
-export const deleteTask = (taskLists, task) => {
+export const deleteTask = (tasksContainer, task) => {
 	if(task.state === 'ACTIVE') {
-		removeTaskFromList(taskLists.active, task);
+		removeTaskFromList(tasksContainer.active, task);
 	}
 	else {
-		removeTaskFromList(taskLists.completed, task);
+		removeTaskFromList(tasksContainer.completed, task);
 	}
 };
 
@@ -157,7 +157,7 @@ export const deleteTask = (taskLists, task) => {
  * Updates a task.
  * Returns the new task.
  */
-export const updateTask = (taskLists, oldTask, changedValues) => {
+export const updateTask = (tasksContainer, oldTask, changedValues) => {
 	const newTask = {
 		...oldTask,
 		...changedValues,
@@ -167,21 +167,21 @@ export const updateTask = (taskLists, oldTask, changedValues) => {
 	// If state changes, move the task from one list to the other (and set/reset the completion date)
 	if(oldTask.state !== newTask.state) {
 		if(oldTask.state === 'ACTIVE') {
-			removeTaskFromList(taskLists.active, oldTask);
-			insertCompletedTask(taskLists, newTask);
+			removeTaskFromList(tasksContainer.active, oldTask);
+			insertCompletedTask(tasksContainer, newTask);
 		}
 		else {
-			removeTaskFromList(taskLists.completed, oldTask);
-			insertActiveTask(taskLists, newTask);
+			removeTaskFromList(tasksContainer.completed, oldTask);
+			insertActiveTask(tasksContainer, newTask);
 		}
 	}
 
 	// Otherwise just replace the old task with the new task in the same list
 	else if(oldTask.state === 'ACTIVE') {
-		replaceTaskInList(taskLists.active, oldTask, newTask);
+		replaceTaskInList(tasksContainer.active, oldTask, newTask);
 	}
 	else {
-		replaceTaskInList(taskLists.completed, oldTask, newTask);
+		replaceTaskInList(tasksContainer.completed, oldTask, newTask);
 	}
 
 	return newTask;

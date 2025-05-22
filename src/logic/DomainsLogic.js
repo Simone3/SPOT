@@ -1,169 +1,169 @@
 
+const PRIORITIES = [{
+		key: 'urgent',
+		value: 'URGENT',
+		label: 'Urgent',
+		color: 'var(--colors-priority-urgent)',
+		persistent: true,
+		count: 0
+	}, {
+		key: 'high',
+		value: 'HIGH',
+		label: 'High',
+		color: 'var(--colors-priority-high)',
+		persistent: true,
+		count: 0
+	}, {
+		key: 'normal',
+		value: 'NORMAL',
+		label: 'Normal',
+		color: 'var(--colors-priority-normal)',
+		persistent: true,
+		count: 0
+	}, {
+		key: 'low',
+		value: 'LOW',
+		label: 'Low',
+		color: 'var(--colors-priority-low)',
+		persistent: true,
+		count: 0
+	}
+];
+
+const NO_OWNER = {
+	key: `no-owner-${crypto.randomUUID()}`,
+	value: undefined,
+	label: 'None (me)',
+	color: undefined,
+	persistent: true,
+	count: 0
+};
+
+const NO_DUE_DATE = {
+	key: `no-due-date-${crypto.randomUUID()}`,
+	value: undefined,
+	label: 'None',
+	color: undefined,
+	persistent: true,
+	count: 0
+};
+
 /**
  * Returns a new object containing the initial domains.
  */
-export const getInitialDomainLists = () => {
+export const getInitialDomains = () => {
 	return {
-		priorities: [{
-			key: 'urgent',
-			value: 'URGENT',
-			label: 'Urgent',
-			color: 'var(--colors-priority-urgent)',
-			persistent: true,
-			count: 0,
-			activeCount: 0
-		}, {
-			key: 'high',
-			value: 'HIGH',
-			label: 'High',
-			color: 'var(--colors-priority-high)',
-			persistent: true,
-			count: 0,
-			activeCount: 0
-		}, {
-			key: 'normal',
-			value: 'NORMAL',
-			label: 'Normal',
-			color: 'var(--colors-priority-normal)',
-			persistent: true,
-			count: 0,
-			activeCount: 0
-		}, {
-			key: 'low',
-			value: 'LOW',
-			label: 'Low',
-			color: 'var(--colors-priority-low)',
-			persistent: true,
-			count: 0,
-			activeCount: 0
-		}],
-		owners: [{
-			key: `no-owner-${crypto.randomUUID()}`,
-			value: undefined,
-			label: 'None (me)',
-			color: undefined,
-			persistent: true,
-			count: 0,
-			activeCount: 0
-		}],
-		dueDates: [{
-			key: `no-due-date-${crypto.randomUUID()}`,
-			value: undefined,
-			label: 'None',
-			color: undefined,
-			persistent: true,
-			count: 0,
-			activeCount: 0
-		}],
-		tags: []
+		filters: {
+			priorities: PRIORITIES,
+			owners: [ NO_OWNER ],
+			dueDates: [ NO_DUE_DATE ],
+			tags: []
+		},
+		form: {
+			priorities: PRIORITIES,
+			owners: [],
+			tags: []
+		}
 	};
 };
 
 /**
  * Clones the object and the contained lists (but not each domain entry).
  */
-export const cloneDomainLists = (domainLists) => {
+export const cloneDomains = (domainsContainer) => {
 	return {
-		priorities: [ ...domainLists.priorities ],
-		owners: [ ...domainLists.owners ],
-		dueDates: [ ...domainLists.dueDates ],
-		tags: [ ...domainLists.tags ]
+		filters: {
+			priorities: [ ...domainsContainer.filters.priorities ],
+			owners: [ ...domainsContainer.filters.owners ],
+			dueDates: [ ...domainsContainer.filters.dueDates ],
+			tags: [ ...domainsContainer.filters.tags ]
+		},
+		form: {
+			priorities: [ ...domainsContainer.form.priorities ],
+			owners: [ ...domainsContainer.form.owners ],
+			tags: [ ...domainsContainer.form.tags ]
+		}
 	};
 };
 
 /**
- * Comparator for domains (sort by value).
+ * Comparator for domain entries (sort by value).
  */
-const domainCompareFunction = (domainA, domainB) => {
-	if(domainA.value < domainB.value) {
+const domainCompareFunction = (entryA, entryB) => {
+	if(entryA.value < entryB.value) {
 		return -1;
 	}
-	if(domainA.value > domainB.value) {
+	if(entryA.value > entryB.value) {
 		return 1;
 	}
 	return 0;
 };
 
 /**
- * Sorts all domains lists.
+ * Sorts all domains.
  */
-const sortAllDomainLists = (domainLists) => {
+const sortAllDomains = (domainsContainer) => {
 	// Sort all lists (except priorities, which are already sorted by default)
-	domainLists.owners.sort(domainCompareFunction);
-	domainLists.dueDates.sort(domainCompareFunction);
-	domainLists.tags.sort(domainCompareFunction);
+	domainsContainer.filters.owners.sort(domainCompareFunction);
+	domainsContainer.filters.dueDates.sort(domainCompareFunction);
+	domainsContainer.filters.tags.sort(domainCompareFunction);
+	domainsContainer.form.owners.sort(domainCompareFunction);
+	domainsContainer.form.tags.sort(domainCompareFunction);
 };
 
 /**
- * Adds a domain value to the domains list (either by creating a new entry or by cloning + updating an existing entry counter).
+ * Removes a domain value from a domain list (either by removing the entry altogether or by cloning & updating the entry counter).
  */
-const addDomain = (domainList, domainValue, isActive) => {
-	// Set falsey values to undefined
-	if(!domainValue) {
-		domainValue = undefined;
+const removeDomain = (domainsList, oldDomainValue) => {
+	// Find old domain by value
+	const domainIndex = domainsList.findIndex((domain) => domain.value === oldDomainValue);
+	if(domainIndex === -1) {
+		return;
 	}
+	let domain = domainsList[domainIndex];
 
-	// Find domain by value
-	const domainIndex = domainList.findIndex((domain) => domain.value === domainValue);
+	if(domain.count <= 1 && !domain.persistent) {
+		// Completely remove the entry from the list
+		domainsList.splice(domainIndex, 1);
+	}
+	else {
+		// Clone entry, update counters and update the list
+		domain = { ...domain };
+		domain.count -= 1;
+		domainsList[domainIndex] = domain;
+	}
+};
 
-	// Skip empty domain value if there's no predefined domain value for it
-	if(domainIndex === -1 && !domainValue) {
+/**
+ * Adds a domain value to a domain list (either by creating a new entry or by cloning & updating an existing entry counter).
+ */
+const addDomain = (domainsList, newDomainValue) => {
+	// Find new domain by value
+	const domainIndex = domainsList.findIndex((domain) => domain.value === newDomainValue);
+
+	// Skip new domain value if empty and there's no predefined entry for it
+	if(domainIndex === -1 && !newDomainValue) {
 		return;
 	}
 
 	let domain;
 	if(domainIndex === -1) {
-		// Create new domain and add it to the list
+		// Create new entry and add it to the list
 		domain = {
-			key: String(domainValue),
-			value: domainValue,
-			label: domainValue,
+			key: String(newDomainValue),
+			value: newDomainValue,
+			label: newDomainValue,
 			color: undefined,
 			persistent: false,
-			count: 1,
-			activeCount: isActive ? 1 : 0
+			count: 1
 		};
-		domainList.push(domain);
+		domainsList.push(domain);
 	}
 	else {
-		// Clone domain, update counters and update the list
-		domain = { ...domainList[domainIndex] };
+		// Clone entry, update counters and update the list
+		domain = { ...domainsList[domainIndex] };
 		domain.count += 1;
-		if(isActive) {
-			domain.activeCount += 1;
-		}
-		domainList[domainIndex] = domain;
-	}
-};
-
-/**
- * Removes a domain value from the domains list (either by removing the entry altogether or by cloning + updating the entry counter).
- */
-const removeDomain = (domainList, domainValue, isActive) => {
-	// Set falsey values to undefined
-	if(!domainValue) {
-		domainValue = undefined;
-	}
-
-	// Find domain by value
-	const domainIndex = domainList.findIndex((domain) => domain.value === domainValue);
-	if(domainIndex === -1) {
-		return;
-	}
-	let domain = domainList[domainIndex];
-
-	if(domain.count <= 1 && !domain.persistent) {
-		// Completely remove the domain from the list
-		domainList.splice(domainIndex, 1);
-	}
-	else {
-		// Clone domain, update counters and update the list
-		domain = { ...domain };
-		domain.count -= 1;
-		if(isActive) {
-			domain.activeCount -= 1;
-		}
-		domainList[domainIndex] = domain;
+		domainsList[domainIndex] = domain;
 	}
 };
 
@@ -171,114 +171,129 @@ const removeDomain = (domainList, domainValue, isActive) => {
  * List of dynamic handlers that allow to extract values from tasks and add them to the proper domain lists.
  */
 const taskDomainHandlers = [
-	{ taskField: 'priority', domainListField: 'priorities', isList: false },
-	{ taskField: 'owner', domainListField: 'owners', isList: false },
-	{ taskField: 'dueDate', domainListField: 'dueDates', isList: false },
-	{ taskField: 'tags', domainListField: 'tags', isList: true }
+	{ taskField: 'priority', isTaskFieldList: false, domainListField: 'priorities' },
+	{ taskField: 'owner', isTaskFieldList: false, domainListField: 'owners' },
+	{ taskField: 'dueDate', isTaskFieldList: false, domainListField: 'dueDates' },
+	{ taskField: 'tags', isTaskFieldList: true, domainListField: 'tags' }
 ];
 
 /**
- * Helper to add task domains.
+ * Updates all domains of the given task in the given domains section.
+ * If oldTask is empty, the domains are added.
+ * If newTask is empty, the domains are removed.
  */
-const addDomainsForTaskWithoutSorting = (domainLists, task) => {
-	const isActive = task.state === 'ACTIVE';
-
+const updateDomainsForTaskInSection = (domainsSection, oldTask, newTask, changedTaskValues) => {
+	// Loop all dynamic handlers
 	for(const handler of taskDomainHandlers) {
-		const domainValue = task[handler.taskField];
-		const domainList = domainLists[handler.domainListField];
-		if(handler.isList) {
-			if(domainValue) {
-				for(const domainValueElement of domainValue) {
-					addDomain(domainList, domainValueElement, isActive);
+		// Extract the handler's domains list (if present)
+		const domainsList = domainsSection[handler.domainListField];
+		if(!domainsList) {
+			continue;
+		}
+
+		// If we have both old and new tasks but the domain value has not changed, no need to do anything
+		if(oldTask && newTask && !(handler.taskField in changedTaskValues)) {
+			continue;
+		}
+	
+		// Extract the handler's old and/or new values
+		const oldDomainValue = oldTask ? oldTask[handler.taskField] : undefined;
+		const newDomainValue = newTask ? newTask[handler.taskField] : undefined;
+
+		// If the task value is actually a list, remove all old values and add all new values (for simplicity)
+		if(handler.isTaskFieldList) {
+			if(oldDomainValue) {
+				for(const oldDomainValueElem of oldDomainValue) {
+					removeDomain(domainsList, oldDomainValueElem);
+				}
+			}
+
+			if(newDomainValue) {
+				for(const newDomainValueElem of newDomainValue) {
+					addDomain(domainsList, newDomainValueElem);
 				}
 			}
 		}
+
+		// If the task value is not a list, simply update the domain list directly (ifs are on the task itself because undefined value may be a valid domain value!)
 		else {
-			addDomain(domainList, domainValue, isActive);
-		}
-	}
-};
-
-/**
- * Adds all task domains to their respective domains lists.
- */
-export const addDomainsForTask = (domainLists, task) => {
-	addDomainsForTaskWithoutSorting(domainLists, task);
-	sortAllDomainLists(domainLists);
-};
-
-/**
- * For each task in the lists, adds all task domains to their respective domains lists.
- */
-export const addDomainsForTaskLists = (domainLists, taskLists) => {
-	for(const task of taskLists.active) {
-		addDomainsForTaskWithoutSorting(domainLists, task);
-	}
-
-	for(const task of taskLists.completed) {
-		addDomainsForTaskWithoutSorting(domainLists, task);
-	}
-
-	sortAllDomainLists(domainLists);
-};
-
-/**
- * Removes all task domains from their respective domains lists.
- */
-export const removeDomainsForTask = (domainLists, task) => {
-	const isActive = task.state === 'ACTIVE';
-
-	for(const handler of taskDomainHandlers) {
-		const domainValue = task[handler.taskField];
-		const domainList = domainLists[handler.domainListField];
-		if(handler.isList) {
-			if(domainValue) {
-				for(const domainValueElement of domainValue) {
-					removeDomain(domainList, domainValueElement, isActive);
-				}
+			if(oldTask) {
+				removeDomain(domainsList, oldDomainValue);
 			}
-		}
-		else {
-			removeDomain(domainList, domainValue, isActive);
-		}
-	}
-
-	sortAllDomainLists(domainLists);
-};
-
-/**
- * Updates any changed task domains in their respective domains lists.
- * Returns true if domains actually changed.
- */
-export const updateDomainsForTask = (domainLists, oldTask, newTask, changedTaskValues) => {
-	const isStateChanged = oldTask.state !== newTask.state;
-	const isOldActive = oldTask.state === 'ACTIVE';
-	const isNewActive = newTask.state === 'ACTIVE';
-
-	for(const handler of taskDomainHandlers) {
-		// Do something only if the state changed (i.e. all domains need to update the active count) or the domain value actually changed
-		if(isStateChanged || handler.taskField in changedTaskValues) {
-			const oldDomainValue = oldTask[handler.taskField];
-			const newDomainValue = newTask[handler.taskField];
-			const domainList = domainLists[handler.domainListField];
-			if(handler.isList) {
-				if(oldDomainValue) {
-					for(const domainValueElement of oldDomainValue) {
-						removeDomain(domainList, domainValueElement, isOldActive);
-					}
-				}
-				if(newDomainValue) {
-					for(const domainValueElement of newDomainValue) {
-						addDomain(domainList, domainValueElement, isNewActive);
-					}
-				}
-			}
-			else {
-				removeDomain(domainList, oldDomainValue, isOldActive);
-				addDomain(domainList, newDomainValue, isNewActive);
+			if(newTask) {
+				addDomain(domainsList, newDomainValue);
 			}
 		}
 	}
+};
 
-	sortAllDomainLists(domainLists);
+/**
+ * Helper to update any changed task domains in their respective domains lists, without sorting.
+ * If oldTask is empty, the domains are added.
+ * If newTask is empty, the domains are removed.
+ */
+const updateDomainsForTaskHelper = (domainsContainer, oldTask, newTask, changedTaskValues) => {
+	// The form section needs to be updated in any case (it contains domains for ALL tasks, both active and completed)
+	updateDomainsForTaskInSection(domainsContainer.form, oldTask, newTask, changedTaskValues);
+
+	// Update the filters section (it contains domains for the active tasks only)
+	if(newTask && oldTask) {
+		const oldActive = oldTask.state === 'ACTIVE';
+		const newActive = newTask.state === 'ACTIVE';
+		if(oldActive && !newActive) {
+			// Task changes state to completed: remove the domains from filters section
+			updateDomainsForTaskInSection(domainsContainer.filters, oldTask, undefined, undefined);
+		}
+		else if(!oldActive && newActive) {
+			// Task changes state to active: add the domains to filters section
+			updateDomainsForTaskInSection(domainsContainer.filters, undefined, newTask, undefined);
+		}
+		else if(oldActive && newActive) {
+			// Task remains active: update the filters section
+			updateDomainsForTaskInSection(domainsContainer.filters, oldTask, newTask, changedTaskValues);
+		}
+	}
+	else if((oldTask && oldTask.state === 'ACTIVE') || (newTask && newTask.state === 'ACTIVE')) {
+		// Add or remove active task: update the filters section
+		updateDomainsForTaskInSection(domainsContainer.filters, oldTask, newTask, changedTaskValues);
+	}
+};
+
+/**
+ * Adds all domains of a given task to their respective domains lists, keeping them in order.
+ */
+export const addDomainsForTask = (domainsContainer, task) => {
+	updateDomainsForTaskHelper(domainsContainer, undefined, task, undefined);
+	sortAllDomains(domainsContainer);
+};
+
+/**
+ * Removes all domains of a given task from their respective domains lists, keeping them in order.
+ */
+export const removeDomainsForTask = (domainsContainer, task) => {
+	updateDomainsForTaskHelper(domainsContainer, task, undefined, undefined);
+	sortAllDomains(domainsContainer);
+};
+
+/**
+ * Updates any changed task domains in their respective domains lists, keeping them in order.
+ */
+export const updateDomainsForTask = (domainsContainer, oldTask, newTask, changedTaskValues) => {
+	updateDomainsForTaskHelper(domainsContainer, oldTask, newTask, changedTaskValues);
+	sortAllDomains(domainsContainer);
+};
+
+/**
+ * For each task, adds all its domains to their respective domains lists, keeping them in order.
+ */
+export const addDomainsForTasks = (domainsContainer, tasksContainer) => {
+	for(const task of tasksContainer.active) {
+		updateDomainsForTaskHelper(domainsContainer, undefined, task, undefined);
+	}
+
+	for(const task of tasksContainer.completed) {
+		updateDomainsForTaskHelper(domainsContainer, undefined, task, undefined);
+	}
+
+	sortAllDomains(domainsContainer);
 };

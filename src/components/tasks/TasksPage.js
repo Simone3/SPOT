@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import Page from '../common/Page';
 import Pane from '../common/Pane';
 import TaskFilters from './TaskFilters';
-import { getInitialDomainLists, cloneDomainLists, addDomainsForTaskLists, removeDomainsForTask, updateDomainsForTask, addDomainsForTask } from '../../logic/DomainsLogic';
-import { getInitialTaskLists, cloneTaskLists, loadBackEndTasks, saveNewTask, deleteTask, updateTask } from '../../logic/TasksLogic';
-import { getInitialFilters, refreshTaskListsVisibility, refreshTaskVisibility } from '../../logic/FiltersLogic';
+import { getInitialDomains, cloneDomains, addDomainsForTasks, removeDomainsForTask, updateDomainsForTask, addDomainsForTask } from '../../logic/DomainsLogic';
+import { getInitialTasks, cloneTasks, loadBackEndTasks, saveNewTask, deleteTask, updateTask } from '../../logic/TasksLogic';
+import { getInitialFilters, refreshTasksVisibility, refreshTaskVisibility } from '../../logic/FiltersLogic';
 import TasksList from './TasksList';
 import { DateUtils } from '../../utils/DateUtils';
 
@@ -196,86 +196,90 @@ const SAMPLE_INPUT_TASKS = [
 ];
 
 const TasksPage = () => {
-	const [ taskLists, setTaskLists ] = useState(getInitialTaskLists());
-	const [ domainLists, setDomainLists ] = useState(getInitialDomainLists());
+	const [ tasksContainer, setTasksContainer ] = useState(getInitialTasks());
+	const [ domainsContainer, setDomainsContainer ] = useState(getInitialDomains());
 	const [ filters, setFilters ] = useState(getInitialFilters());
 
-	// FIXME: load from DB + fix the empty dependency array
-	useEffect(() => {
-		const newTaskLists = cloneTaskLists(taskLists);
-		const newDomainLists = cloneDomainLists(domainLists);
+	const onLoadBackEndTasks = () => {
+		const newTasksContainer = cloneTasks(tasksContainer);
+		const newDomainsContainer = cloneDomains(domainsContainer);
 
-		loadBackEndTasks(newTaskLists, SAMPLE_INPUT_TASKS);
-		refreshTaskListsVisibility(newTaskLists, filters, filters);
-		addDomainsForTaskLists(newDomainLists, newTaskLists);
+		loadBackEndTasks(newTasksContainer, SAMPLE_INPUT_TASKS);
+		refreshTasksVisibility(newTasksContainer, filters, filters);
+		addDomainsForTasks(newDomainsContainer, newTasksContainer);
 
-		setTaskLists(newTaskLists);
-		setDomainLists(newDomainLists);
-	}, []);
+		setTasksContainer(newTasksContainer);
+		setDomainsContainer(newDomainsContainer);
+	};
 
 	const onSaveNewTask = (task) => {
-		const newTaskLists = cloneTaskLists(taskLists);
-		const newDomainLists = cloneDomainLists(domainLists);
+		const newTasksContainer = cloneTasks(tasksContainer);
+		const newDomainsContainer = cloneDomains(domainsContainer);
 
-		saveNewTask(newTaskLists, task);
+		saveNewTask(newTasksContainer, task);
 		refreshTaskVisibility(task, filters);
-		addDomainsForTask(newDomainLists, task);
+		addDomainsForTask(newDomainsContainer, task);
 
-		setTaskLists(newTaskLists);
-		setDomainLists(newDomainLists);
+		setTasksContainer(newTasksContainer);
+		setDomainsContainer(newDomainsContainer);
 	};
 
 	const onUpdateTask = (oldTask, changedValues) => {
-		const newTaskLists = cloneTaskLists(taskLists);
-		const newDomainLists = cloneDomainLists(domainLists);
+		const newTasksContainer = cloneTasks(tasksContainer);
+		const newDomainsContainer = cloneDomains(domainsContainer);
+		const newFilters = { ...filters };
 
-		const newTask = updateTask(newTaskLists, oldTask, changedValues);
-		refreshTaskVisibility(newTask, filters);
-		updateDomainsForTask(newDomainLists, oldTask, newTask, changedValues);
+		const newTask = updateTask(newTasksContainer, oldTask, changedValues);
+		updateDomainsForTask(newDomainsContainer, oldTask, newTask, changedValues);
+		refreshTaskVisibility(newTask, newFilters);
 
-		setTaskLists(newTaskLists);
-		setDomainLists(newDomainLists);
+		setTasksContainer(newTasksContainer);
+		setDomainsContainer(newDomainsContainer);
+		setFilters(newFilters);
 	};
 
 	const onDeleteTask = (task) => {
-		const newTaskLists = cloneTaskLists(taskLists);
-		const newDomainLists = cloneDomainLists(domainLists);
+		const newTasksContainer = cloneTasks(tasksContainer);
+		const newDomainsContainer = cloneDomains(domainsContainer);
 
-		deleteTask(newTaskLists, task);
-		removeDomainsForTask(newDomainLists, task);
+		deleteTask(newTasksContainer, task);
+		removeDomainsForTask(newDomainsContainer, task);
 
-		setTaskLists(newTaskLists);
-		setDomainLists(newDomainLists);
+		setTasksContainer(newTasksContainer);
+		setDomainsContainer(newDomainsContainer);
 	};
 
 	const onFilterChange = (changedFilters) => {
-		const newTaskLists = cloneTaskLists(taskLists);
+		const newTasksContainer = cloneTasks(tasksContainer);
 		const newFilters = {
 			...filters,
 			...changedFilters
 		};
 
-		refreshTaskListsVisibility(newTaskLists, filters, newFilters);
+		refreshTasksVisibility(newTasksContainer, filters, newFilters);
 
 		setFilters(newFilters);
-		setTaskLists(newTaskLists);
+		setTasksContainer(newTasksContainer);
 	};
 
 	const onResetDefaultFilters = () => {
-		const newTaskLists = cloneTaskLists(taskLists);
+		const newTasksContainer = cloneTasks(tasksContainer);
 		const newFilters = getInitialFilters();
 
-		refreshTaskListsVisibility(newTaskLists, filters, newFilters);
+		refreshTasksVisibility(newTasksContainer, filters, newFilters);
 
 		setFilters(newFilters);
-		setTaskLists(newTaskLists);
+		setTasksContainer(newTasksContainer);
 	};
+
+	// FIXME: load from DB + fix the empty dependency array
+	useEffect(onLoadBackEndTasks, []);
 
 	return (
 		<Page>
 			<Pane relativeSize={1}>
 				<TaskFilters
-					domainLists={domainLists}
+					domains={domainsContainer.filters}
 					filters={filters}
 					onFilterChange={onFilterChange}
 					onResetDefaultFilters={onResetDefaultFilters}
@@ -284,7 +288,7 @@ const TasksPage = () => {
 			<Pane relativeSize={2}>
 				<TasksList
 					title='Tasks'
-					tasks={taskLists.active}
+					tasks={tasksContainer.active}
 					showAddNew={true}
 					onSaveNewTask={onSaveNewTask}
 					onUpdateTask={onUpdateTask}
@@ -293,7 +297,7 @@ const TasksPage = () => {
 				{filters.showCompleted &&
 					<TasksList
 						title='Completed Tasks'
-						tasks={taskLists.completed}
+						tasks={tasksContainer.completed}
 						showAddNew={false}
 						onSaveNewTask={onSaveNewTask}
 						onUpdateTask={onUpdateTask}
