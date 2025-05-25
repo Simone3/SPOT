@@ -127,7 +127,7 @@ const removeDomain = (domainsList, oldDomainValue) => {
 		domainsList.splice(domainIndex, 1);
 	}
 	else {
-		// Clone entry, update counters and update the list
+		// Clone entry, update counter and update the list
 		domain = { ...domain };
 		domain.count -= 1;
 		domainsList[domainIndex] = domain;
@@ -160,7 +160,7 @@ const addDomain = (domainsList, newDomainValue) => {
 		domainsList.push(domain);
 	}
 	else {
-		// Clone entry, update counters and update the list
+		// Clone entry, update counter and update the list
 		domain = { ...domainsList[domainIndex] };
 		domain.count += 1;
 		domainsList[domainIndex] = domain;
@@ -168,13 +168,26 @@ const addDomain = (domainsList, newDomainValue) => {
 };
 
 /**
- * List of dynamic handlers that allow to extract values from tasks and add them to the proper domain lists.
+ * Returns the index in the domains list where the given domain value is located or -1 if not present.
+ */
+const findDomain = (domainsList, domainValue) => {
+	for(let i = 0; i < domainsList.length; i++) {
+		if(domainsList[i].value === domainValue) {
+			return i;
+		}
+	}
+
+	return -1;
+};
+
+/**
+ * List of dynamic handlers that allow to extract values from tasks, domains and filters.
  */
 const taskDomainHandlers = [
-	{ taskField: 'priority', isTaskFieldList: false, domainListField: 'priorities' },
-	{ taskField: 'owner', isTaskFieldList: false, domainListField: 'owners' },
-	{ taskField: 'dueDate', isTaskFieldList: false, domainListField: 'dueDates' },
-	{ taskField: 'tags', isTaskFieldList: true, domainListField: 'tags' }
+	{ taskField: 'priority', isTaskFieldList: false, domainListField: 'priorities', filtersField: 'priorities' },
+	{ taskField: 'owner', isTaskFieldList: false, domainListField: 'owners', filtersField: 'owners' },
+	{ taskField: 'dueDate', isTaskFieldList: false, domainListField: 'dueDates', filtersField: 'dueDates' },
+	{ taskField: 'tags', isTaskFieldList: true, domainListField: 'tags', filtersField: 'tags' }
 ];
 
 /**
@@ -296,4 +309,24 @@ export const addDomainsForTasks = (domainsContainer, tasksContainer) => {
 	}
 
 	sortAllDomains(domainsContainer);
+};
+
+/**
+ * Removes any filter that does not match the current domains values.
+ */
+export const updateFiltersOnDomainsChange = (filtersDomains, filters) => {
+	for(const handler of taskDomainHandlers) {
+		const filterValues = filters[handler.filtersField];
+		if(filterValues && filterValues.length > 0) {
+			const domainsList = filtersDomains[handler.domainListField];
+
+			// Loop all current filter values (backwards because of splice() re-indexing)
+			for(let i = filterValues.length - 1; i >= 0; i--) {
+				// Remove the filter value if it's not in the domains list
+				if(findDomain(domainsList, filterValues[i]) === -1) {
+					filterValues.splice(i, 1);
+				}
+			}
+		}
+	}
 };

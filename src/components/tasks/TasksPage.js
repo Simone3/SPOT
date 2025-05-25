@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import Page from '../common/Page';
 import Pane from '../common/Pane';
 import TaskFilters from './TaskFilters';
-import { getInitialDomains, cloneDomains, addDomainsForTasks, removeDomainsForTask, updateDomainsForTask, addDomainsForTask } from '../../logic/DomainsLogic';
+import { getInitialDomains, cloneDomains, addDomainsForTasks, removeDomainsForTask, updateDomainsForTask, addDomainsForTask, updateFiltersOnDomainsChange } from '../../logic/DomainsLogic';
 import { getInitialTasks, cloneTasks, loadBackEndTasks, saveNewTask, deleteTask, updateTask } from '../../logic/TasksLogic';
-import { getInitialFilters, refreshTasksVisibility, refreshTaskVisibility } from '../../logic/FiltersLogic';
+import { cloneFilters, getInitialFilters, refreshTasksVisibility, refreshTaskVisibility } from '../../logic/FiltersLogic';
 import TasksList from './TasksList';
 import { DateUtils } from '../../utils/DateUtils';
 
@@ -205,8 +205,8 @@ const TasksPage = () => {
 		const newDomainsContainer = cloneDomains(domainsContainer);
 
 		loadBackEndTasks(newTasksContainer, SAMPLE_INPUT_TASKS);
-		refreshTasksVisibility(newTasksContainer, filters, filters);
 		addDomainsForTasks(newDomainsContainer, newTasksContainer);
+		refreshTasksVisibility(newTasksContainer, filters, filters);
 
 		setTasksContainer(newTasksContainer);
 		setDomainsContainer(newDomainsContainer);
@@ -217,8 +217,8 @@ const TasksPage = () => {
 		const newDomainsContainer = cloneDomains(domainsContainer);
 
 		saveNewTask(newTasksContainer, task);
-		refreshTaskVisibility(task, filters);
 		addDomainsForTask(newDomainsContainer, task);
+		refreshTaskVisibility(task, filters);
 
 		setTasksContainer(newTasksContainer);
 		setDomainsContainer(newDomainsContainer);
@@ -227,10 +227,11 @@ const TasksPage = () => {
 	const onUpdateTask = (oldTask, changedValues) => {
 		const newTasksContainer = cloneTasks(tasksContainer);
 		const newDomainsContainer = cloneDomains(domainsContainer);
-		const newFilters = { ...filters };
+		const newFilters = cloneFilters(filters);
 
 		const newTask = updateTask(newTasksContainer, oldTask, changedValues);
 		updateDomainsForTask(newDomainsContainer, oldTask, newTask, changedValues);
+		updateFiltersOnDomainsChange(newDomainsContainer.filters, newFilters);
 		refreshTaskVisibility(newTask, newFilters);
 
 		setTasksContainer(newTasksContainer);
@@ -241,12 +242,15 @@ const TasksPage = () => {
 	const onDeleteTask = (task) => {
 		const newTasksContainer = cloneTasks(tasksContainer);
 		const newDomainsContainer = cloneDomains(domainsContainer);
+		const newFilters = cloneFilters(filters);
 
 		deleteTask(newTasksContainer, task);
 		removeDomainsForTask(newDomainsContainer, task);
+		updateFiltersOnDomainsChange(newDomainsContainer.filters, newFilters);
 
 		setTasksContainer(newTasksContainer);
 		setDomainsContainer(newDomainsContainer);
+		setFilters(newFilters);
 	};
 
 	const onFilterChange = (changedFilters) => {

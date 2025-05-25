@@ -5,7 +5,6 @@ const randomIndex = (length) => {
 };
 
 const check = (list, expectedListOfIds) => {
-	// console.log(`Result: ${JSON.stringify(list)}`);
 	if(expectedListOfIds) {
 		expect(list.map((v) => v.id)).toEqual(expectedListOfIds);
 	}

@@ -14,6 +14,20 @@ export const getInitialFilters = () => {
 };
 
 /**
+ * Clones the object and the contained lists.
+ */
+export const cloneFilters = (filters) => {
+	return {
+		text: filters.text,
+		owners: [ ...filters.owners ],
+		dueDates: [ ...filters.dueDates ],
+		priorities: [ ...filters.priorities ],
+		tags: [ ...filters.tags ],
+		showCompleted: filters.showCompleted
+	};
+};
+
+/**
  * Checks if a specific tasks matches a set of filters.
  */
 const matchesFilters = (task, filters) => {
@@ -45,7 +59,7 @@ const matchesFilters = (task, filters) => {
 };
 
 /**
- * Refreshes the "visibile" field of a tasks based on the new filters.
+ * Refreshes the "visibile" field of a task based on the given filters.
  */
 export const refreshTaskVisibility = (task, filters) => {
 	task.visible = matchesFilters(task, filters);

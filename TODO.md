@@ -1,6 +1,5 @@
 
 # refactor
-fix bug where a selected filter disappears (e.g. unselect completed)
 display filters only if at least one option
 show confirm popup on delete
 review task element ui
@@ -32,6 +31,7 @@ log to filesystem each change (with max lifetime/size)
 batch update/insert events for multiple changes
 	careful with "sortPosition" updates in ManuallySortedList...
 move deleted tasks into another table?
+add config that turns on a "coherence check" event (added to the event queue so that any concurrent changes are queued) that every hour or so compares in-memory with db?
 
 # others
 change font
