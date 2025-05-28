@@ -33,7 +33,7 @@ const PRIORITIES = [{
 const NO_OWNER = {
 	key: `no-owner-${crypto.randomUUID()}`,
 	value: undefined,
-	label: 'None (me)',
+	label: 'Me',
 	color: undefined,
 	persistent: true,
 	count: 0

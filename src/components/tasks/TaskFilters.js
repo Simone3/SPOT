@@ -27,31 +27,39 @@ const TaskFilters = ({ domains, filters, onFilterChange, onResetDefaultFilters }
 				placeholder='Search...'
 				value={filters.text}
 				onChange={(value) => onFilterChange({ text: value })}/>
-			<ButtonsSelect
-				label='Filter priorities'
-				allowMultiSelect={true}
-				value={filters.priorities}
-				onChange={(value) => onFilterChange({ priorities: value })}
-				options={domains.priorities}/>
-			<ButtonsSelect
-				label='Filter owners'
-				allowMultiSelect={true}
-				value={filters.owners}
-				onChange={(value) => onFilterChange({ owners: value })}
-				options={domains.owners}/>
-			<ButtonsSelect
-				label='Filter due dates'
-				allowMultiSelect={true}
-				value={filters.dueDates}
-				onChange={(value) => onFilterChange({ dueDates: value })}
-				options={domains.dueDates.map((dueDateDomain) => ({ ...dueDateDomain, label: !dueDateDomain.value ? dueDateDomain.label : DateUtils.toSmartString(new Date(dueDateDomain.value), currentDates) }))
-				}/>
-			<ButtonsSelect
-				label='Filter tags'
-				allowMultiSelect={true}
-				value={filters.tags}
-				onChange={(value) => onFilterChange({ tags: value })}
-				options={domains.tags}/>
+			{domains.priorities.length > 0 &&
+				<ButtonsSelect
+					label='Filter priorities'
+					allowMultiSelect={true}
+					value={filters.priorities}
+					onChange={(value) => onFilterChange({ priorities: value })}
+					options={domains.priorities}/>
+			}
+			{domains.owners.length > 0 &&
+				<ButtonsSelect
+					label='Filter owners'
+					allowMultiSelect={true}
+					value={filters.owners}
+					onChange={(value) => onFilterChange({ owners: value })}
+					options={domains.owners}/>
+			}
+			{domains.dueDates.length > 0 &&
+				<ButtonsSelect
+					label='Filter due dates'
+					allowMultiSelect={true}
+					value={filters.dueDates}
+					onChange={(value) => onFilterChange({ dueDates: value })}
+					options={domains.dueDates.map((dueDateDomain) => ({ ...dueDateDomain, label: !dueDateDomain.value ? dueDateDomain.label : DateUtils.toSmartString(new Date(dueDateDomain.value), currentDates) }))
+					}/>
+			}
+			{domains.tags.length > 0 &&
+				<ButtonsSelect
+					label='Filter tags'
+					allowMultiSelect={true}
+					value={filters.tags}
+					onChange={(value) => onFilterChange({ tags: value })}
+					options={domains.tags}/>
+			}
 			<Checkbox
 				label='Show completed'
 				value={filters.showCompleted}

@@ -1,18 +1,18 @@
 
 # refactor
-display filters only if at least one option
-show confirm popup on delete
 review task element ui
-refactor new task and remove modal companent -> button that creates a new task with empty text and then everything is an update basically
-edit in place only (only for active tasks?)
-	textarea for text
-		css same as text?
-		auto-fit height and width?
-		delayed update of main state? save on focus out?
-	on hover
-		show chip placeholders
-		show actions (left?): move (drag&drop + arrows?), edit priority (slider? arrows?), complete, delete?
-form: validate/transform data: trim, empty strings, remove double/weird spaces, format date, tags (remove empty + check unique), etc.
+	refactor new task and remove modal companent
+		button that creates a new task with empty text and then everything is an update basically
+	edit in place only (only for active tasks?)
+		textarea for text
+			css same as text?
+			auto-fit height and width?
+			delayed update of main state? save on focus out?
+		on hover
+			show chip placeholders
+			show actions (left?): move (drag&drop + arrows?), edit priority (slider? arrows?), complete, delete?
+	form: validate/transform data: trim, empty strings, remove double/weird spaces, format date, tags (remove empty + check unique), etc.
+show confirm popup on delete
 implement manual sort for active tasks -> careful with moving with an active filter and therefore a sub-list!
 button to auto-sort active tasks
 	if priority is the same, keep original manual sort?
