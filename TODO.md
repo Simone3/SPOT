@@ -1,26 +1,28 @@
 
 # refactor
 review task element ui
+	complete textarea (e.g. add editor controls)
+	make other task ui components clickable/editable
+	place two buttons on the second line side by side? or show on hover on the right (top right side by side?)? below or above?
+	on hover
+		show chip placeholders
+		show actions (left?): move (drag&drop + arrows?), edit priority (slider? arrows?), complete, delete?
+		always show date with "none"?
 	refactor new task and remove modal companent
 		button that creates a new task with empty text and then everything is an update basically
-	edit in place only (only for active tasks?)
-		textarea for text
-			css same as text?
-			auto-fit height and width?
-			delayed update of main state? save on focus out?
-		on hover
-			show chip placeholders
-			show actions (left?): move (drag&drop + arrows?), edit priority (slider? arrows?), complete, delete?
 	form: validate/transform data: trim, empty strings, remove double/weird spaces, format date, tags (remove empty + check unique), etc.
-show confirm popup on delete
+		is it actually necessary to check for tag uniqueness...?
+show confirm popup on delete -> already implemented in modal
 implement manual sort for active tasks -> careful with moving with an active filter and therefore a sub-list!
 button to auto-sort active tasks
 	if priority is the same, keep original manual sort?
+	do not recompute ALL positions but just those that do not match?
 
 # wire in electron main process: save to disk
 sqllite?
 how often?
 async
+debounce changes and merge changes on same element (text typing)
 error handling
 	notify when any error occurs
 	mark tasks in error graphically?
@@ -34,6 +36,7 @@ move deleted tasks into another table?
 add config that turns on a "coherence check" event (added to the event queue so that any concurrent changes are queued) that every hour or so compares in-memory with db?
 
 # others
+unit test all logic files (tasks, filters, domains, etc.)
 change font
 final ui polish inside electron
 handle/block two instances or windows of the app at the same time?

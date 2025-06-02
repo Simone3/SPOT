@@ -9,6 +9,7 @@ import TagsIcon from '../icons/TagsIcon';
 import CalendarIcon from '../icons/CalendarIcon';
 import OwnerIcon from '../icons/OwnerIcon';
 import { DatesContext } from '../../contexts/DatesContexr';
+import TextArea from '../inputs/TextArea';
 
 const Task = ({ task, onSave, onDelete }) => {
 	const currentDates = useContext(DatesContext);
@@ -77,9 +78,11 @@ const Task = ({ task, onSave, onDelete }) => {
 				</Clickable>
 			</div>
 			<div className='task-content'>
-				<div className='task-text'>
-					{text}
-				</div>
+				<TextArea
+					placeholder={'<no content>'}
+					value={text}
+					onChange={(value) => onSave({ text: value })}
+				/>
 				{(chips.length > 0) &&
 					<div className='task-chips'>
 						{chips.map((chip) => chip)}

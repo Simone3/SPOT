@@ -19,6 +19,9 @@ body {
 	--colors-danger: #FF0000;
 	--colors-warn: #FFA500;
 	--colors-disabled: #808080;
+
+	/* Fonts */
+	--font-family: Inter, system-ui, sans-serif;
 }
 
 /* HTML body */
@@ -27,6 +30,7 @@ body {
 	background-color: var(--colors-background-primary);
 	color: var(--colors-text-primary);
 	overflow: hidden;
+	font-family: var(--font-family);
 }
 
 /* React root */

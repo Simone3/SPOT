@@ -1,29 +1,18 @@
-import { useId, useState } from 'react';
+import { useId } from 'react';
+import { MDXEditor } from '@mdxeditor/editor';
+import '@mdxeditor/editor/style.css';
 import './TextArea.css';
 
-const TextArea = ({ label, placeholder, value, onChange, validate, forceShowInvalid }) => {
+const TextArea = ({ placeholder, value, onChange }) => {
 	const id = useId();
-
-	const [ touched, setTouched ] = useState(false);
-
-	const showInvalid = validate && (touched || forceShowInvalid) && !validate(value);
-
 	return (
-		<div className={`textarea-container ${showInvalid && 'textarea-container-invalid'}`}>
-			{label && <label htmlFor={id} className='textarea-label'>{label}</label>}
-			<textarea
+		<div className={`textarea-container`}>
+			<MDXEditor
 				id={id}
-				className='textarea-input'
+				contentEditableClassName='textarea-input'
 				placeholder={placeholder}
-				value={value}
-				onChange={(e) => {
-					onChange(e.target.value);
-				}}
-				onBlur={() => {
-					if(!touched) {
-						setTouched(true);
-					}
-				}}
+				markdown={value}
+				onChange={onChange}
 			/>
 		</div>
 	);

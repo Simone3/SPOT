@@ -11,7 +11,7 @@ import { DateUtils } from '../../utils/DateUtils';
 const SAMPLE_INPUT_TASKS = [
 	{
 		id: 'd4e92b5e-6879-4c49-bb76-3c7af2a0cbf2',
-		text: 'Buy groceries',
+		text: 'Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries.',
 		state: 'ACTIVE',
 		priority: 'NORMAL',
 		owner: 'Alice',
@@ -21,7 +21,7 @@ const SAMPLE_INPUT_TASKS = [
 	},
 	{
 		id: '85eeb930-1b29-4b6c-8f33-6a5161b57a60',
-		text: 'Finish project report',
+		text: 'Finish project report.\nAnd then send report.\n\nThis is another line.\nAnd another.',
 		state: 'ACTIVE',
 		priority: 'HIGH',
 		owner: 'Bob',
@@ -40,7 +40,7 @@ const SAMPLE_INPUT_TASKS = [
 	},
 	{
 		id: '70a58f3f-c82b-4f70-901b-b91785b4af01',
-		text: 'Schedule a dentist appointment',
+		text: '',
 		state: 'ACTIVE',
 		priority: 'URGENT',
 		owner: 'Alice',
