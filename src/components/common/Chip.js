@@ -1,12 +1,12 @@
 import './Chip.css';
 
-const Chip = ({ icon, text, invalid }) => {
+const Chip = ({ icon, invalid, children }) => {
 
 	return (
 		<div className={`chip ${invalid ? 'chip-invalid' : 'chip-valid'}`}>
 			{icon}
-			<div className='chip-text'>
-				{text}
+			<div className='chip-content'>
+				{children}
 			</div>
 		</div>
 	);

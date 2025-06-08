@@ -1,17 +1,22 @@
 
 # refactor
-review task element ui
-	complete textarea (e.g. add editor controls)
-	make other task ui components clickable/editable
-	place two buttons on the second line side by side? or show on hover on the right (top right side by side?)? below or above?
-	on hover
-		show chip placeholders
-		show actions (left?): move (drag&drop + arrows?), edit priority (slider? arrows?), complete, delete?
-		always show date with "none"?
-	refactor new task and remove modal companent
-		button that creates a new task with empty text and then everything is an update basically
-	form: validate/transform data: trim, empty strings, remove double/weird spaces, format date, tags (remove empty + check unique), etc.
-		is it actually necessary to check for tag uniqueness...?
+fix bug: delete task while the edit timeout is running
+chips ui text-like
+continue converting other chips as clickable/editable
+add new component for priority change
+place two buttons on the second line side by side? or show on hover on the right (top right side by side?)? below or above?
+add ui element for the timeout and final save? like a spinner (or whole border) that turns green at the end
+remove text input suggestion if exactly equal to current value?
+on task hover
+	show chip placeholders
+	show actions (left?): move (drag&drop + arrows?), edit priority (slider? arrows?), complete, delete?
+	always show date with "none"?
+refactor new task and remove modal companent
+	button that creates a new task with empty text and then everything is an update basically
+	add task when filters active: add newTask boolean that makes it pass any filter and is reset on any change? something like that
+form: validate/transform data: trim, empty strings, remove double/weird spaces, format date, tags (remove empty + check unique), etc.
+	is it actually necessary to check for tag uniqueness...?
+do "visibleTasks = tasks.filter((task) => task.visible)" inside state callbacks (visibleActiveTasks etc.) to avoid many filters / re-renders?
 show confirm popup on delete -> already implemented in modal
 implement manual sort for active tasks -> careful with moving with an active filter and therefore a sub-list!
 button to auto-sort active tasks
@@ -34,8 +39,10 @@ batch update/insert events for multiple changes
 	careful with "sortPosition" updates in ManuallySortedList...
 move deleted tasks into another table?
 add config that turns on a "coherence check" event (added to the event queue so that any concurrent changes are queued) that every hour or so compares in-memory with db?
+does closing the program while typing save the latest value? considering both state update on blur and/or delayed disk save, if implemented
 
 # others
+toggle filters sidebar visibility
 unit test all logic files (tasks, filters, domains, etc.)
 change font
 final ui polish inside electron

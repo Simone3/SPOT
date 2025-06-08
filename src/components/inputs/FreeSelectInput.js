@@ -51,7 +51,7 @@ const FreeSelectInput = ({ label, placeholder, options, disabled, value, onChang
 	// Filter dropdown options, but only after the user typed something in the free text input
 	const filteredOptions = changedAfterOpen && value ?
 		options.filter((option) => {
-			return option.toLowerCase().indexOf(value.toLowerCase()) !== -1;
+			return option.label.toLowerCase().indexOf(value.toLowerCase()) !== -1;
 		}) :
 		options;
 
@@ -80,16 +80,16 @@ const FreeSelectInput = ({ label, placeholder, options, disabled, value, onChang
 			<div className='free-select-input-dropdown-container'>
 				<div className='free-select-input-options-container'>
 					<ul className='free-select-input-options'>
-						{filteredOptions.map((option, index) => {
+						{filteredOptions.map((option) => {
 							return (
 								<li
-									key={index}
+									key={option.key}
 									className='free-select-input-option'
 									onClick={() => {
 										doClose();
-										onChange(option);
+										onChange(option.value);
 									}}>
-									{option}
+									{option.label}
 								</li>
 							);
 						})}

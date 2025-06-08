@@ -3,14 +3,14 @@ import Task from './Task';
 import Clickable from '../common/Clickable';
 import AddIcon from '../icons/AddIcon';
 
-const TasksList = ({ title, tasks, showAddNew, onSaveNewTask, onUpdateTask, onDeleteTask }) => {
+const TasksList = ({ title, tasks, inputDomains, showAddNew, onAddNewTask, onUpdateTask, onDeleteTask }) => {
 	const visibleTasks = tasks.filter((task) => task.visible);
 	return (
 		<div className='tasks-list-container'>
 			<div className='tasks-list-header-line'>
 				<h3 className='tasks-list-title'>{title}</h3>
 				{showAddNew && <div className='tasks-list-actions'>
-					<Clickable onClick={onSaveNewTask}>
+					<Clickable onClick={onAddNewTask}>
 						<AddIcon className='tasks-list-add-icon'/>
 						<div className='tasks-list-add-label'>TODO: add new task to be placed here!</div>
 					</Clickable>
@@ -20,8 +20,9 @@ const TasksList = ({ title, tasks, showAddNew, onSaveNewTask, onUpdateTask, onDe
 				<Task
 					key={task.id}
 					task={task}
-					onSave={(newValues) => {
-						onUpdateTask(task, newValues);
+					inputDomains={inputDomains}
+					onSave={(changedValues) => {
+						onUpdateTask(task, changedValues);
 					}}
 					onDelete={() => {
 						onDeleteTask(task);

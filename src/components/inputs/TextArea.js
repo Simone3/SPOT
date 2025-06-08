@@ -13,6 +13,7 @@ const TextArea = ({ placeholder, value, onChange }) => {
 				placeholder={placeholder}
 				markdown={value}
 				onChange={onChange}
+				plugins={[]}
 			/>
 		</div>
 	);
