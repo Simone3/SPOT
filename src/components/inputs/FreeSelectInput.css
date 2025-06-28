@@ -21,30 +21,38 @@
 .free-select-input-value {
 	outline: none;
 	font: inherit;
-	background-color: var(--colors-background-secondary);
-	border: 1px solid var(--colors-background-secondary);
 	color: var(--colors-text-primary);
 	padding: 6px;
 	width: 100%;
-}
-
-.free-select-input-value:focus {
-	border-color: var(--colors-accent-primary);
-	box-shadow: 0 0 4px var(--colors-accent-primary);
+	field-sizing: content;
+	max-inline-size: 300px;
+	text-overflow: ellipsis;
+	background: none;
+	border: none;
 }
 
 .free-select-input-dropdown-container {
 	position: absolute;
-	width: calc(100% - 2px);
+	min-width: 100px;
 	top: 100%;
 	z-index: 200;
 	background-color: var(--colors-background-secondary);
 	border: 1px solid var(--colors-background-secondary);
 	border-top: 0;
+	margin-left: 6px;
 }
 
-.free-select-input-closed .free-select-input-dropdown-container {
-	visibility: hidden;
+.free-select-input-dropdown-container-closed {
+	display: none;
+}
+
+.free-select-input-dropdown-arrow {
+	width: 0; 
+	height: 0; 
+	border-left: 5px solid transparent;
+	border-right: 5px solid transparent;
+	border-bottom: 5px solid var(--colors-background-secondary);
+	margin-top: -5px;
 }
 
 .free-select-input-options-container {
@@ -65,8 +73,12 @@
 	cursor: pointer;
 	user-select: none;
 	padding: 6px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	outline: none;
 }
 
-.free-select-input-option:hover {
+.free-select-input-option:hover,
+.free-select-input-option:focus {
 	background: var(--colors-accent-primary);
 }

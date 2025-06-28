@@ -1,12 +1,16 @@
 
 # refactor
-fix bug: delete task while the edit timeout is running
-chips ui text-like
-continue converting other chips as clickable/editable
-add new component for priority change
+continue converting other chips as clickable/editable - chips ui text-like
+	suggestions tooltip ui
+	date picker ui
+	smart tags free select inputs: remove empty (if unfocused) or just get a component that handles multiple values inside same input?
+	text color grey like original
+	red invalid date picker
+is clickOutsideOpenCounterRef still required? remove context and dependency!
+grey box-shadow on focus?
+add component for priority change
 place two buttons on the second line side by side? or show on hover on the right (top right side by side?)? below or above?
 add ui element for the timeout and final save? like a spinner (or whole border) that turns green at the end
-remove text input suggestion if exactly equal to current value?
 on task hover
 	show chip placeholders
 	show actions (left?): move (drag&drop + arrows?), edit priority (slider? arrows?), complete, delete?
@@ -16,6 +20,7 @@ refactor new task and remove modal companent
 	add task when filters active: add newTask boolean that makes it pass any filter and is reset on any change? something like that
 form: validate/transform data: trim, empty strings, remove double/weird spaces, format date, tags (remove empty + check unique), etc.
 	is it actually necessary to check for tag uniqueness...?
+completed task display text instead of inputs (in case of performance problems)
 do "visibleTasks = tasks.filter((task) => task.visible)" inside state callbacks (visibleActiveTasks etc.) to avoid many filters / re-renders?
 show confirm popup on delete -> already implemented in modal
 implement manual sort for active tasks -> careful with moving with an active filter and therefore a sub-list!
@@ -44,7 +49,17 @@ does closing the program while typing save the latest value? considering both st
 # others
 toggle filters sidebar visibility
 unit test all logic files (tasks, filters, domains, etc.)
-change font
+integration tests with web automation
+	basic: add, edit, complete, delete, filter -> start with 0 tasks and end with 0 tasks
+	change task and immediately change filter or exit tasks list, multiple tasks at once, delete and complete one while counter is running
+	very long domain values; very long texts
+	remove/complete task that is the only one that has the current active filter
+	manually sort and trigger reload, manually sort in filtered list
+	add multiple empty tasks
+improve autocomplete
+	bold the REMAINING part (not the substring that matches!) -> like amazon
+	sort options by count desc
+	show only the first N matches (no scrollbar)
 final ui polish inside electron
 handle/block two instances or windows of the app at the same time?
 test mode that allows to set mocked state from a button? e.g. special cases, thousands of rows, etc.
@@ -82,7 +97,7 @@ tag page that allows to set colors, add search keywords for each tag, merge tags
 timeline section for events with dates
 localization
 sorting in tasks and notes
-shortcuts like ctrl+f
+shortcuts like ctrl+f (autofocus on search filter)
 light theme
 global search for both tasks and notes
 drag&drop from outlook

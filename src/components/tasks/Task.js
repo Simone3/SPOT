@@ -11,6 +11,22 @@ import OwnerIcon from '../icons/OwnerIcon';
 import { DatesContext } from '../../contexts/DatesContexr';
 import TextArea from '../inputs/TextArea';
 import FreeSelectInput from '../inputs/FreeSelectInput';
+import DatePicker from '../inputs/DatePicker';
+
+/**
+ * Returns a string value possibly changed to match an option capitalization
+ * (value matches one of the options but not exacly the same case)
+ */
+const checkOptionCapitalization = (value, options) => {
+	const compareValue = value.trim().toLowerCase();
+	const caseInsensitiveMatch = options.find((option) => option.label.toLowerCase() === compareValue);
+	if(caseInsensitiveMatch && caseInsensitiveMatch.label !== value) {
+		return caseInsensitiveMatch.label;
+	}
+	else {
+		return value;
+	}
+};
 
 const Task = ({ task: taskFromProps, inputDomains, onSave: onSaveFromProps, onDelete }) => {
 	const currentDates = useContext(DatesContext);
@@ -25,6 +41,9 @@ const Task = ({ task: taskFromProps, inputDomains, onSave: onSaveFromProps, onDe
 		dueDate,
 		tags
 	} = internalTask;
+
+	// Temporary state for new tags
+	const [ newTag, setNewTag ] = useState('');
 
 	// Ref with the changed task values (a ref is required for the timeout/unmount callbacks because state may not be completely updated)
 	const changedValuesRef = useRef({});
@@ -59,11 +78,14 @@ const Task = ({ task: taskFromProps, inputDomains, onSave: onSaveFromProps, onDe
 		}, 5000);
 	};
 
-	// Helper to update both state and ref when values change, and (re)set the save timeout
-	const setValue = (key, value) => {
-		setInternalTask({ ...internalTask, [key]: value });
-		changedValuesRef.current[key] = value;
-		resetTimeout(saveTaskIfNecessary);
+	// Helper to update both state and ref when task values change, and (re)set the save timeout
+	const setTaskValue = (key, valueOrCallback) => {
+		setInternalTask((prevInternalTask) => {
+			const newValue = typeof valueOrCallback === 'function' ? valueOrCallback(prevInternalTask[key]) : valueOrCallback;
+			changedValuesRef.current[key] = newValue;
+			resetTimeout(saveTaskIfNecessary);
+			return { ...prevInternalTask, [key]: newValue };
+		});
 	};
 	
 	// On component unmount, flush any pending changes
@@ -74,44 +96,108 @@ const Task = ({ task: taskFromProps, inputDomains, onSave: onSaveFromProps, onDe
 		};
 	}, []);
 
-	// Dynamic list of "chips"
 	const chips = [];
+
+	// Owner chip
 	chips.push(
 		<Chip
 			key='owner'
 			icon={<OwnerIcon/>}>
-				<FreeSelectInput
-					value={owner}
-					placeholder={'Me'}
-					onChange={(value) => {
-						setValue('owner', value);
-					}}
-					options={inputDomains.owners}
-				/>
+			<FreeSelectInput
+				value={owner}
+				placeholder={'Me'}
+				onChange={(value) => {
+					setTaskValue('owner', value);
+				}}
+				onFinishEditing={(value) => {
+					// Update value for trimming/capitalization
+					let changedValue = value ? value.trim() : value;
+					changedValue = checkOptionCapitalization(changedValue, inputDomains.owners);
+					if(changedValue !== value) {
+						setTaskValue('owner', changedValue);
+					}
+				}}
+				options={inputDomains.owners}
+			/>
 		</Chip>
 	);
-	if(dueDate) {
-		const parsedDueDate = new Date(dueDate);
+
+	// Due date chip
+	chips.push(
+		<Chip
+			key='due-date'
+			icon={<CalendarIcon/>}>
+			<DatePicker
+				value={dueDate}
+				onChange={(value) => {
+					setTaskValue('dueDate', value);
+				}}
+			/>
+		</Chip>
+	);
+
+	// Tag chips (if any)
+	for(let i = 0; i < tags.length; i++) {
 		chips.push(
 			<Chip
-				key='due-date'
-				icon={<CalendarIcon/>}
-				text={DateUtils.toSmartString(parsedDueDate, currentDates)}
-				invalid={state === 'ACTIVE' && DateUtils.compareDay(parsedDueDate, new Date()) < 0}
-			/>
+				key={`tag-${i}`}
+				icon={<TagsIcon/>}>
+				<FreeSelectInput
+					value={tags[i]}
+					placeholder={'Add tag...'}
+					onChange={(value) => {
+						setTaskValue('tags', (prevTags) => [ ...prevTags.slice(0, i), value, ...prevTags.slice(i + 1) ]);
+					}}
+					onFinishEditing={(value) => {
+						let changedValue = value ? value.trim() : value;
+						if(changedValue) {
+							// Update value for trimming/capitalization
+							changedValue = checkOptionCapitalization(changedValue, inputDomains.tags);
+							if(changedValue !== value) {
+								setTaskValue('tags', (prevTags) => [ ...prevTags.slice(0, i), changedValue, ...prevTags.slice(i + 1) ]);
+							}
+						}
+						else {
+							// Remove any empty tag from the array
+							setTaskValue('tags', (prevTags) => [ ...prevTags.slice(0, i), ...prevTags.slice(i + 1) ]);
+						}
+					}}
+					options={inputDomains.tags}
+				/>
+			</Chip>
 		);
 	}
-	if(tags && tags.length > 0) {
-		for(const tag of tags) {
-			chips.push(
-				<Chip
-					key={`tag-${tag}`}
-					icon={<TagsIcon/>}
-					text={tag}
-				/>
-			);
-		}
-	}
+
+	// New tag chip
+	chips.push(
+		<Chip
+			key={`tag-new`}
+			icon={<TagsIcon/>}>
+			<FreeSelectInput
+				value={newTag}
+				placeholder={'Add tag...'}
+				onChange={(value) => {
+					console.log(`onChange ${value}`);
+					setNewTag(value);
+				}}
+				onFinishEditing={(value) => {
+					console.log(`onFinishEditing ${value}`);
+					let changedValue = value ? value.trim() : value;
+					if(changedValue) {
+						// Add as actual tag and reset new tag input
+						changedValue = checkOptionCapitalization(changedValue, inputDomains.tags);
+						setTaskValue('tags', (prevTags) => [ ...prevTags, changedValue ]);
+						setNewTag('');
+					}
+					else if(changedValue !== value) {
+						// Update for trimming
+						setNewTag('');
+					}
+				}}
+				options={inputDomains.tags}
+			/>
+		</Chip>
+	);
 
 	// Dynamic container class
 	let containerClass = 'task-container';
@@ -128,7 +214,7 @@ const Task = ({ task: taskFromProps, inputDomains, onSave: onSaveFromProps, onDe
 				<Checkbox
 					value={state === 'COMPLETED'}
 					onChange={() => {
-						setValue('state', state === 'ACTIVE' ? 'COMPLETED' : 'ACTIVE');
+						setTaskValue('state', state === 'ACTIVE' ? 'COMPLETED' : 'ACTIVE');
 					}}/>
 				<Clickable onClick={onDelete}>
 					<DeleteIcon/>
@@ -136,10 +222,10 @@ const Task = ({ task: taskFromProps, inputDomains, onSave: onSaveFromProps, onDe
 			</div>
 			<div className='task-content'>
 				<TextArea
-					placeholder={'<no content>'}
+					placeholder={'Add content...'}
 					value={text}
 					onChange={(value) => {
-						setValue('text', value);
+						setTaskValue('text', value);
 					}}
 				/>
 				{(chips.length > 0) &&

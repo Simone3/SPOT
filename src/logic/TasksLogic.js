@@ -124,10 +124,9 @@ export const moveActiveTask = (tasksContainer, fromIndex, toIndex) => {
  */
 const removeTaskFromList = (taskList, task) => {
 	const index = taskList.findIndex((arrayTask) => task.id === arrayTask.id);
-	if(index === -1) {
-		throw Error(`Task ${task.id} does not exist, cannot remove from list!`);
+	if(index !== -1) {
+		taskList.splice(index, 1);
 	}
-	taskList.splice(index, 1);
 };
 
 /**
@@ -135,10 +134,9 @@ const removeTaskFromList = (taskList, task) => {
  */
 const replaceTaskInList = (taskList, oldTask, newTask) => {
 	const index = taskList.findIndex((arrayTask) => oldTask.id === arrayTask.id);
-	if(index === -1) {
-		throw Error(`Task ${oldTask.id} does not exist, cannot remove from list!`);
+	if(index !== -1) {
+		taskList[index] = newTask;
 	}
-	taskList[index] = newTask;
 };
 
 /**

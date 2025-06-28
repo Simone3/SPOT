@@ -61,7 +61,7 @@ export const getInitialDomains = () => {
 		},
 		form: {
 			priorities: PRIORITIES,
-			owners: [],
+			owners: [ NO_OWNER ],
 			tags: []
 		}
 	};
