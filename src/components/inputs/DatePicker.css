@@ -1,24 +1,17 @@
 
-.date-picker-label {
-	font-size: 0.8em;
-    margin-bottom: 5px;
-    display: block;
-    font-weight: bolder;
-    color: var(--colors-text-secondary);
-}
-
 .date-picker-input {
-	color-scheme: dark;
 	outline: none;
 	font: inherit;
-	display: block;
-	padding: 5px;
-	border: 1px solid var(--colors-background-secondary);
-	background-color: var(--colors-background-secondary);
-	border-radius: 0;
+	color: var(--colors-text-primary);
+	padding: 6px;
+	width: 100%;
+	field-sizing: content;
+	max-inline-size: 300px;
+	text-overflow: ellipsis;
+	background: none;
+	border: none;
 }
 
-.date-picker-input:focus {
-	border-color: var(--colors-accent-primary);
-	box-shadow: 0 0 4px var(--colors-accent-primary);
+.date-picker-calendar {
+	color: red;
 }

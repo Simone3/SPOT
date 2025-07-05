@@ -1,18 +1,23 @@
 import { useId } from 'react';
+import ReactDatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import './DatePicker.css';
 
-const DatePicker = ({ label, value, onChange }) => {
+const DatePicker = ({ placeholder, value, onChange }) => {
 	const id = useId();
 
 	return (
 		<div className='date-picker-container'>
-			{label && <label htmlFor={id} className='date-picker-label'>{label}</label>}
-			<input
+			<ReactDatePicker
 				id={id}
+				selected={value}
+				onChange={(date) => {
+					onChange(date);
+				}}
+				dateFormat='MMMM d, yyyy'
+				placeholderText={placeholder}
 				className='date-picker-input'
-				type='date'
-				value={value}
-				onChange={(e) => onChange(e.target.value)}
+				calendarClassName='date-picker-calendar'
 			/>
 		</div>
 	);

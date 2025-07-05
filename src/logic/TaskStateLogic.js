@@ -67,6 +67,7 @@ const SAMPLE_INPUT_TASKS = [
 		state: 'ACTIVE',
 		priority: 'NORMAL',
 		owner: 'Bob',
+		dueDate: DateUtils.toStandardYearMonthDay(new Date('2021-02-20')),
 		tags: [ 'work' ],
 		sortPosition: 600
 	},

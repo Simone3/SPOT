@@ -132,6 +132,7 @@ const Task = ({ task: taskFromProps, inputDomains, onSave: onSaveFromProps, onDe
 				onChange={(value) => {
 					setTaskValue('dueDate', value);
 				}}
+				placeholder={'No due date'}
 			/>
 		</Chip>
 	);
@@ -177,11 +178,9 @@ const Task = ({ task: taskFromProps, inputDomains, onSave: onSaveFromProps, onDe
 				value={newTag}
 				placeholder={'Add tag...'}
 				onChange={(value) => {
-					console.log(`onChange ${value}`);
 					setNewTag(value);
 				}}
 				onFinishEditing={(value) => {
-					console.log(`onFinishEditing ${value}`);
 					let changedValue = value ? value.trim() : value;
 					if(changedValue) {
 						// Add as actual tag and reset new tag input

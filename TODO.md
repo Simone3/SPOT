@@ -1,12 +1,11 @@
 
 # refactor
+due dates filter is not re-sorted on change! e.g. change year
 continue converting other chips as clickable/editable - chips ui text-like
-	suggestions tooltip ui
 	date picker ui
-	smart tags free select inputs: remove empty (if unfocused) or just get a component that handles multiple values inside same input?
-	text color grey like original
+	options tooltip ui
+	text color grey like original, placeholder lighter grey
 	red invalid date picker
-is clickOutsideOpenCounterRef still required? remove context and dependency!
 grey box-shadow on focus?
 add component for priority change
 place two buttons on the second line side by side? or show on hover on the right (top right side by side?)? below or above?
