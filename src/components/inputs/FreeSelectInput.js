@@ -74,7 +74,6 @@ const FreeSelectInput = ({ label, placeholder, options, disabled, value, onChang
 				/>
 			</div>
 			<div className={`free-select-input-dropdown-container free-select-input-dropdown-container-${open && filteredOptions.length > 0 ? 'open' : 'closed'}`}>
-				<div className='free-select-input-dropdown-arrow'></div>
 				<div className='free-select-input-options-container'>
 					<ul className='free-select-input-options'>
 						{filteredOptions.map((option) => {

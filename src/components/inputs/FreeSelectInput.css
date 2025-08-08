@@ -21,8 +21,8 @@
 .free-select-input-value {
 	outline: none;
 	font: inherit;
-	color: var(--colors-text-primary);
-	padding: 6px;
+	color: var(--colors-text-secondary);
+	padding: 6px 0px;
 	width: 100%;
 	field-sizing: content;
 	max-inline-size: 300px;
@@ -38,21 +38,13 @@
 	z-index: 200;
 	background-color: var(--colors-background-secondary);
 	border: 1px solid var(--colors-background-secondary);
+	color: var(--colors-text-primary);
 	border-top: 0;
 	margin-left: 6px;
 }
 
 .free-select-input-dropdown-container-closed {
 	display: none;
-}
-
-.free-select-input-dropdown-arrow {
-	width: 0; 
-	height: 0; 
-	border-left: 5px solid transparent;
-	border-right: 5px solid transparent;
-	border-bottom: 5px solid var(--colors-background-secondary);
-	margin-top: -5px;
 }
 
 .free-select-input-options-container {

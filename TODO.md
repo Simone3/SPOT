@@ -1,12 +1,6 @@
 
 # refactor
-due dates filter is not re-sorted on change! e.g. change year
-continue converting other chips as clickable/editable - chips ui text-like
-	date picker ui
-	options tooltip ui
-	text color grey like original, placeholder lighter grey
-	red invalid date picker
-grey box-shadow on focus?
+fix focus on all components for consistency (also: calendar) - grey box-shadow on focus maybe? - tabs behaviour
 add component for priority change
 place two buttons on the second line side by side? or show on hover on the right (top right side by side?)? below or above?
 add ui element for the timeout and final save? like a spinner (or whole border) that turns green at the end
@@ -46,6 +40,7 @@ add config that turns on a "coherence check" event (added to the event queue so 
 does closing the program while typing save the latest value? considering both state update on blur and/or delayed disk save, if implemented
 
 # others
+better date picker where you can insert dates in any format and/or that displays the formatted (today, tomorrow, etc.) value
 toggle filters sidebar visibility
 unit test all logic files (tasks, filters, domains, etc.)
 integration tests with web automation

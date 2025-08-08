@@ -12,6 +12,7 @@ import { DatesContext } from '../../contexts/DatesContexr';
 import TextArea from '../inputs/TextArea';
 import FreeSelectInput from '../inputs/FreeSelectInput';
 import DatePicker from '../inputs/DatePicker';
+import WarningIcon from '../icons/WarningIcon';
 
 /**
  * Returns a string value possibly changed to match an option capitalization
@@ -102,7 +103,7 @@ const Task = ({ task: taskFromProps, inputDomains, onSave: onSaveFromProps, onDe
 	chips.push(
 		<Chip
 			key='owner'
-			icon={<OwnerIcon/>}>
+			leftIcon={<OwnerIcon/>}>
 			<FreeSelectInput
 				value={owner}
 				placeholder={'Me'}
@@ -126,11 +127,12 @@ const Task = ({ task: taskFromProps, inputDomains, onSave: onSaveFromProps, onDe
 	chips.push(
 		<Chip
 			key='due-date'
-			icon={<CalendarIcon/>}>
+			leftIcon={<CalendarIcon/>}
+			rightIcon={dueDate && DateUtils.compareDay(new Date(dueDate), new Date()) <= 0 && <WarningIcon className='due-date-overdue-icon'/>}>
 			<DatePicker
 				value={dueDate}
 				onChange={(value) => {
-					setTaskValue('dueDate', value);
+					setTaskValue('dueDate', DateUtils.toStandardYearMonthDay(value));
 				}}
 				placeholder={'No due date'}
 			/>
@@ -142,7 +144,7 @@ const Task = ({ task: taskFromProps, inputDomains, onSave: onSaveFromProps, onDe
 		chips.push(
 			<Chip
 				key={`tag-${i}`}
-				icon={<TagsIcon/>}>
+				leftIcon={<TagsIcon/>}>
 				<FreeSelectInput
 					value={tags[i]}
 					placeholder={'Add tag...'}
@@ -173,7 +175,7 @@ const Task = ({ task: taskFromProps, inputDomains, onSave: onSaveFromProps, onDe
 	chips.push(
 		<Chip
 			key={`tag-new`}
-			icon={<TagsIcon/>}>
+			leftIcon={<TagsIcon/>}>
 			<FreeSelectInput
 				value={newTag}
 				placeholder={'Add tag...'}

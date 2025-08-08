@@ -18,6 +18,7 @@ const DatePicker = ({ placeholder, value, onChange }) => {
 				placeholderText={placeholder}
 				className='date-picker-input'
 				calendarClassName='date-picker-calendar'
+				calendarStartDay={1}
 			/>
 		</div>
 	);

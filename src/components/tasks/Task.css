@@ -60,4 +60,6 @@
 	column-gap: 18px;
 }
 
-
+.due-date-overdue-icon {
+	color: var(--colors-danger) !important;
+}
