@@ -1,48 +1,12 @@
 
 .task-container {
-	border-left: 3px solid transparent;
-	margin: 30px 0;
-	padding: 10px 0;
 	display: flex;
-}
-
-.task-container-urgent {
-	border-color: var(--colors-priority-urgent);
-}
-
-.task-container-high {
-	border-color: var(--colors-priority-high);
-}
-
-.task-container-normal {
-	border-color: var(--colors-priority-normal);
-}
-
-.task-container-low {
-	border-color: var(--colors-priority-low);
+	padding: 0px 20px;
+	margin: 30px 0;
 }
 
 .task-container-completed {
 	text-decoration: line-through;
-}
-
-.task-actions {
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	flex-direction: column;
-	padding: 0 10px;
-	width: 20px;
-	min-width: 20px;
-	gap: 15px;
-}
-
-.task-actions input, .task-actions svg {
-	width: 15px;
-	height: 15px;
-	padding: 0;
-	margin: 0;
-	display: block;
 }
 
 .task-content {
@@ -50,16 +14,5 @@
 	flex-direction: column;
 	justify-content: center;
 	width: 100%;
-}
-
-.task-chips {
-	display: flex;
-	flex-wrap: wrap;
-	margin-top: 12px;
-	row-gap: 6px;
-	column-gap: 18px;
-}
-
-.due-date-overdue-icon {
-	color: var(--colors-danger) !important;
+	padding-left: 15px;
 }

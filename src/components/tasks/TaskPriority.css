@@ -1,0 +1,47 @@
+
+.task-priority {
+	position: relative;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.task-priority-bar {
+	width: 3px;
+	height: 100%;
+}
+
+.task-priority-picker {
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	transform: translate(-50%, -50%);
+	z-index: 200;
+	background-color: var(--colors-background-primary);
+	padding: 2px 0;
+}
+
+.task-priority-picker {
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+}
+
+.task-priority-picker-option {
+	cursor: pointer;
+	user-select: none;
+	overflow: hidden;
+	outline: none;
+	width: 15px;
+	height: 15px;
+	padding: 2px;
+}
+
+.task-priority-picker-option svg {
+	width: 15px;
+	height: 15px;
+	padding: 0;
+	margin: 0;
+	display: block;
+	color: var(--colors-background-secondary);
+}

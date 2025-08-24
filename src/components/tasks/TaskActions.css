@@ -1,0 +1,20 @@
+
+.task-actions {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	flex-direction: column;
+	padding: 0 10px;
+	width: 20px;
+	min-width: 20px;
+	gap: 15px;
+}
+
+.task-actions input, .task-actions svg {
+	width: 15px;
+	height: 15px;
+	padding: 0;
+	margin: 0;
+	display: block;
+	color: var(--colors-text-secondary);
+}

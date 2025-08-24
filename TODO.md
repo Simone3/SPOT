@@ -1,25 +1,29 @@
 
 # refactor
-fix focus on all components for consistency (also: calendar) - grey box-shadow on focus maybe? - tabs behaviour
-add component for priority change
-place two buttons on the second line side by side? or show on hover on the right (top right side by side?)? below or above?
-add ui element for the timeout and final save? like a spinner (or whole border) that turns green at the end
-on task hover
-	show chip placeholders
-	show actions (left?): move (drag&drop + arrows?), edit priority (slider? arrows?), complete, delete?
-	always show date with "none"?
-refactor new task and remove modal companent
+
+grey delete icon and refactor complete checkbox
+
+edit
+	add component for priority change
+	add ui element for the timeout and final save? like a spinner (or whole border) that turns green at the end
+	form: validate/transform data: trim, empty strings, remove double/weird spaces, format date, tags (remove empty + check unique), etc.
+	show confirm popup on delete -> already implemented in modal
+	disable spellcheck on textarea
+refactor new task and remove modal component
 	button that creates a new task with empty text and then everything is an update basically
 	add task when filters active: add newTask boolean that makes it pass any filter and is reset on any change? something like that
-form: validate/transform data: trim, empty strings, remove double/weird spaces, format date, tags (remove empty + check unique), etc.
-	is it actually necessary to check for tag uniqueness...?
-completed task display text instead of inputs (in case of performance problems)
-do "visibleTasks = tasks.filter((task) => task.visible)" inside state callbacks (visibleActiveTasks etc.) to avoid many filters / re-renders?
-show confirm popup on delete -> already implemented in modal
-implement manual sort for active tasks -> careful with moving with an active filter and therefore a sub-list!
-button to auto-sort active tasks
-	if priority is the same, keep original manual sort?
-	do not recompute ALL positions but just those that do not match?
+list
+	"No tasks to display" for both or neither section? or "add new task" is enough for first list?
+	do "visibleTasks = tasks.filter((task) => task.visible)" inside state callbacks (visibleActiveTasks etc.) to avoid many filters / re-renders?
+	completed strikethrough for datepicker not working
+sort
+	implement manual sort for active tasks -> careful with moving with an active filter and therefore a sub-list!
+	button to auto-sort active tasks
+		if priority is the same, keep original manual sort?
+		do not recompute ALL positions but just those that do not match?
+filters
+	"me" and "none" filters displayed only if there are actually tasks with empty values?
+	priority icons and/or colors in the filters?
 
 # wire in electron main process: save to disk
 sqllite?
@@ -40,6 +44,14 @@ add config that turns on a "coherence check" event (added to the event queue so 
 does closing the program while typing save the latest value? considering both state update on blur and/or delayed disk save, if implemented
 
 # others
+don't render dropboxes and hide them with css, just don't create them unless open = true!
+fix focus on all components for consistency
+	calendar, selectbox, etc.
+	delete icon not focusable (all clickables probably)
+	think about on-hover inputs, those are not focusable
+	grey box-shadow on focus maybe?
+	tabs behaviour too
+completed task display plain text instead of inputs (in case of performance problems)
 better date picker where you can insert dates in any format and/or that displays the formatted (today, tomorrow, etc.) value
 toggle filters sidebar visibility
 unit test all logic files (tasks, filters, domains, etc.)
@@ -85,6 +97,7 @@ text search
 sorted by date (with a section for each day?)
 
 # maybe in the future
+click on chip icon auto-focuses on input
 animations when task list changes
 lang / translations (define all strings in lang file)
 tag page that allows to set colors, add search keywords for each tag, merge tags, delete tags, etc.

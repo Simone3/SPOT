@@ -67,7 +67,7 @@ const SAMPLE_INPUT_TASKS = [
 		state: 'ACTIVE',
 		priority: 'NORMAL',
 		owner: 'Bob',
-		dueDate: DateUtils.toStandardYearMonthDay(new Date('2021-02-20')),
+		dueDate: DateUtils.toStandardYearMonthDay(new Date('2024-01-19')),
 		tags: [ 'work' ],
 		sortPosition: 600
 	},
@@ -85,7 +85,7 @@ const SAMPLE_INPUT_TASKS = [
 		state: 'ACTIVE',
 		priority: 'NORMAL',
 		owner: 'Charlie',
-		tags: [ 'travel', 'urgent' ],
+		tags: [ 'travel' ],
 		sortPosition: 800
 	},
 	{
@@ -122,7 +122,7 @@ const SAMPLE_INPUT_TASKS = [
 		priority: 'URGENT',
 		owner: 'Jane',
 		dueDate: DateUtils.toStandardYearMonthDay(new Date('2025-11-20')),
-		tags: [ 'finance', 'important' ],
+		tags: [ 'finance' ],
 		sortPosition: 1200
 	},
 	{
@@ -131,7 +131,7 @@ const SAMPLE_INPUT_TASKS = [
 		state: 'ACTIVE',
 		priority: 'HIGH',
 		owner: 'Emily',
-		dueDate: DateUtils.toStandardYearMonthDay(new Date('2025-01-23')),
+		dueDate: DateUtils.toStandardYearMonthDay(new Date('2025-01-19')),
 		tags: [ 'work' ],
 		sortPosition: 1300
 	},

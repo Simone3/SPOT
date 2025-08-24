@@ -1,0 +1,12 @@
+
+.task-chips {
+	display: flex;
+	flex-wrap: wrap;
+	margin-top: 12px;
+	row-gap: 6px;
+	column-gap: 18px;
+}
+
+.due-date-overdue-icon {
+	color: var(--colors-danger) !important;
+}
