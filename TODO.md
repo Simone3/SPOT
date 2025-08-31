@@ -1,10 +1,6 @@
 
 # refactor
-
-grey delete icon and refactor complete checkbox
-
 edit
-	add component for priority change
 	add ui element for the timeout and final save? like a spinner (or whole border) that turns green at the end
 	form: validate/transform data: trim, empty strings, remove double/weird spaces, format date, tags (remove empty + check unique), etc.
 	show confirm popup on delete -> already implemented in modal
@@ -15,7 +11,7 @@ refactor new task and remove modal component
 list
 	"No tasks to display" for both or neither section? or "add new task" is enough for first list?
 	do "visibleTasks = tasks.filter((task) => task.visible)" inside state callbacks (visibleActiveTasks etc.) to avoid many filters / re-renders?
-	completed strikethrough for datepicker not working
+	completed strikethrough for datepicker not working - also: can you strikethough placeholder (content, datepicker, etc.)?
 sort
 	implement manual sort for active tasks -> careful with moving with an active filter and therefore a sub-list!
 	button to auto-sort active tasks
@@ -23,6 +19,7 @@ sort
 		do not recompute ALL positions but just those that do not match?
 filters
 	"me" and "none" filters displayed only if there are actually tasks with empty values?
+	default task with "me" as owner
 	priority icons and/or colors in the filters?
 
 # wire in electron main process: save to disk

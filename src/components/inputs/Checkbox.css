@@ -11,15 +11,19 @@
 	width: 1em;
 	height: 1em;
 	line-height: 1;
-	background-color: var(--colors-background-secondary);
-	border: 1px solid var(--colors-background-secondary);
+	background-color: none;
+	border: 1px solid var(--colors-text-secondary);
 	cursor: pointer;
 	margin: 0;
 }
 
 .checkbox-input:focus {
-	border-color: var(--colors-accent-primary);
+	border-color: var(--colors-text-secondary);
 	box-shadow: 0 0 4px var(--colors-accent-primary);
+}
+
+.checkbox-container-accent-selected .checkbox-input:checked {
+	border-color: var(--colors-accent-primary);
 }
 
 .checkbox-input::before {
@@ -33,6 +37,10 @@
 
 .checkbox-input:checked::before {
 	content: "\2713";
+	color: var(--colors-text-secondary);
+}
+
+.checkbox-container-accent-selected .checkbox-input:checked::before {
 	color: var(--colors-accent-primary);
 }
 

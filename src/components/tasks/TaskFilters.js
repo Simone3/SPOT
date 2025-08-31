@@ -63,7 +63,8 @@ const TaskFilters = ({ domains, filters, onFilterChange, onResetDefaultFilters }
 			<Checkbox
 				label='Show completed'
 				value={filters.showCompleted}
-				onChange={(value) => onFilterChange({ showCompleted: value })}/>
+				onChange={(value) => onFilterChange({ showCompleted: value })}
+				accentSelectedColor={true}/>
 		</div>
 	);
 };
