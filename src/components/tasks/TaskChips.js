@@ -23,7 +23,7 @@ const checkOptionCapitalization = (value, options) => {
 	}
 };
 
-const Task = ({ inputDomains, task, setTaskValue, newTag, setNewTag }) => {
+const Task = ({ inputDomains, task, setTaskValue, flushTaskChanges, newTag, setNewTag }) => {
 	const {
 		state,
 		owner,
@@ -42,14 +42,18 @@ const Task = ({ inputDomains, task, setTaskValue, newTag, setNewTag }) => {
 				value={owner}
 				placeholder={'Me'}
 				onChange={(value) => {
-					setTaskValue('owner', value);
+					setTaskValue('owner', value, false);
 				}}
 				onFinishEditing={(value) => {
-					// Update value for trimming/capitalization
 					let changedValue = value ? value.trim() : value;
 					changedValue = checkOptionCapitalization(changedValue, inputDomains.owners);
 					if(changedValue !== value) {
-						setTaskValue('owner', changedValue);
+						// Update value for trimming/capitalization and then flush
+						setTaskValue('owner', changedValue, true);
+					}
+					else {
+						// Otherwise just flush
+						flushTaskChanges();
 					}
 				}}
 				options={inputDomains.owners}
@@ -67,9 +71,10 @@ const Task = ({ inputDomains, task, setTaskValue, newTag, setNewTag }) => {
 			<DatePicker
 				value={dueDate}
 				onChange={(value) => {
-					setTaskValue('dueDate', DateUtils.toStandardYearMonthDay(value));
+					setTaskValue('dueDate', DateUtils.toStandardYearMonthDay(value), false);
 				}}
 				placeholder={'No due date'}
+				onBlur={flushTaskChanges}
 			/>
 		</Chip>
 	);
@@ -84,20 +89,24 @@ const Task = ({ inputDomains, task, setTaskValue, newTag, setNewTag }) => {
 					value={tags[i]}
 					placeholder={'Add tag...'}
 					onChange={(value) => {
-						setTaskValue('tags', (prevTags) => [ ...prevTags.slice(0, i), value, ...prevTags.slice(i + 1) ]);
+						setTaskValue('tags', (prevTags) => [ ...prevTags.slice(0, i), value, ...prevTags.slice(i + 1) ], false);
 					}}
 					onFinishEditing={(value) => {
 						let changedValue = value ? value.trim() : value;
 						if(changedValue) {
-							// Update value for trimming/capitalization
 							changedValue = checkOptionCapitalization(changedValue, inputDomains.tags);
 							if(changedValue !== value) {
-								setTaskValue('tags', (prevTags) => [ ...prevTags.slice(0, i), changedValue, ...prevTags.slice(i + 1) ]);
+								// Update value for trimming/capitalization and then flush
+								setTaskValue('tags', (prevTags) => [ ...prevTags.slice(0, i), changedValue, ...prevTags.slice(i + 1) ], true);
+							}
+							else {
+								// Otherwise just flush
+								flushTaskChanges();
 							}
 						}
 						else {
-							// Remove any empty tag from the array
-							setTaskValue('tags', (prevTags) => [ ...prevTags.slice(0, i), ...prevTags.slice(i + 1) ]);
+							// Remove any empty tag from the array and then flush
+							setTaskValue('tags', (prevTags) => [ ...prevTags.slice(0, i), ...prevTags.slice(i + 1) ], true);
 						}
 					}}
 					options={inputDomains.tags}
@@ -120,10 +129,10 @@ const Task = ({ inputDomains, task, setTaskValue, newTag, setNewTag }) => {
 				onFinishEditing={(value) => {
 					let changedValue = value ? value.trim() : value;
 					if(changedValue) {
-						// Add as actual tag and reset new tag input
+						// Reset new tag input, add as actual tag and then flush
 						changedValue = checkOptionCapitalization(changedValue, inputDomains.tags);
-						setTaskValue('tags', (prevTags) => [ ...prevTags, changedValue ]);
 						setNewTag('');
+						setTaskValue('tags', (prevTags) => [ ...prevTags, changedValue ], true);
 					}
 					else if(changedValue !== value) {
 						// Update for trimming

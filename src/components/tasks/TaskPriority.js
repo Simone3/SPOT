@@ -5,7 +5,7 @@ import PriorityUrgentIcon from '../icons/PriorityUrgentIcon';
 import PriorityHighIcon from '../icons/PriorityHighIcon';
 import PriorityNormalIcon from '../icons/PriorityNormalIcon';
 
-const TaskPriority = ({ priorityDomain, value, onChange }) => {
+const TaskPriority = ({ priorityDomain, value, onChange, onBlur }) => {
 	const id = useId();
 
 	const [ open, setOpen ] = useState(false);
@@ -28,7 +28,7 @@ const TaskPriority = ({ priorityDomain, value, onChange }) => {
 		}
 	};
 
-	const onValueClick = () => {
+	const onCurrentValueClick = () => {
 		setOpen(true);
 	};
 
@@ -37,11 +37,13 @@ const TaskPriority = ({ priorityDomain, value, onChange }) => {
 			onChange(newValue);
 		}
 		setOpen(false);
+		onBlur();
 	};
 
 	const onOptionBlur = (e) => {
 		if(!containerRef.current.contains(e.relatedTarget)) {
 			setOpen(false);
+			onBlur();
 		}
 	};
 
@@ -59,7 +61,7 @@ const TaskPriority = ({ priorityDomain, value, onChange }) => {
 							className='task-priority-picker-option'
 							tabIndex={0}
 							onBlur={onOptionBlur}
-							onClick={open ? () => onNewValueClick(domain.value) : onValueClick}>
+							onClick={open ? () => onNewValueClick(domain.value) : onCurrentValueClick}>
 							{getPriorityIcon(domain.value, true || domain.value === value)}
 						</div>
 					);

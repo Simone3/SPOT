@@ -3,7 +3,7 @@ import { MDXEditor } from '@mdxeditor/editor';
 import '@mdxeditor/editor/style.css';
 import './TextArea.css';
 
-const TextArea = ({ placeholder, value, onChange }) => {
+const TextArea = ({ placeholder, value, onChange, onBlur }) => {
 	const id = useId();
 	return (
 		<div className={`textarea-container`}>
@@ -13,6 +13,7 @@ const TextArea = ({ placeholder, value, onChange }) => {
 				placeholder={placeholder}
 				markdown={value}
 				onChange={onChange}
+				onBlur={onBlur}
 				plugins={[]}
 			/>
 		</div>

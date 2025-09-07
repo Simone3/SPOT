@@ -3,7 +3,7 @@ import ReactDatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import './DatePicker.css';
 
-const DatePicker = ({ placeholder, value, onChange }) => {
+const DatePicker = ({ placeholder, value, onChange, onBlur }) => {
 	const id = useId();
 
 	return (
@@ -14,6 +14,7 @@ const DatePicker = ({ placeholder, value, onChange }) => {
 				onChange={(date) => {
 					onChange(date);
 				}}
+				onBlur={onBlur}
 				dateFormat='MMMM d, yyyy'
 				placeholderText={placeholder}
 				className='date-picker-input'

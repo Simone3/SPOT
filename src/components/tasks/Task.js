@@ -6,7 +6,7 @@ import TaskActions from './TaskActions';
 import TaskChips from './TaskChips';
 
 const Task = ({ task: taskFromProps, inputDomains, onSave: onSaveFromProps, onDelete }) => {
-	// Internal copy of the task, for delayed changes propagation to main state
+	// Internal copy of the task, for delayed changes propagation to the parent component (main state)
 	const [ internalTask, setInternalTask ] = useState(taskFromProps);
 	const {
 		text,
@@ -17,7 +17,7 @@ const Task = ({ task: taskFromProps, inputDomains, onSave: onSaveFromProps, onDe
 	// Temporary state for new tags
 	const [ newTag, setNewTag ] = useState('');
 
-	// Ref with the changed task values (a ref is required for the timeout/unmount callbacks because state may not be completely updated)
+	// Ref with the changed task values (a ref is required for the timer/unmount callbacks because state may not be completely updated)
 	const changedValuesRef = useRef({});
 
 	// Ref with the latest version of onSave callback (same reason as above)
@@ -26,46 +26,51 @@ const Task = ({ task: taskFromProps, inputDomains, onSave: onSaveFromProps, onDe
 		onSaveRef.current = onSaveFromProps;
 	}, [ onSaveFromProps ]);
 
-	// Helper to save the current task values
-	const saveTaskIfNecessary = () => {
+	// Timer that flushes changes back to the parent component with a delay
+	const flushTimerRef = useRef(null);
+
+	// Helper to stop the flush timer
+	const clearFlushTimer = () => {
+		if(flushTimerRef.current) {
+			clearTimeout(flushTimerRef.current);
+			flushTimerRef.current = null;
+		}
+	};
+
+	// Helper to flush any change to the parent component (main state)
+	const flushTaskChanges = () => {
+		clearFlushTimer();
 		if(Object.keys(changedValuesRef.current).length !== 0) {
-			onSaveRef.current(changedValuesRef.current);
+			const changesToFlush = changedValuesRef.current;
 			changedValuesRef.current = {};
+			onSaveRef.current(changesToFlush);
 		}
 	};
 
-	// Timeout that flushes changes back to the parent component with a delay
-	const timeoutRef = useRef(null);
-	const clearTimeoutIfAny = () => {
-		if(timeoutRef.current) {
-			clearTimeout(timeoutRef.current);
-			timeoutRef.current = null;
-		}
-	};
-	const resetTimeout = (callback) => {
-		clearTimeoutIfAny();
-		timeoutRef.current = setTimeout(() => {
-			callback();
-			timeoutRef.current = null;
-		}, 5000);
+	// Helper to (re)start the flush timer
+	const restartFlushTimer = () => {
+		clearFlushTimer();
+		flushTimerRef.current = setTimeout(flushTaskChanges, 5000);
 	};
 
-	// Helper to update both state and ref when task values change, and (re)set the save timeout
-	const setTaskValue = (key, valueOrCallback) => {
+	// Helper to update both state and ref when task values change, (re)set the flush timer and (optionally) flush any pending changes afterwards
+	const setTaskValue = (key, valueOrCallback, flush) => {
 		setInternalTask((prevInternalTask) => {
 			const newValue = typeof valueOrCallback === 'function' ? valueOrCallback(prevInternalTask[key]) : valueOrCallback;
 			changedValuesRef.current[key] = newValue;
-			resetTimeout(saveTaskIfNecessary);
+			if(flush) {
+				flushTaskChanges();
+			}
+			else {
+				restartFlushTimer();
+			}
 			return { ...prevInternalTask, [key]: newValue };
 		});
 	};
 	
 	// On component unmount, flush any pending changes
 	useEffect(() => {
-		return () => {
-			clearTimeoutIfAny();
-			saveTaskIfNecessary();
-		};
+		return flushTaskChanges;
 	}, []);
 
 	// Dynamic container class
@@ -80,21 +85,24 @@ const Task = ({ task: taskFromProps, inputDomains, onSave: onSaveFromProps, onDe
 				priorityDomain={inputDomains.priorities}
 				value={priority}
 				onChange={(value) => {
-					setTaskValue('priority', value);
+					setTaskValue('priority', value, false);
 				}}
+				onBlur={flushTaskChanges}
 			/>
 			<div className='task-content'>
 				<TextArea
 					placeholder={'Add content...'}
 					value={text}
 					onChange={(value) => {
-						setTaskValue('text', value);
+						setTaskValue('text', value, false);
 					}}
+					onBlur={flushTaskChanges}
 				/>
 				<TaskChips
 					inputDomains={inputDomains}
 					task={internalTask}
 					setTaskValue={setTaskValue}
+					flushTaskChanges={flushTaskChanges}
 					newTag={newTag}
 					setNewTag={setNewTag}
 				/>
@@ -102,7 +110,8 @@ const Task = ({ task: taskFromProps, inputDomains, onSave: onSaveFromProps, onDe
 			<TaskActions
 				task={internalTask}
 				onChangeState={() => {
-					setTaskValue('state', state === 'ACTIVE' ? 'COMPLETED' : 'ACTIVE');
+					// Change state and immediately flush it to parent component
+					setTaskValue('state', state === 'ACTIVE' ? 'COMPLETED' : 'ACTIVE', true);
 				}}
 				onDelete={onDelete}
 			/>
