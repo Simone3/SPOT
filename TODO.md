@@ -1,51 +1,9 @@
 
 # refactor
-
-TEST FLUSHING/TRIMMING/UNMOUNT/TIMER FOR ALL COMPONENTS!!!
-
-new list refresh logic
-	set completed / delete -> immediately update list and filters
-	change other fields
-		text change -> list: do NOT update (text filter if any!) - filters: nothing
-		domains don't change -> anything, doesn't matter
-		domain change/replace (unselected) -> list: do NOT update - filters: change on blur
-		domain change/replace (selected) -> list: do NOT update - filters: change on blur and ???
-		domain remove (unselected) -> list: do NOT update - filters: change on blur
-		domain remove (selected) -> list: do NOT update - filters: change on blur and keep that empty domain selected until next change/refresh
-		domain add -> list: do NOT update - filters: change on blur
-	refresh button on list
-		refresh list based on filters
-	on ANY filter change
-		refresh ALL lists with ALL filters (already doing that?)
-	on an empty domain unselection (also: reset defaults) - ???????
-		remove it -> i.e. on any filter change pass THAT domains list and remove if = 0 and not selected
-	|
-	V
-	field onblur -> task change -> do NOT update list + update domains (but keep selected values even if count = 0)
-	complete / delete -> update list + update domains (but keep selected values even if count = 0) [state change or delete event]
-	filter change -> update list + update domains ONLY ON THAT FILTER (but keep selected values even if count = 0)
-	reset filters -> update list + update domains (but keep selected values even if count = 0)
-	refresh button -> update list
-	add button -> do NOT update list + update domains (probably no-op but still)
-	sort button -> refresh order + update list
-	|
-	V
-	[NOTE: on blur AND global task timeout for safety? also for pause program without blur - both trigger the same update]
-	---
-	deleteTask()
-	updateTaskValues() -> does something only if it's different from main state (timeout but also on blur without change)
-		if state changes -> also trigger domains update!
-	refreshTasks()
-	addTask()
-	sortTasks()
-	onFilterChange()
-	resetFilters()
-	---
-	updateTasksVisibility()
-	updateDomains(x) (but keep selected values even if count = 0)
-	updateAllDomains() (but keep selected values even if count = 0)
+refactor add / reset / sort / refresh button into separate component, then wire in sort and refresh
+refresh button
+	refresh visibility
 edit
-	add ui element for the timeout and final save? like a spinner (or whole border) that turns green at the end
 	form: validate/transform data: trim, empty strings, remove double/weird spaces, format date, tags (remove empty + check unique), etc.
 	show confirm popup on delete -> already implemented in modal
 	disable spellcheck on textarea
@@ -61,6 +19,7 @@ sort
 	button to auto-sort active tasks
 		if priority is the same, keep original manual sort?
 		do not recompute ALL positions but just those that do not match?
+		refresh visibility
 filters
 	"me" and "none" filters displayed only if there are actually tasks with empty values?
 	default task with "me" as owner
@@ -113,7 +72,7 @@ test mode that allows to set mocked state from a button? e.g. special cases, tho
 delayed text search input submit
 focus (tab) on all icons (e.g. edit button)
 scrollbar style?
-check browser console errors
+check browser console errors (there's a warning when the tags list changes size)
 check spaces vs. tabs
 check linter
 select options and modal conflict when at the bottom of the content - also the entire content gets longer

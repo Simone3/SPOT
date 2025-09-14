@@ -10,7 +10,7 @@ import Sidebar from './components/common/Sidebar';
 import MainContent from './components/common/MainContent';
 import TagsPage from './components/tags/TagsPage';
 import SettingsPage from './components/settings/SettingsPage';
-import { DatesContextProvider } from './contexts/DatesContexr';
+import { DatesContextProvider } from './contexts/DatesContext';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(

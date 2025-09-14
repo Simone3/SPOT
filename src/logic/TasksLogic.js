@@ -95,19 +95,25 @@ const insertActiveTask = (tasksContainer, task) => {
 };
 
 /**
- * Adds a new task to the proper tasks lists.
- * It also sets some task fields: id, completionDate, sortPosition.
+ * Adds a new "empty" task to the proper tasks lists and returns it.
  */
-export const saveNewTask = (tasksContainer, task) => {
-	task.id = crypto.randomUUID();
-	task.visible = false;
+export const addNewTask = (tasksContainer) => {
+	const newTask = {
+		id: crypto.randomUUID(),
+		text: '',
+		state: 'ACTIVE',
+		priority: 'HIGH',
+		owner: undefined,
+		dueDate: undefined,
+		tags: [],
+		sortPosition: undefined,
+		visible: false,
+		completionDate: undefined
+	};
 
-	if(task.state === 'ACTIVE') {
-		insertActiveTask(tasksContainer, task);
-	}
-	else {
-		insertCompletedTask(tasksContainer, task);
-	}
+	insertActiveTask(tasksContainer, newTask);
+
+	return newTask;
 };
 
 /**
@@ -158,8 +164,7 @@ export const deleteTask = (tasksContainer, task) => {
 export const updateTask = (tasksContainer, oldTask, changedValues) => {
 	const newTask = {
 		...oldTask,
-		...changedValues,
-		visible: false
+		...changedValues
 	};
 
 	// If state changes, move the task from one list to the other (and set/reset the completion date)

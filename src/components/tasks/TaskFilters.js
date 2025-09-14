@@ -5,7 +5,7 @@ import Checkbox from '../inputs/Checkbox';
 import TextInput from '../inputs/TextInput';
 import Clickable from '../common/Clickable';
 import ResetIcon from '../icons/ResetIcon';
-import { DatesContext } from '../../contexts/DatesContexr';
+import { DatesContext } from '../../contexts/DatesContext';
 import { DateUtils } from '../../utils/DateUtils';
 
 const TaskFilters = ({ domains, filters, onFilterChange, onResetDefaultFilters }) => {

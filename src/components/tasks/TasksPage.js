@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import Page from '../common/Page';
 import Pane from '../common/Pane';
 import TaskFilters from './TaskFilters';
-import { getInitialTaskState, onAddNewTask, onDeleteTask, onFilterChange, onLoadBackEndTasks, onResetDefaultFilters, onUpdateTask } from '../../logic/TaskStateLogic';
+import { getInitialTaskState, addTaskToState, refreshVisibleTasksInState, deleteTaskFromState, changeFiltersInState, loadBackEndTasksIntoState, resetFiltersState, updateTaskInState } from '../../logic/TaskStateLogic';
 import TasksList from './TasksList';
 
 const TasksPage = () => {
@@ -10,7 +10,7 @@ const TasksPage = () => {
 
 	// FIXME: load from DB + fix the empty dependency array
 	useEffect(() => {
-		onLoadBackEndTasks(setTaskState);
+		loadBackEndTasksIntoState(setTaskState);
 		return () => {
 			setTaskState(() => {
 				return getInitialTaskState();
@@ -18,18 +18,42 @@ const TasksPage = () => {
 		};
 	}, []);
 
+	const onFilterChange = (changedFilters) => {
+		changeFiltersInState(setTaskState, changedFilters);
+	};
+
+	const onResetDefaultFilters = () => {
+		resetFiltersState(setTaskState);
+	};
+
+	const onRefreshTasks = () => {
+		refreshVisibleTasksInState(setTaskState);
+	};
+
+	const onSortTasksByImportance = () => {
+		// TODO sort
+	};
+
+	const onAddNewTask = () => {
+		addTaskToState(setTaskState);
+	};
+
+	const onUpdateTask = (oldTask, changedValues) => {
+		updateTaskInState(setTaskState, oldTask, changedValues);
+	};
+
+	const onDeleteTask = (task) => {
+		deleteTaskFromState(setTaskState, task);
+	};
+
 	return (
 		<Page>
 			<Pane relativeSize={1}>
 				<TaskFilters
 					domains={taskState.domainsContainer.filters}
 					filters={taskState.filters}
-					onFilterChange={(changedFilters) => {
-						onFilterChange(setTaskState, changedFilters);
-					}}
-					onResetDefaultFilters={() => {
-						onResetDefaultFilters(setTaskState);
-					}}
+					onFilterChange={onFilterChange}
+					onResetDefaultFilters={onResetDefaultFilters}
 				/>
 			</Pane>
 			<Pane relativeSize={2}>
@@ -37,32 +61,22 @@ const TasksPage = () => {
 					title='Tasks'
 					tasks={taskState.tasksContainer.active}
 					inputDomains={taskState.domainsContainer.form}
-					showAddNew={true}
-					onAddNewTask={(task) => {
-						onAddNewTask(setTaskState, task);
-					}}
-					onUpdateTask={(oldTask, changedValues) => {
-						onUpdateTask(setTaskState, oldTask, changedValues);
-					}}
-					onDeleteTask={(task) => {
-						onDeleteTask(setTaskState, task);
-					}}
+					onRefreshTasks={onRefreshTasks}
+					onSortTasksByImportance={onSortTasksByImportance}
+					onAddNewTask={onAddNewTask}
+					onUpdateTask={onUpdateTask}
+					onDeleteTask={onDeleteTask}
 				/>
 				{taskState.filters.showCompleted &&
 					<TasksList
 						title='Completed Tasks'
 						tasks={taskState.tasksContainer.completed}
 						inputDomains={taskState.domainsContainer.form}
-						showAddNew={false}
-						onAddNewTask={(task) => {
-							onAddNewTask(setTaskState, task);
-						}}
-						onUpdateTask={(oldTask, changedValues) => {
-							onUpdateTask(setTaskState, oldTask, changedValues);
-						}}
-						onDeleteTask={(task) => {
-							onDeleteTask(setTaskState, task);
-						}}
+						onRefreshTasks={undefined}
+						onSortTasksByImportance={undefined}
+						onAddNewTask={undefined}
+						onUpdateTask={onUpdateTask}
+						onDeleteTask={onDeleteTask}
 					/>
 				}
 			</Pane>
