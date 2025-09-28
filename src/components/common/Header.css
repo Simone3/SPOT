@@ -1,0 +1,37 @@
+
+
+.header-line {
+	display: flex;
+	justify-content: space-between;
+}
+
+.header-title {
+	margin: 20px 0 0 20px;
+}
+
+.header-actions {
+	display: flex;
+    justify-content: center;
+    flex-direction: row;
+	color: var(--colors-text-secondary);
+	margin: 20px 20px 0 0;
+	gap: 30px;
+}
+
+.header-actions .clickable {
+	display: flex;
+    justify-content: center;
+    flex-direction: row;
+	color: var(--colors-text-secondary);
+}
+
+.header-actions .clickable svg {
+	display: block;
+	height: 18px;
+	margin-right: 3px;
+	align-self: center;
+}
+
+.header-action-label {
+	align-self: center;
+}

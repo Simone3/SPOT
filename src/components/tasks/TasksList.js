@@ -1,21 +1,30 @@
 import './TasksList.css';
 import Task from './Task';
-import Clickable from '../common/Clickable';
 import AddIcon from '../icons/AddIcon';
+import RefreshIcon from '../icons/RefreshIcon';
+import SortIcon from '../icons/SortIcon';
+import Header from '../common/Header';
 
 const TasksList = ({ title, tasks, inputDomains, onRefreshTasks, onSortTasksByImportance, onAddNewTask, onUpdateTask, onDeleteTask }) => {
 	const visibleTasks = tasks.filter((task) => task.visible);
 	return (
 		<div className='tasks-list-container'>
-			<div className='tasks-list-header-line'>
-				<h3 className='tasks-list-title'>{title}</h3>
-				{onAddNewTask && <div className='tasks-list-actions'>
-					<Clickable onClick={onAddNewTask}>
-						<AddIcon className='tasks-list-add-icon'/>
-						<div className='tasks-list-add-label'>Add task</div>
-					</Clickable>
-				</div>}
-			</div>
+			<Header
+				title={title}
+				actions={[{
+					icon: <RefreshIcon />,
+					label: 'Refresh',
+					onClick: onRefreshTasks
+				}, {
+					icon: <SortIcon />,
+					label: 'Sort by importance',
+					onClick: onSortTasksByImportance
+				}, {
+					icon: <AddIcon />,
+					label: 'Add task',
+					onClick: onAddNewTask
+				}]}
+			/>
 			{visibleTasks.map((task) =>
 				<Task
 					key={task.id}
@@ -29,7 +38,7 @@ const TasksList = ({ title, tasks, inputDomains, onRefreshTasks, onSortTasksByIm
 					}}
 				/>)
 			}
-			{visibleTasks.length === 0 && !showAddNew && <div className='tasks-list-empty-message'>No tasks to display</div>}
+			{visibleTasks.length === 0 && <div className='tasks-list-empty-message'>No tasks to display</div>}
 		</div>
 	);
 };

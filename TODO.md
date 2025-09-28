@@ -1,29 +1,25 @@
 
 # refactor
-refactor add / reset / sort / refresh button into separate component, then wire in sort and refresh
-refresh button
-	refresh visibility
+delete confirm, then remove modal component
 edit
 	form: validate/transform data: trim, empty strings, remove double/weird spaces, format date, tags (remove empty + check unique), etc.
-	show confirm popup on delete -> already implemented in modal
 	disable spellcheck on textarea
-refactor new task and remove modal component
-	button that creates a new task with empty text and then everything is an update basically
-	add task when filters active: add newTask boolean that makes it pass any filter and is reset on any change? something like that
 list
 	"No tasks to display" for both or neither section? or "add new task" is enough for first list?
 	do "visibleTasks = tasks.filter((task) => task.visible)" inside state callbacks (visibleActiveTasks etc.) to avoid many filters / re-renders?
 	completed strikethrough for datepicker not working - also: can you strikethough placeholder (content, datepicker, etc.)?
 sort
-	implement manual sort for active tasks -> careful with moving with an active filter and therefore a sub-list!
-	button to auto-sort active tasks
-		if priority is the same, keep original manual sort?
-		do not recompute ALL positions but just those that do not match?
-		refresh visibility
+	implement sort by importance
+		if priority is the same, keep original manual sort!
+		do not recompute ALL positions but just those that do not match
+		all tasks and not only the visible ones
+	implement manual sort for active tasks
+		careful with moving with an active filter and therefore a sub-list
 filters
 	"me" and "none" filters displayed only if there are actually tasks with empty values?
-	default task with "me" as owner
+	default filter with "me" as owner
 	priority icons and/or colors in the filters?
+ui feedback when clicking a button
 
 # wire in electron main process: save to disk
 sqllite?
