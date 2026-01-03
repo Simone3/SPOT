@@ -15,6 +15,7 @@ const TextArea = ({ placeholder, value, onChange, onBlur }) => {
 				onChange={onChange}
 				onBlur={onBlur}
 				plugins={[]}
+				spellCheck={false}
 			/>
 		</div>
 	);

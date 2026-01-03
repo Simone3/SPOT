@@ -1,5 +1,6 @@
 import { useId } from 'react';
 import './ButtonsSelect.css';
+import Button from './Button';
 
 const ButtonsSelect = ({ label, allowMultiSelect, options, value, onChange }) => {
 	const id = useId();
@@ -40,13 +41,13 @@ const ButtonsSelect = ({ label, allowMultiSelect, options, value, onChange }) =>
 					const isSelected = allowMultiSelect ? value.includes(option.value) : value === option.value;
 					const extraStyle = isSelected && option.color ? { backgroundColor: option.color } : undefined;
 					return (
-						<button
+						<Button
 							key={option.key}
 							onClick={onClick}
 							className={`buttons-select-option ${isSelected ? 'buttons-select-option-selected' : 'buttons-select-option-unselected'}`}
-							style={extraStyle}>
-							{option.label}
-						</button>
+							style={extraStyle}
+							label={option.label}
+						/>
 					);
 				})}
 			</div>

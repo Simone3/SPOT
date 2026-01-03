@@ -5,7 +5,7 @@
 	margin: 30px 0;
 }
 
-.task-container-completed {
+.task-container-completed, .task-container-completed ._placeholder_sects_1101 {
 	text-decoration: line-through;
 }
 

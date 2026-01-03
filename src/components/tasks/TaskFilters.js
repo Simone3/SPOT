@@ -16,12 +16,13 @@ const TaskFilters = ({ domains, filters, onFilterChange, onResetDefaultFilters }
 			<Header
 				title={'Filters'}
 				actions={[{
+					id: 'reset',
 					icon: <ResetIcon />,
 					label: 'Reset to default',
 					onClick: onResetDefaultFilters
 				}]}
 			/>
-			<div class='task-filters'>
+			<div className='task-filters'>
 				<TextInput
 					label='Filter content'
 					placeholder='Search...'

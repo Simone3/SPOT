@@ -8,7 +8,7 @@ const Header = ({ title, actions }) => {
 			{actions && actions.length > 0 &&
 				<div className='header-actions'>
 					{actions.map((action) =>
-						<Clickable onClick={action.onClick}>
+						<Clickable onClick={action.onClick} key={action.id}>
 							{action.icon}
 							<div className='header-action-label'>{action.label}</div>
 						</Clickable>)

@@ -5,21 +5,24 @@ import RefreshIcon from '../icons/RefreshIcon';
 import SortIcon from '../icons/SortIcon';
 import Header from '../common/Header';
 
-const TasksList = ({ title, tasks, inputDomains, onRefreshTasks, onSortTasksByImportance, onAddNewTask, onUpdateTask, onDeleteTask }) => {
+const TasksList = ({ title, tasks, inputDomains, onRefreshTasks, onSortTasksByImportance, onAddNewTask, onUpdateTask, onDeleteTask, showActions }) => {
 	const visibleTasks = tasks.filter((task) => task.visible);
 	return (
 		<div className='tasks-list-container'>
 			<Header
 				title={title}
-				actions={[{
+				actions={showActions && [{
+					id: 'refresh',
 					icon: <RefreshIcon />,
 					label: 'Refresh',
 					onClick: onRefreshTasks
 				}, {
+					id: 'sort',
 					icon: <SortIcon />,
 					label: 'Sort by importance',
 					onClick: onSortTasksByImportance
 				}, {
+					id: 'add',
 					icon: <AddIcon />,
 					label: 'Add task',
 					onClick: onAddNewTask
@@ -38,7 +41,7 @@ const TasksList = ({ title, tasks, inputDomains, onRefreshTasks, onSortTasksByIm
 					}}
 				/>)
 			}
-			{visibleTasks.length === 0 && <div className='tasks-list-empty-message'>No tasks to display</div>}
+			{visibleTasks.length === 0 && <div className='tasks-list-empty-message'>No task found! Change the current filters or create new tasks.</div>}
 		</div>
 	);
 };

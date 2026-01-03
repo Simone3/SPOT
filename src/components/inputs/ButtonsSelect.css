@@ -13,25 +13,8 @@
 	gap: 5px;
 }
 
-.buttons-select-option {
-	outline: none;
-	font: inherit;
-	display: flex;
-	padding: 6px;
-	cursor: pointer;
-	background-color: var(--colors-background-secondary);
-	border: 1px solid var(--colors-background-secondary);
-	color: var(--colors-text-secondary);
-}
-
-.buttons-select-option:focus {
-	border-color: var(--colors-accent-primary);
-	box-shadow: 0 0 4px var(--colors-accent-primary);
-}
-
-.buttons-select-option-selected {
+.buttons-select-options .buttons-select-option-selected {
 	background-color: var(--colors-accent-primary);
 	color: var(--colors-text-primary);
 }
-
 

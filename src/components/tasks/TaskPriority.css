@@ -9,6 +9,7 @@
 .task-priority-bar {
 	width: 3px;
 	height: 100%;
+	border-radius: 3px;
 }
 
 .task-priority-picker {

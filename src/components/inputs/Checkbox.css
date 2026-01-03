@@ -13,6 +13,7 @@
 	line-height: 1;
 	background-color: none;
 	border: 1px solid var(--colors-text-secondary);
+	border-radius: 5px;
 	cursor: pointer;
 	margin: 0;
 }

@@ -1,13 +1,5 @@
 
 # refactor
-delete confirm, then remove modal component
-edit
-	form: validate/transform data: trim, empty strings, remove double/weird spaces, format date, tags (remove empty + check unique), etc.
-	disable spellcheck on textarea
-list
-	"No tasks to display" for both or neither section? or "add new task" is enough for first list?
-	do "visibleTasks = tasks.filter((task) => task.visible)" inside state callbacks (visibleActiveTasks etc.) to avoid many filters / re-renders?
-	completed strikethrough for datepicker not working - also: can you strikethough placeholder (content, datepicker, etc.)?
 sort
 	implement sort by importance
 		if priority is the same, keep original manual sort!
@@ -17,9 +9,7 @@ sort
 		careful with moving with an active filter and therefore a sub-list
 filters
 	"me" and "none" filters displayed only if there are actually tasks with empty values?
-	default filter with "me" as owner
-	priority icons and/or colors in the filters?
-ui feedback when clicking a button
+	default filter with "me" as owner?
 
 # wire in electron main process: save to disk
 sqllite?
@@ -40,6 +30,8 @@ add config that turns on a "coherence check" event (added to the event queue so 
 does closing the program while typing save the latest value? considering both state update on blur and/or delayed disk save, if implemented
 
 # others
+priority icons in the filters?
+ui feedback when clicking a button
 don't render dropboxes and hide them with css, just don't create them unless open = true!
 fix focus on all components for consistency
 	calendar, selectbox, etc.

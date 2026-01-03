@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import Page from '../common/Page';
 import Pane from '../common/Pane';
 import TaskFilters from './TaskFilters';
@@ -61,22 +61,21 @@ const TasksPage = () => {
 					title='Tasks'
 					tasks={taskState.tasksContainer.active}
 					inputDomains={taskState.domainsContainer.form}
+					onUpdateTask={onUpdateTask}
+					onDeleteTask={onDeleteTask}
+					showActions={true}
 					onRefreshTasks={onRefreshTasks}
 					onSortTasksByImportance={onSortTasksByImportance}
 					onAddNewTask={onAddNewTask}
-					onUpdateTask={onUpdateTask}
-					onDeleteTask={onDeleteTask}
 				/>
 				{taskState.filters.showCompleted &&
 					<TasksList
 						title='Completed Tasks'
 						tasks={taskState.tasksContainer.completed}
 						inputDomains={taskState.domainsContainer.form}
-						onRefreshTasks={undefined}
-						onSortTasksByImportance={undefined}
-						onAddNewTask={undefined}
 						onUpdateTask={onUpdateTask}
 						onDeleteTask={onDeleteTask}
+						showActions={false}
 					/>
 				}
 			</Pane>

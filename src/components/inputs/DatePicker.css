@@ -10,6 +10,15 @@
 	text-overflow: ellipsis;
 	background: none;
 	border: none;
+	display: inline;
+}
+
+.react-datepicker-wrapper {
+	display: inline;
+}
+
+.react-datepicker__input-container {
+	display: inline;
 }
 
 .react-datepicker__header {
