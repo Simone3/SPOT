@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import Page from '../common/Page';
 import Pane from '../common/Pane';
 import TaskFilters from './TaskFilters';
-import { getInitialTaskState, addTaskToState, refreshVisibleTasksInState, deleteTaskFromState, changeFiltersInState, loadBackEndTasksIntoState, resetFiltersState, updateTaskInState } from '../../logic/TaskStateLogic';
+import { getInitialTaskState, addTaskToState, refreshVisibleTasksInState, deleteTaskFromState, changeFiltersInState, loadBackEndTasksIntoState, resetFiltersState, updateTaskInState, sortTasksByImportanceInState } from '../../logic/TaskStateLogic';
 import TasksList from './TasksList';
 
 const TasksPage = () => {
@@ -31,7 +31,7 @@ const TasksPage = () => {
 	};
 
 	const onSortTasksByImportance = () => {
-		// TODO sort
+		sortTasksByImportanceInState(setTaskState);
 	};
 
 	const onAddNewTask = () => {

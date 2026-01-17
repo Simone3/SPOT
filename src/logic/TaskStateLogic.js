@@ -1,5 +1,5 @@
 import { getInitialDomains, cloneDomains, addDomainsForTasks, removeDomainsForTask, updateDomainsForTask, addDomainsForTask, updateFiltersOnDomainsChange } from './DomainsLogic';
-import { getInitialTasks, cloneTasks, loadBackEndTasks, addNewTask, deleteTask, updateTask } from './TasksLogic';
+import { getInitialTasks, cloneTasks, loadBackEndTasks, addNewTask, deleteTask, updateTask, forceSortActiveTasksByImportance } from './TasksLogic';
 import { cloneFilters, getInitialFilters, refreshTasksVisibility, refreshTaskVisibility } from './FiltersLogic';
 import { DateUtils } from '../utils/DateUtils';
 
@@ -335,6 +335,21 @@ export const refreshVisibleTasksInState = (setTaskState) => {
 
 		// Simply refresh the task lists based on the current filters
 		refreshTasksVisibility(newTasksContainer, prevTaskState.filters, prevTaskState.filters);
+
+		return {
+			tasksContainer: newTasksContainer,
+			domainsContainer: prevTaskState.domainsContainer,
+			filters: prevTaskState.filters
+		};
+	});
+};
+
+export const sortTasksByImportanceInState = (setTaskState) => {
+	setTaskState((prevTaskState) => {
+		const newTasksContainer = cloneTasks(prevTaskState.tasksContainer);
+
+		// Force sort by importance
+		forceSortActiveTasksByImportance(newTasksContainer);
 
 		return {
 			tasksContainer: newTasksContainer,

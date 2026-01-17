@@ -1,4 +1,11 @@
-import { insertIntoManuallySortedList, moveInManuallySortedList } from './ManuallySortedList';
+import { insertIntoManuallySortedList, moveInManuallySortedList, recomputeSortPositions } from './ManuallySortedList';
+
+const PRIORITIES_SORT = {
+	LOW: 0,
+	NORMAL: 1,
+	HIGH: 2,
+	URGENT: 3
+};
 
 /**
  * Returns a new object containing the initial task lists.
@@ -21,13 +28,9 @@ export const cloneTasks = (tasksContainer) => {
 };
 
 /**
- * Comparator for active tasks (sort by position and then by ID).
+ * Default comparator (by ID)
  */
-const activeTasksCompareFunction = (taskA, taskB) => {
-	const position = taskA.sortPosition - taskB.sortPosition;
-	if(position !== 0) {
-		return position;
-	}
+const taskIdCompareFunction = (taskA, taskB) => {
 	if(taskA.id < taskB.id) {
 		return -1;
 	}
@@ -38,28 +41,74 @@ const activeTasksCompareFunction = (taskA, taskB) => {
 };
 
 /**
- * Comparator for completed tasks (sort by completion date and then by ID).
+ * Comparator for active tasks (sort by position and then by ID).
+ */
+const activeTasksPositionCompareFunction = (taskA, taskB) => {
+	const positionCompare = taskA.sortPosition - taskB.sortPosition;
+	if(positionCompare !== 0) {
+		return positionCompare;
+	}
+	return taskIdCompareFunction(taskA, taskB);
+};
+
+/**
+ * Comparator for refreshing active tasks positions (sort by priority DESC, then due date DESC and then default to original manual sort).
+ */
+const activeTasksImportanceCompareFunction = (taskA, taskB) => {
+	const priorityCompare = PRIORITIES_SORT[taskB.priority] - PRIORITIES_SORT[taskA.priority];
+	if(priorityCompare !== 0) {
+		return priorityCompare;
+	}
+
+	let dueDateCompare = 0;
+	if(taskA.dueDate && taskB.dueDate) {
+		// Due date DESC if both tasks have it
+		dueDateCompare = taskB.dueDate - taskA.dueDate;
+	}
+	else if(taskA.dueDate) {
+		// If only task A has a due date, it goes first
+		dueDateCompare = -1;
+	}
+	else if(taskB.dueDate) {
+		// If only task B has a due date, it goes first
+		dueDateCompare = 1;
+	}
+	if(dueDateCompare !== 0) {
+		return dueDateCompare;
+	}
+
+	// Keep original manual sort if all values are the same
+	return taskA.sortPosition - taskB.sortPosition;
+};
+
+/**
+ * Comparator for completed tasks (sort by completion date DESC and then by ID).
  */
 const completedTasksCompareFunction = (taskA, taskB) => {
-	const completion = taskA.completionDate - taskB.completionDate;
-	if(completion !== 0) {
-		return completion;
+	const completionCompare = taskB.completionDate - taskA.completionDate;
+	if(completionCompare !== 0) {
+		return completionCompare;
 	}
-	if(taskA.id < taskB.id) {
-		return -1;
-	}
-	if(taskA.id > taskB.id) {
-		return 1;
-	}
-	return 0;
+	return taskIdCompareFunction(taskA, taskB);
 };
 
 /**
  * Sorts all task lists.
  */
 const sortAllTasks = (tasksContainer) => {
-	tasksContainer.active.sort(activeTasksCompareFunction);
+	tasksContainer.active.sort(activeTasksPositionCompareFunction);
 	tasksContainer.completed.sort(completedTasksCompareFunction);
+};
+
+/**
+ * Re-computes the sorting of active tasks by importance (priority / due date), possibly overriding the existing manual sort.
+ */
+export const forceSortActiveTasksByImportance = (tasksContainer) => {
+	// Re-sort the whole list based on importance rules
+	tasksContainer.active.sort(activeTasksImportanceCompareFunction);
+
+	// Re-compute sort positions where needed
+	recomputeSortPositions(tasksContainer.active);
 };
 
 /**

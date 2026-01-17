@@ -1,10 +1,6 @@
 
 # refactor
 sort
-	implement sort by importance
-		if priority is the same, keep original manual sort!
-		do not recompute ALL positions but just those that do not match
-		all tasks and not only the visible ones
 	implement manual sort for active tasks
 		careful with moving with an active filter and therefore a sub-list
 filters
@@ -12,6 +8,7 @@ filters
 	default filter with "me" as owner?
 
 # wire in electron main process: save to disk
+careful with sort positions, especially when they change in more than one task at a time (manual sort recompute + re-sort by urgency)
 sqllite?
 how often?
 async
