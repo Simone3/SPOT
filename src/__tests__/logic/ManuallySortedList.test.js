@@ -135,17 +135,17 @@ test('Move items around', () => {
 		{ id: 10, sortPosition: 500 }
 	];
 	check(moveInManuallySortedList(list, 7, 2), [ 0, 1, 7, 2, 3, 4, 5, 6, 8, 9, 10 ]);
-	check(moveInManuallySortedList(list, 1, 8), [ 0, 7, 2, 3, 4, 5, 6, 1, 8, 9, 10 ]);
-	check(moveInManuallySortedList(list, 4, 4), [ 0, 7, 2, 3, 4, 5, 6, 1, 8, 9, 10 ]);
-	check(moveInManuallySortedList(list, 4, 5), [ 0, 7, 2, 3, 4, 5, 6, 1, 8, 9, 10 ]);
-	check(moveInManuallySortedList(list, 4, 6), [ 0, 7, 2, 3, 5, 4, 6, 1, 8, 9, 10 ]);
-	check(moveInManuallySortedList(list, 6, 5), [ 0, 7, 2, 3, 5, 6, 4, 1, 8, 9, 10 ]);
-	check(moveInManuallySortedList(list, 3, 0), [ 3, 0, 7, 2, 5, 6, 4, 1, 8, 9, 10 ]);
-	check(moveInManuallySortedList(list, 3, 10), [ 3, 0, 7, 5, 6, 4, 1, 8, 9, 2, 10 ]);
-	check(moveInManuallySortedList(list, 3, 11), [ 3, 0, 7, 6, 4, 1, 8, 9, 2, 10, 5 ]);
-	check(moveInManuallySortedList(list, 7, 1), [ 3, 9, 0, 7, 6, 4, 1, 8, 2, 10, 5 ]);
-	check(moveInManuallySortedList(list, 0, 11), [ 9, 0, 7, 6, 4, 1, 8, 2, 10, 5, 3 ]);
-	check(moveInManuallySortedList(list, 10, 0), [ 3, 9, 0, 7, 6, 4, 1, 8, 2, 10, 5 ]);
+	check(moveInManuallySortedList(list, 1, 8), [ 0, 7, 2, 3, 4, 5, 6, 8, 1, 9, 10 ]);
+	check(moveInManuallySortedList(list, 4, 4), [ 0, 7, 2, 3, 4, 5, 6, 8, 1, 9, 10 ]);
+	check(moveInManuallySortedList(list, 4, 5), [ 0, 7, 2, 3, 5, 4, 6, 8, 1, 9, 10 ]);
+	check(moveInManuallySortedList(list, 4, 6), [ 0, 7, 2, 3, 4, 6, 5, 8, 1, 9, 10 ]);
+	check(moveInManuallySortedList(list, 6, 5), [ 0, 7, 2, 3, 4, 5, 6, 8, 1, 9, 10 ]);
+	check(moveInManuallySortedList(list, 3, 0), [ 3, 0, 7, 2, 4, 5, 6, 8, 1, 9, 10 ]);
+	check(moveInManuallySortedList(list, 3, 10), [ 3, 0, 7, 4, 5, 6, 8, 1, 9, 10, 2 ]);
+	check(moveInManuallySortedList(list, 3, 11), [ 3, 0, 7, 5, 6, 8, 1, 9, 10, 2, 4 ]);
+	check(moveInManuallySortedList(list, 7, 1), [ 3, 9, 0, 7, 5, 6, 8, 1, 10, 2, 4 ]);
+	check(moveInManuallySortedList(list, 0, 11), [ 9, 0, 7, 5, 6, 8, 1, 10, 2, 4, 3 ]);
+	check(moveInManuallySortedList(list, 10, 0), [ 3, 9, 0, 7, 5, 6, 8, 1, 10, 2, 4 ]);
 });
 
 test('Move with recompute', () => {

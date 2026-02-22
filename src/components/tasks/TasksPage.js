@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import Page from '../common/Page';
 import Pane from '../common/Pane';
 import TaskFilters from './TaskFilters';
-import { getInitialTaskState, addTaskToState, refreshVisibleTasksInState, deleteTaskFromState, changeFiltersInState, loadBackEndTasksIntoState, resetFiltersState, updateTaskInState, sortTasksByImportanceInState } from '../../logic/TaskStateLogic';
+import { getInitialTaskState, addTaskToState, refreshVisibleTasksInState, deleteTaskFromState, changeFiltersInState, loadBackEndTasksIntoState, resetFiltersState, updateTaskInState, sortTasksByImportanceInState, moveActiveTaskInState } from '../../logic/TaskStateLogic';
 import TasksList from './TasksList';
 
 const TasksPage = () => {
@@ -28,6 +28,10 @@ const TasksPage = () => {
 
 	const onRefreshTasks = () => {
 		refreshVisibleTasksInState(setTaskState);
+	};
+
+	const onMoveActiveTask = (fromIndex, toIndex) => {
+		moveActiveTaskInState(setTaskState, fromIndex, toIndex);
 	};
 
 	const onSortTasksByImportance = () => {
@@ -65,6 +69,7 @@ const TasksPage = () => {
 					onDeleteTask={onDeleteTask}
 					showActions={true}
 					onRefreshTasks={onRefreshTasks}
+					onMoveTask={onMoveActiveTask}
 					onSortTasksByImportance={onSortTasksByImportance}
 					onAddNewTask={onAddNewTask}
 				/>

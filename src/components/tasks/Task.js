@@ -1,11 +1,12 @@
 import './Task.css';
 import { useState, useRef, useEffect } from 'react';
+import { useSortable } from '@dnd-kit/react/sortable';
 import TextArea from '../inputs/TextArea';
 import TaskPriority from './TaskPriority';
 import TaskActions from './TaskActions';
 import TaskChips from './TaskChips';
 
-const Task = ({ task: taskFromProps, inputDomains, onSave: onSaveFromProps, onDelete }) => {
+const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFromProps, onDelete }) => {
 	// Internal copy of the task, for delayed changes propagation to the parent component (main state)
 	const [ internalTask, setInternalTask ] = useState(taskFromProps);
 	const {
@@ -28,6 +29,9 @@ const Task = ({ task: taskFromProps, inputDomains, onSave: onSaveFromProps, onDe
 
 	// Timer that flushes changes back to the parent component with a delay
 	const flushTimerRef = useRef(null);
+
+	// Sortable hook
+	const { ref, handleRef } = useSortable({ id, index });
 
 	// Helper to stop the flush timer
 	const clearFlushTimer = () => {
@@ -80,7 +84,7 @@ const Task = ({ task: taskFromProps, inputDomains, onSave: onSaveFromProps, onDe
 	}
 
 	return (
-		<div className={containerClass}>
+		<div ref={ref} className={containerClass}>
 			<TaskPriority
 				priorityDomain={inputDomains.priorities}
 				value={priority}
@@ -115,6 +119,7 @@ const Task = ({ task: taskFromProps, inputDomains, onSave: onSaveFromProps, onDe
 				}}
 				onDelete={onDelete}
 			/>
+			<span ref={handleRef}>MOVE P = {internalTask.sortPosition}, I = {index}</span>
 		</div>
 	);
 };

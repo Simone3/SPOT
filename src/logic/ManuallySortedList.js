@@ -1,4 +1,4 @@
-const SORT_POSITION_STEP = 100;
+const SORT_POSITION_STEP = 1000;
 
 /**
  * Computes sortPosition fields for elements starting from unsortedStartIndex until a suitable sortPosition is found or the end of the list is reached.
@@ -86,13 +86,13 @@ export const moveInManuallySortedList = (list, fromIndex, toIndex) => {
 		throw Error('FromIndex out of bound');
 	}
 
-	if(fromIndex === toIndex || fromIndex === toIndex - 1) {
+	if(fromIndex === toIndex) {
 		return list;
 	}
 
 	// Remove element from toIndex, clone it and re-add it to toIndex (this can probably be implemented more efficiently but enough for now...)
-	const element = { ...list.splice(fromIndex, 1)[0] };
-	insertIntoManuallySortedList(list, element, fromIndex < toIndex ? toIndex - 1 : toIndex);
+	const [ element ] = list.splice(fromIndex, 1);
+	insertIntoManuallySortedList(list, element, toIndex);
 	return list;
 };
 

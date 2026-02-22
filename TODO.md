@@ -1,11 +1,12 @@
 
 # refactor
-sort
-	implement manual sort for active tasks
-		careful with moving with an active filter and therefore a sub-list
+manual sort
+	sort handle ui
+	disable sort for completed
 filters
 	"me" and "none" filters displayed only if there are actually tasks with empty values?
 	default filter with "me" as owner?
+upgrade all versions (should also fix datepicker warns)
 
 # wire in electron main process: save to disk
 careful with sort positions, especially when they change in more than one task at a time (manual sort recompute + re-sort by urgency)

@@ -1,5 +1,5 @@
 import { getInitialDomains, cloneDomains, addDomainsForTasks, removeDomainsForTask, updateDomainsForTask, addDomainsForTask, updateFiltersOnDomainsChange } from './DomainsLogic';
-import { getInitialTasks, cloneTasks, loadBackEndTasks, addNewTask, deleteTask, updateTask, forceSortActiveTasksByImportance } from './TasksLogic';
+import { getInitialTasks, cloneTasks, loadBackEndTasks, addNewTask, deleteTask, updateTask, forceSortActiveTasksByImportance, moveActiveTask } from './TasksLogic';
 import { cloneFilters, getInitialFilters, refreshTasksVisibility, refreshTaskVisibility } from './FiltersLogic';
 import { DateUtils } from '../utils/DateUtils';
 
@@ -358,3 +358,19 @@ export const sortTasksByImportanceInState = (setTaskState) => {
 		};
 	});
 };
+
+export const moveActiveTaskInState = (setTaskState, fromIndex, toIndex) => {
+	setTaskState((prevTaskState) => {
+		const newTasksContainer = cloneTasks(prevTaskState.tasksContainer);
+
+		// Move task
+		moveActiveTask(newTasksContainer, fromIndex, toIndex);
+
+		return {
+			tasksContainer: newTasksContainer,
+			domainsContainer: prevTaskState.domainsContainer,
+			filters: prevTaskState.filters
+		};
+	});
+};
+
