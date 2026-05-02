@@ -1,8 +1,28 @@
 
+add agents
+
+create documentation
+
+convert to typescript
+add to agents
+  "Use plain React with TypeScript and CSS only"
+  - `npm run typecheck`
+
+create tests
+
+make it update agents
+
+eslint like media tracker
+
+
+
+
+
 # refactor
 manual sort
 	sort handle ui
 	disable sort for completed
+semi transparent background with task importance color?
 filters
 	"me" and "none" filters displayed only if there are actually tasks with empty values?
 	default filter with "me" as owner?
@@ -28,6 +48,7 @@ add config that turns on a "coherence check" event (added to the event queue so 
 does closing the program while typing save the latest value? considering both state update on blur and/or delayed disk save, if implemented
 
 # others
+DatesContextProvider should update every day at 00:00
 priority icons in the filters?
 ui feedback when clicking a button
 don't render dropboxes and hide them with css, just don't create them unless open = true!
