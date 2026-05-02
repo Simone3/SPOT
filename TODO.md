@@ -1,12 +1,10 @@
 
-add agents
-
-create documentation
-
 convert to typescript
 add to agents
   "Use plain React with TypeScript and CSS only"
   - `npm run typecheck`
+
+single css file?
 
 create tests
 
