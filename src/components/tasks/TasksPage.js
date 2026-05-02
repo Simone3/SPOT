@@ -8,7 +8,6 @@ import TasksList from './TasksList';
 const TasksPage = () => {
 	const [ taskState, setTaskState ] = useState(getInitialTaskState());
 
-	// FIXME: load from DB + fix the empty dependency array
 	useEffect(() => {
 		loadBackEndTasksIntoState(setTaskState);
 		return () => {

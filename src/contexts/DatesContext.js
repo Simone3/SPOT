@@ -3,7 +3,6 @@ import { createContext, useState } from 'react';
 export const DatesContext = createContext();
 
 export const DatesContextProvider = ({ children }) => {
-	// TODO update these values at 0:00 every day!
 	const [ currentDates ] = useState(() => {
 		const initialState = {};
 

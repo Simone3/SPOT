@@ -75,7 +75,7 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFrom
 	// On component unmount, flush any pending changes
 	useEffect(() => {
 		return flushTaskChanges;
-	}, []);
+	});
 
 	// Dynamic container class
 	let containerClass = 'task-container';
