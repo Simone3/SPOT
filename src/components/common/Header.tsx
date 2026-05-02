@@ -1,0 +1,35 @@
+import './Header.css';
+import Clickable from './Clickable';
+import type { ReactNode } from 'react';
+
+export type HeaderAction = {
+	id: string;
+	icon: ReactNode;
+	label: string;
+	onClick: () => void;
+};
+
+type HeaderProps = {
+	title: string;
+	actions?: HeaderAction[] | false;
+};
+
+const Header = ({ title, actions }: HeaderProps) => {
+	return (
+		<div className='header-line'>
+			<h3 className='header-title'>{title}</h3>
+			{actions && actions.length > 0 &&
+				<div className='header-actions'>
+					{actions.map((action) =>
+						<Clickable onClick={action.onClick} key={action.id}>
+							{action.icon}
+							<div className='header-action-label'>{action.label}</div>
+						</Clickable>)
+					}
+				</div>
+			}
+		</div>
+	);
+};
+
+export default Header;

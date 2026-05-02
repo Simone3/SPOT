@@ -5,7 +5,7 @@ SPOT is the Simple Planner & Organizer Tool: a small Electron + React task manag
 ## Current Status
 
 - The React app is the primary working surface.
-- Task data is currently loaded from in-memory sample data in `src/logic/TaskStateLogic.js`.
+- Task data is currently loaded from in-memory sample data in `src/logic/TaskStateLogic.ts`.
 - Task changes are held in React state only. They are not persisted to disk or a database.
 - The Electron main process opens `http://localhost:3000`, so the React dev server must be running when using the Electron shell.
 - The Notes, Tags, and Settings routes exist as placeholder pages.
@@ -34,6 +34,7 @@ Run validation:
 
 ```sh
 npm run lint
+npm run typecheck
 npm test
 ```
 
@@ -52,8 +53,10 @@ npm run make
 - `DOCUMENTATION.md` is this detailed project reference.
 - `main.js`, `preload.js`, and `renderer.js` are the Electron layer.
 - `index.html` and `public/index.html` are HTML entry points.
-- `src/index.js` mounts the React app and defines routes.
+- `src/index.tsx` mounts the React app and defines routes.
 - `src/index.css` defines global layout and theme variables.
+- `src/types.ts` contains shared TypeScript types for tasks, domains, filters, dates, and icons.
+- `src/react-app-env.d.ts` contains the React Scripts TypeScript reference.
 - `src/components/common` contains layout and shared UI primitives.
 - `src/components/inputs` contains reusable inputs.
 - `src/components/tasks` contains the current task-management UI.
@@ -65,7 +68,7 @@ npm run make
 
 ## Application Shell
 
-`src/index.js` renders:
+`src/index.tsx` renders:
 
 - `DatesContextProvider`
 - `BrowserRouter`
@@ -104,9 +107,9 @@ Known Electron work still pending:
 
 ## Task Data Model
 
-The current task shape is plain JavaScript:
+The current task shape is defined as a TypeScript interface in `src/types.ts`:
 
-```js
+```ts
 {
 	id,
 	text,
@@ -136,9 +139,9 @@ Field notes:
 
 ## Task State
 
-`src/logic/TaskStateLogic.js` coordinates task state updates. The state container has three sections:
+`src/logic/TaskStateLogic.ts` coordinates task state updates. The state container has three sections:
 
-```js
+```ts
 {
 	tasksContainer,
 	domainsContainer,
@@ -217,7 +220,7 @@ Active list actions:
 
 ## Filtering
 
-`src/logic/FiltersLogic.js` controls task visibility.
+`src/logic/FiltersLogic.ts` controls task visibility.
 
 Current filters:
 
@@ -238,7 +241,7 @@ Filter behavior:
 
 ## Domains
 
-`src/logic/DomainsLogic.js` builds option domains for filters and form inputs.
+`src/logic/DomainsLogic.ts` builds option domains for filters and form inputs.
 
 Persistent domains:
 
@@ -254,7 +257,7 @@ Dynamic domains:
 
 Domain entries contain:
 
-```js
+```ts
 {
 	key,
 	value,
@@ -274,9 +277,9 @@ Active tasks have two sorting modes:
 - Manual sort by `sortPosition`.
 - Forced importance sort.
 
-Manual sorting is implemented in `src/logic/ManuallySortedList.js`. Items are inserted or moved by assigning a `sortPosition` between neighboring items where possible. When there is not enough numeric space, affected positions are recomputed.
+Manual sorting is implemented in `src/logic/ManuallySortedList.ts`. Items are inserted or moved by assigning a `sortPosition` between neighboring items where possible. When there is not enough numeric space, affected positions are recomputed.
 
-Forced importance sorting is implemented in `src/logic/TasksLogic.js`. The intended order is:
+Forced importance sorting is implemented in `src/logic/TasksLogic.ts`. The intended order is:
 
 1. Priority descending: Urgent, High, Normal, Low.
 2. Due date presence first.
@@ -360,6 +363,7 @@ Validation commands:
 
 ```sh
 npm run lint
+npm run typecheck
 npm test
 ```
 
@@ -374,13 +378,13 @@ Future testing priorities:
 - Keep `README.md` minimal.
 - Keep this document detailed and current.
 - Keep `AGENTS.md` and this document aligned.
-- Use plain React with JavaScript and CSS.
+- Use plain React with TypeScript and CSS.
 - Do not add frameworks such as Vite or Next.js.
 - Do not add dependencies unless they clearly reduce work or risk.
 - Keep dependency versions exact in `package.json`.
 - Prefer existing component and logic patterns.
 - Keep tests minimal but meaningful.
-- Run `npm run lint` and `npm test` before closing a feature or fix.
+- Run `npm run lint`, `npm run typecheck`, and `npm test` before closing a feature or fix.
 
 ## Near-Term Work
 
