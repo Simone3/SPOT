@@ -48,6 +48,7 @@ add config that turns on a "coherence check" event (added to the event queue so 
 does closing the program while typing save the latest value? considering both state update on blur and/or delayed disk save, if implemented
 
 # others
+view what codex wrote in "Near-Term Work" in DOCUMENTATION.md
 DatesContextProvider should update every day at 00:00
 priority icons in the filters?
 ui feedback when clicking a button

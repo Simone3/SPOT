@@ -50,7 +50,6 @@ npm run make
 - `AGENTS.md` contains contributor and automation instructions. Keep it aligned with this document.
 - `README.md` intentionally stays minimal.
 - `DOCUMENTATION.md` is this detailed project reference.
-- `TODO.md` contains rough planning notes and future work.
 - `main.js`, `preload.js`, and `renderer.js` are the Electron layer.
 - `index.html` and `public/index.html` are HTML entry points.
 - `src/index.js` mounts the React app and defines routes.

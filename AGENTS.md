@@ -8,6 +8,7 @@
 - `README.md` just contains minimal information about the application and how to run it.
 - `DOCUMENTATION.md` contains the detailed application documentation.
 - Keep `AGENTS.md` and `DOCUMENTATION.md` aligned and up to date. If either becomes stale or contradicts the project state, fix it as part of the task.
+- Do NOT edit `TODO.md` and `README.md`.
 - Do NOT introduce extra libraries unless you justify them briefly and they clearly reduce work or risk.
 - `package.json` dependencies must always use exact versions; do not use modifiers such as `^` or `~`.
 - Prefer existing project patterns over new abstractions when they are available. However, do centralize behavior into shared components/utilities whenever convenient.
