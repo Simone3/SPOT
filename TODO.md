@@ -1,14 +1,10 @@
 
-
-
 convert to typescript
-	fixes
+	setTaskValue not passed to TaskChips but setOwner, setDueDate and setTags and move logic up
 	-----
-	setTaskValue not passed to TaskChips but setOwner, setDueDate and setTags
+	types.ts split into tasks etc. files
 	-----
-	types.ts split
-	-----
-	do another pass file by file for types
+	then do another pass file by file
 
 eslint like media tracker - need to upgrade deps?
 
@@ -17,6 +13,7 @@ single css file?
 create tests
 
 make it update agents
+
 
 
 
