@@ -4,22 +4,14 @@ export type TaskStatus = 'ACTIVE' | 'COMPLETED';
 
 export type TaskPriorityValue = 'URGENT' | 'HIGH' | 'NORMAL' | 'LOW';
 
-export type TaskDomainValue = string | undefined;
-
-export type TaskDueDate = string | undefined;
-
-export type TaskOwner = string | undefined;
-
-export type TaskTag = string;
-
 export interface Task {
 	id: string;
 	text: string;
 	state: TaskStatus;
 	priority: TaskPriorityValue;
-	owner?: TaskOwner;
-	dueDate?: TaskDueDate;
-	tags: TaskTag[];
+	owner?: string;
+	dueDate?: string;
+	tags: string[];
 	sortPosition: number;
 	visible: boolean;
 	completionDate?: Date;
@@ -32,9 +24,9 @@ export interface TasksContainer {
 	completed: Task[];
 }
 
-export interface DomainEntry<TValue extends TaskDomainValue = TaskDomainValue> {
+export interface DomainEntry {
 	key: string;
-	value: TValue;
+	value: string;
 	label: string;
 	color?: string;
 	persistent: boolean;
@@ -42,16 +34,16 @@ export interface DomainEntry<TValue extends TaskDomainValue = TaskDomainValue> {
 }
 
 export interface FilterDomains {
-	priorities: DomainEntry<TaskPriorityValue>[];
-	owners: DomainEntry<TaskOwner>[];
-	dueDates: DomainEntry<TaskDueDate>[];
-	tags: DomainEntry<TaskTag>[];
+	priorities: DomainEntry[];
+	owners: DomainEntry[];
+	dueDates: DomainEntry[];
+	tags: DomainEntry[];
 }
 
 export interface FormDomains {
-	priorities: DomainEntry<TaskPriorityValue>[];
-	owners: DomainEntry<TaskOwner>[];
-	tags: DomainEntry<TaskTag>[];
+	priorities: DomainEntry[];
+	owners: DomainEntry[];
+	tags: DomainEntry[];
 }
 
 export interface DomainsContainer {
@@ -61,10 +53,10 @@ export interface DomainsContainer {
 
 export interface TaskFilters {
 	text: string;
-	owners: TaskOwner[];
-	dueDates: TaskDueDate[];
+	owners: string[];
+	dueDates: string[];
 	priorities: TaskPriorityValue[];
-	tags: TaskTag[];
+	tags: string[];
 	showCompleted: boolean;
 }
 

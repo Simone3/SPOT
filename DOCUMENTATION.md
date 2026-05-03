@@ -130,11 +130,11 @@ Field notes:
 - `text` is free-form task content.
 - `state` is `ACTIVE` or `COMPLETED`.
 - `priority` is `URGENT`, `HIGH`, `NORMAL`, or `LOW`.
-- `owner` is a free-form string or `undefined`. The empty owner is displayed as `Me`.
-- `dueDate` is stored as `YYYY-MM-DD` or `undefined`.
+- `owner` is a free-form string. A missing or empty owner is displayed as `Me`.
+- `dueDate` is stored as a `YYYY-MM-DD` string. A missing or empty due date is displayed as no due date.
 - `tags` is an array of free-form strings.
-- `sortPosition` stores manual ordering for active tasks. It is required and defaults to `0` when input data does not provide a value.
-- `visible` is derived from filters. It is required and defaults to `false` when input data does not provide a value.
+- `sortPosition` stores manual ordering for active tasks. It is required and new tasks start at `0`.
+- `visible` is derived from filters. It is required and sample/new tasks start as `false`.
 - `completionDate` is set when a task is completed.
 
 ## Task State
@@ -246,8 +246,8 @@ Filter behavior:
 Persistent domains:
 
 - priorities: Urgent, High, Normal, Low
-- owner: `Me`, represented by `undefined`
-- due date: `None`, represented by `undefined`
+- owner: `Me`, represented by an empty string
+- due date: `None`, represented by an empty string
 
 Dynamic domains:
 
@@ -332,7 +332,7 @@ Input components:
 - `TextArea`
 - `TextInput`
 
-`ButtonsSelect` and `FreeSelectInput` are generic input components. They accept generic option objects instead of app-specific domain types.
+`ButtonsSelect` and `FreeSelectInput` are string-valued input components. They accept simple option objects instead of app-specific domain types.
 
 Icons are local React components under `src/components/icons`.
 

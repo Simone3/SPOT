@@ -1,8 +1,6 @@
 import { insertIntoManuallySortedList, moveInManuallySortedList, recomputeSortPositions } from './ManuallySortedList';
 import type { Task, TaskChange, TaskPriorityValue, TasksContainer } from '../types';
 
-type TaskInput = Omit<Task, 'sortPosition' | 'visible'> & Partial<Pick<Task, 'sortPosition' | 'visible'>>;
-
 const PRIORITIES_SORT: Record<TaskPriorityValue, number> = {
 	LOW: 0,
 	NORMAL: 1,
@@ -117,13 +115,8 @@ export const forceSortActiveTasksByImportance = (tasksContainer: TasksContainer)
 /**
  * Adds a list of back-end tasks into the task lists.
  */
-export const loadBackEndTasks = (tasksContainer: TasksContainer, backEndTasks: TaskInput[]): void => {
-	for(const backEndTask of backEndTasks) {
-		const task: Task = {
-			...backEndTask,
-			sortPosition: backEndTask.sortPosition ?? 0,
-			visible: backEndTask.visible ?? false
-		};
+export const loadBackEndTasks = (tasksContainer: TasksContainer, backEndTasks: Task[]): void => {
+	for(const task of backEndTasks) {
 		if(task.state === 'ACTIVE') {
 			tasksContainer.active.push(task);
 		}

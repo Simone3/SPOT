@@ -1,7 +1,7 @@
 const SORT_POSITION_STEP = 1000;
 
 export interface ManuallySortedItem {
-	sortPosition?: number;
+	sortPosition: number;
 }
 
 /**
@@ -16,10 +16,10 @@ const fixSortPositionsInUnsortedSection = <TElement extends ManuallySortedItem>(
 	let i = unsortedStartIndex + 1;
 	let unsortedCount = 1;
 	while(i < list.length) {
-		if(list[i].sortPosition! - referenceSortPosition - 1 >= unsortedCount) {
+		if(list[i].sortPosition - referenceSortPosition - 1 >= unsortedCount) {
 			// We found an element high enough to close the "unsorted section"
 			// Recompute sort positions for all elements in between with proportionally distributed sortPosition between referenceSortPosition and the found sortPosition
-			const sortFixStep = (list[i].sortPosition! - referenceSortPosition - 1) / (unsortedCount + 1);
+			const sortFixStep = (list[i].sortPosition - referenceSortPosition - 1) / (unsortedCount + 1);
 			for(let j = 0; j < unsortedCount; j++) {
 				list[unsortedStartIndex + j].sortPosition = referenceSortPosition + Math.ceil((j + 1) * sortFixStep);
 			}
@@ -34,7 +34,7 @@ const fixSortPositionsInUnsortedSection = <TElement extends ManuallySortedItem>(
 
 	// We reached the end of the list without closing the "unsorted section": reload all trailing elements with the default step
 	for(let j = unsortedStartIndex; j < list.length; j++) {
-		list[j].sortPosition = list[j - 1].sortPosition! + SORT_POSITION_STEP;
+		list[j].sortPosition = list[j - 1].sortPosition + SORT_POSITION_STEP;
 	}
 	return i;
 };
@@ -58,21 +58,21 @@ export const insertIntoManuallySortedList = <TElement extends ManuallySortedItem
 
 	// Add at the start of the list: position is the current first element minus the step
 	if(index <= 0) {
-		element.sortPosition = list[0].sortPosition! - SORT_POSITION_STEP;
+		element.sortPosition = list[0].sortPosition - SORT_POSITION_STEP;
 		list.unshift(element);
 		return list;
 	}
 
 	// Add at the end of the list: position is the current last element plus the step
 	if(index >= list.length) {
-		element.sortPosition = list[list.length - 1].sortPosition! + SORT_POSITION_STEP;
+		element.sortPosition = list[list.length - 1].sortPosition + SORT_POSITION_STEP;
 		list.push(element);
 		return list;
 	}
 
 	// Add in the middle of the list and then compute sortPosition to fit adjacent elements (possibly changing sortPosition of following elements if there's no space to fit the new one)
 	list.splice(index, 0, element);
-	fixSortPositionsInUnsortedSection(list, list[index - 1].sortPosition!, index);
+	fixSortPositionsInUnsortedSection(list, list[index - 1].sortPosition, index);
 	return list;
 };
 
@@ -110,9 +110,9 @@ export const recomputeSortPositions = <TElement extends ManuallySortedItem>(list
 
 	let i = 1;
 	while(i < list.length) {
-		if(list[i - 1].sortPosition! >= list[i].sortPosition!) {
+		if(list[i - 1].sortPosition >= list[i].sortPosition) {
 			// Current element is unsorted, call the utility to close this "unsorted section" (possibly spanning more than one element)
-			i = fixSortPositionsInUnsortedSection(list, list[i - 1].sortPosition!, i);
+			i = fixSortPositionsInUnsortedSection(list, list[i - 1].sortPosition, i);
 		}
 		else {
 			// All good with current sorting, move on

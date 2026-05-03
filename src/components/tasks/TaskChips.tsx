@@ -13,7 +13,7 @@ import type { FormDomains, Task as TaskType } from '../../types';
  * Returns a string value possibly changed to match an option capitalization
  * (value matches one of the options but not exacly the same case)
  */
-const checkOptionCapitalization = (value: string | undefined, options: { label: string }[]) => {
+const checkOptionCapitalization = (value: string, options: { label: string }[]) => {
 	if(!value) {
 		return value;
 	}
@@ -54,7 +54,7 @@ const TaskChips = ({ inputDomains, task, setTaskValue, flushTaskChanges, newTag,
 			key='owner'
 			leftIcon={<OwnerIcon/>}>
 			<FreeSelectInput
-				value={owner}
+				value={owner || ''}
 				placeholder={'Me'}
 				onChange={(value) => {
 					setTaskValue('owner', value, false);

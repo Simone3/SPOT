@@ -1,5 +1,5 @@
 
-import type { DomainEntry, DomainsContainer, FilterDomains, FormDomains, Task, TaskChange, TaskDomainValue, TaskFilters, TaskPriorityValue, TaskTag, TasksContainer } from '../types';
+import type { DomainEntry, DomainsContainer, FilterDomains, FormDomains, Task, TaskChange, TaskFilters, TasksContainer } from '../types';
 
 type DomainsSection = Partial<FilterDomains & FormDomains>;
 
@@ -12,7 +12,7 @@ type TaskDomainHandler = {
 	filtersField: FilterListField;
 };
 
-const PRIORITIES: DomainEntry<TaskPriorityValue>[] = [{
+const PRIORITIES: DomainEntry[] = [{
 		key: 'urgent',
 		value: 'URGENT',
 		label: 'Urgent',
@@ -43,18 +43,18 @@ const PRIORITIES: DomainEntry<TaskPriorityValue>[] = [{
 	}
 ];
 
-const NO_OWNER: DomainEntry<undefined> = {
+const NO_OWNER: DomainEntry = {
 	key: `no-owner-${crypto.randomUUID()}`,
-	value: undefined,
+	value: '',
 	label: 'Me',
 	color: undefined,
 	persistent: true,
 	count: 0
 };
 
-const NO_DUE_DATE: DomainEntry<undefined> = {
+const NO_DUE_DATE: DomainEntry = {
 	key: `no-due-date-${crypto.randomUUID()}`,
-	value: undefined,
+	value: '',
 	label: 'None',
 	color: undefined,
 	persistent: true,
@@ -103,10 +103,10 @@ export const cloneDomains = (domainsContainer: DomainsContainer): DomainsContain
  * Comparator for domain entries (sort by value).
  */
 const domainCompareFunction = (entryA: DomainEntry, entryB: DomainEntry): number => {
-	if((entryA.value as string) < (entryB.value as string)) {
+	if(entryA.value < entryB.value) {
 		return -1;
 	}
-	if((entryA.value as string) > (entryB.value as string)) {
+	if(entryA.value > entryB.value) {
 		return 1;
 	}
 	return 0;
@@ -127,7 +127,7 @@ const sortAllDomains = (domainsContainer: DomainsContainer): void => {
 /**
  * Removes a domain value from a domain list (either by removing the entry altogether or by cloning & updating the entry counter).
  */
-const removeDomain = (domainsList: DomainEntry[], oldDomainValue: TaskDomainValue): void => {
+const removeDomain = (domainsList: DomainEntry[], oldDomainValue: string): void => {
 	// Find old domain by value
 	const domainIndex = domainsList.findIndex((domain) => domain.value === oldDomainValue);
 	if(domainIndex === -1) {
@@ -150,7 +150,7 @@ const removeDomain = (domainsList: DomainEntry[], oldDomainValue: TaskDomainValu
 /**
  * Adds a domain value to a domain list (either by creating a new entry or by cloning & updating an existing entry counter).
  */
-const addDomain = (domainsList: DomainEntry[], newDomainValue: TaskDomainValue): void => {
+const addDomain = (domainsList: DomainEntry[], newDomainValue: string): void => {
 	// Find new domain by value
 	const domainIndex = domainsList.findIndex((domain) => domain.value === newDomainValue);
 
@@ -162,10 +162,10 @@ const addDomain = (domainsList: DomainEntry[], newDomainValue: TaskDomainValue):
 	let domain;
 	if(domainIndex === -1) {
 		// Create new entry and add it to the list
-			domain = {
-				key: String(newDomainValue),
-				value: newDomainValue,
-				label: newDomainValue as string,
+		domain = {
+			key: newDomainValue,
+			value: newDomainValue,
+			label: newDomainValue,
 			color: undefined,
 			persistent: false,
 			count: 1
@@ -183,7 +183,7 @@ const addDomain = (domainsList: DomainEntry[], newDomainValue: TaskDomainValue):
 /**
  * Returns the index in the domains list where the given domain value is located or -1 if not present.
  */
-const findDomain = (domainsList: DomainEntry[], domainValue: TaskDomainValue): number => {
+const findDomain = (domainsList: DomainEntry[], domainValue: string): number => {
 	for(let i = 0; i < domainsList.length; i++) {
 		if(domainsList[i].value === domainValue) {
 			return i;
@@ -228,8 +228,8 @@ const updateDomainsForTaskInSection = (domainsSection: DomainsSection, oldTask: 
 
 		// If the task value is actually a list, remove all old values and add all new values (for simplicity)
 		if(handler.isTaskFieldList) {
-			const oldDomainValues = oldDomainValue as TaskTag[] | undefined;
-			const newDomainValues = newDomainValue as TaskTag[] | undefined;
+			const oldDomainValues = oldDomainValue as string[] | undefined;
+			const newDomainValues = newDomainValue as string[] | undefined;
 			if(oldDomainValues) {
 				for(const oldDomainValueElem of oldDomainValues) {
 					removeDomain(domainsList, oldDomainValueElem);
@@ -243,13 +243,13 @@ const updateDomainsForTaskInSection = (domainsSection: DomainsSection, oldTask: 
 			}
 		}
 
-		// If the task value is not a list, simply update the domain list directly (ifs are on the task itself because undefined value may be a valid domain value!)
+		// If the task value is not a list, simply update the domain list directly.
 		else {
 			if(oldTask) {
-				removeDomain(domainsList, oldDomainValue as TaskDomainValue);
+				removeDomain(domainsList, typeof oldDomainValue === 'string' ? oldDomainValue : '');
 			}
 			if(newTask) {
-				addDomain(domainsList, newDomainValue as TaskDomainValue);
+				addDomain(domainsList, typeof newDomainValue === 'string' ? newDomainValue : '');
 			}
 		}
 	}

@@ -2,31 +2,31 @@ import { useId, type MouseEvent } from 'react';
 import './ButtonsSelect.css';
 import Button from './Button';
 
-type ButtonsSelectOption<TValue> = {
+type ButtonsSelectOption = {
 	key: string;
-	value: TValue;
+	value: string;
 	label: string;
 	color?: string;
 };
 
-type ButtonsSelectProps<TValue> = {
+type ButtonsSelectProps = {
 	label?: string;
 	allowMultiSelect?: boolean;
-	options: ButtonsSelectOption<TValue>[];
-	value: TValue | TValue[];
-	onChange: (value: TValue | TValue[]) => void;
+	options: ButtonsSelectOption[];
+	value: string | string[];
+	onChange: (value: string | string[]) => void;
 };
 
-const ButtonsSelect = <TValue, >({ label, allowMultiSelect, options, value, onChange }: ButtonsSelectProps<TValue>) => {
+const ButtonsSelect = ({ label, allowMultiSelect, options, value, onChange }: ButtonsSelectProps) => {
 	const id = useId();
-	const onClickSingle = (optionValue: TValue) => {
+	const onClickSingle = (optionValue: string) => {
 		if(value !== optionValue) {
 			onChange(optionValue);
 		}
 	};
 
-	const onClickMultiple = (event: MouseEvent<HTMLButtonElement>, optionValue: TValue) => {
-		const selectedValues = value as TValue[];
+	const onClickMultiple = (event: MouseEvent<HTMLButtonElement>, optionValue: string) => {
+		const selectedValues = value as string[];
 		const selectedIndex = selectedValues.indexOf(optionValue);
 		if(event.metaKey || event.ctrlKey) {
 			if(selectedIndex === -1) {
@@ -54,7 +54,7 @@ const ButtonsSelect = <TValue, >({ label, allowMultiSelect, options, value, onCh
 			<div id={id} className='buttons-select-options'>
 				{options.map((option) => {
 					const onClick = allowMultiSelect ? (event: MouseEvent<HTMLButtonElement>) => onClickMultiple(event, option.value) : () => onClickSingle(option.value);
-					const isSelected = allowMultiSelect ? (value as TValue[]).includes(option.value) : value === option.value;
+					const isSelected = allowMultiSelect ? (value as string[]).includes(option.value) : value === option.value;
 					const extraStyle = isSelected && option.color ? { backgroundColor: option.color } : undefined;
 					return (
 						<Button

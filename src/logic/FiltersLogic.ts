@@ -41,11 +41,11 @@ const matchesFilters = (task: Task, filters: TaskFilters): boolean => {
 		return false;
 	}
 
-	if(filters.owners.length > 0 && !filters.owners.includes(task.owner)) {
+	if(filters.owners.length > 0 && !filters.owners.includes(task.owner || '')) {
 		return false;
 	}
 
-	if(filters.dueDates.length > 0 && !filters.dueDates.includes(task.dueDate)) {
+	if(filters.dueDates.length > 0 && !filters.dueDates.includes(task.dueDate || '')) {
 		return false;
 	}
 

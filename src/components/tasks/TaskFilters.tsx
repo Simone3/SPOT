@@ -7,7 +7,7 @@ import Header from '../common/Header';
 import ResetIcon from '../icons/ResetIcon';
 import { DatesContext } from '../../contexts/DatesContext';
 import { DateUtils } from '../../utils/DateUtils';
-import type { FilterDomains, TaskDueDate, TaskFilterChange, TaskFilters as TaskFiltersType, TaskOwner, TaskPriorityValue, TaskTag } from '../../types';
+import type { FilterDomains, TaskFilterChange, TaskFilters as TaskFiltersType, TaskPriorityValue } from '../../types';
 
 type TaskFiltersProps = {
 	domains: FilterDomains;
@@ -49,7 +49,7 @@ const TaskFilters = ({ domains, filters, onFilterChange, onResetDefaultFilters }
 						label='Filter owners'
 						allowMultiSelect={true}
 						value={filters.owners}
-						onChange={(value) => onFilterChange({ owners: value as TaskOwner[] })}
+						onChange={(value) => onFilterChange({ owners: value as string[] })}
 						options={domains.owners}/>
 				}
 				{domains.dueDates.length > 0 &&
@@ -57,7 +57,7 @@ const TaskFilters = ({ domains, filters, onFilterChange, onResetDefaultFilters }
 						label='Filter due dates'
 						allowMultiSelect={true}
 						value={filters.dueDates}
-						onChange={(value) => onFilterChange({ dueDates: value as TaskDueDate[] })}
+						onChange={(value) => onFilterChange({ dueDates: value as string[] })}
 						options={domains.dueDates.map((dueDateDomain) => ({ ...dueDateDomain, label: !dueDateDomain.value ? dueDateDomain.label : DateUtils.toSmartString(new Date(dueDateDomain.value), currentDates) }))
 						}/>
 				}
@@ -66,7 +66,7 @@ const TaskFilters = ({ domains, filters, onFilterChange, onResetDefaultFilters }
 						label='Filter tags'
 						allowMultiSelect={true}
 						value={filters.tags}
-						onChange={(value) => onFilterChange({ tags: value as TaskTag[] })}
+						onChange={(value) => onFilterChange({ tags: value as string[] })}
 						options={domains.tags}/>
 				}
 				<Checkbox

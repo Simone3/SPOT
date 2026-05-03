@@ -4,9 +4,7 @@ import { cloneFilters, getInitialFilters, refreshTasksVisibility, refreshTaskVis
 import { DateUtils } from '../utils/DateUtils';
 import type { SetTaskState, Task, TaskChange, TaskFilterChange, TaskStateContainer } from '../types';
 
-type SampleTask = Omit<Task, 'visible'> & Partial<Pick<Task, 'visible'>>;
-
-const SAMPLE_INPUT_TASKS: SampleTask[] = [
+const SAMPLE_INPUT_TASKS: Task[] = [
 	{
 		id: 'd4e92b5e-6879-4c49-bb76-3c7af2a0cbf2',
 		text: 'Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries.',
@@ -15,7 +13,8 @@ const SAMPLE_INPUT_TASKS: SampleTask[] = [
 		owner: 'Alice',
 		dueDate: DateUtils.toStandardYearMonthDay(new Date('2025-11-12')),
 		tags: [ 'shopping', 'errands' ],
-		sortPosition: 0
+		sortPosition: 0,
+		visible: false
 	},
 	{
 		id: '85eeb930-1b29-4b6c-8f33-6a5161b57a60',
@@ -25,7 +24,8 @@ const SAMPLE_INPUT_TASKS: SampleTask[] = [
 		owner: 'Bob',
 		dueDate: DateUtils.toStandardYearMonthDay(new Date(new Date().setHours(0, 0, 0, 0))),
 		tags: [ 'work' ],
-		sortPosition: 100
+		sortPosition: 100,
+		visible: false
 	},
 	{
 		id: 'f624563c-0e6a-4c1e-bb7c-885e46be4998',
@@ -34,7 +34,8 @@ const SAMPLE_INPUT_TASKS: SampleTask[] = [
 		completionDate: new Date('2024-06-01'),
 		priority: 'LOW',
 		tags: [ 'home' ],
-		sortPosition: 200
+		sortPosition: 200,
+		visible: false
 	},
 	{
 		id: '70a58f3f-c82b-4f70-901b-b91785b4af01',
@@ -43,7 +44,8 @@ const SAMPLE_INPUT_TASKS: SampleTask[] = [
 		priority: 'URGENT',
 		owner: 'Alice',
 		tags: [ 'health' ],
-		sortPosition: 300
+		sortPosition: 300,
+		visible: false
 	},
 	{
 		id: '1c2a8d5a-e5b2-4c73-8bdc-70458c5ae321',
@@ -53,7 +55,8 @@ const SAMPLE_INPUT_TASKS: SampleTask[] = [
 		owner: 'Charlie',
 		dueDate: DateUtils.toStandardYearMonthDay(new Date('2024-01-19')),
 		tags: [ 'travel' ],
-		sortPosition: 400
+		sortPosition: 400,
+		visible: false
 	},
 	{
 		id: '3fd9be50-c51d-4fd1-a8c1-4b351cfd76f9',
@@ -62,7 +65,8 @@ const SAMPLE_INPUT_TASKS: SampleTask[] = [
 		completionDate: new Date('2024-03-01'),
 		priority: 'HIGH',
 		tags: [ 'party', 'personal' ],
-		sortPosition: 500
+		sortPosition: 500,
+		visible: false
 	},
 	{
 		id: '9b62f7de-2b65-432c-8675-4867a0e3c71c',
@@ -72,7 +76,8 @@ const SAMPLE_INPUT_TASKS: SampleTask[] = [
 		owner: 'Bob',
 		dueDate: DateUtils.toStandardYearMonthDay(new Date('2024-01-19')),
 		tags: [ 'work' ],
-		sortPosition: 600
+		sortPosition: 600,
+		visible: false
 	},
 	{
 		id: 'dd7300de-065c-4c73-bd98-419aefc66c9f',
@@ -80,7 +85,8 @@ const SAMPLE_INPUT_TASKS: SampleTask[] = [
 		state: 'ACTIVE',
 		priority: 'URGENT',
 		tags: [ 'home', 'chores' ],
-		sortPosition: 700
+		sortPosition: 700,
+		visible: false
 	},
 	{
 		id: '11af6ed8-29f3-4e37-a1a2-4bc6a5749cb6',
@@ -89,7 +95,8 @@ const SAMPLE_INPUT_TASKS: SampleTask[] = [
 		priority: 'NORMAL',
 		owner: 'Charlie',
 		tags: [ 'travel' ],
-		sortPosition: 800
+		sortPosition: 800,
+		visible: false
 	},
 	{
 		id: 'b73f0208-bb2e-426c-b654-d362ace38e72',
@@ -97,7 +104,8 @@ const SAMPLE_INPUT_TASKS: SampleTask[] = [
 		state: 'ACTIVE',
 		priority: 'NORMAL',
 		tags: [],
-		sortPosition: 900
+		sortPosition: 900,
+		visible: false
 	},
 	{
 		id: 'a1c4c59f-d272-4b29-a8d7-815db5de2899',
@@ -107,7 +115,8 @@ const SAMPLE_INPUT_TASKS: SampleTask[] = [
 		owner: 'John',
 		dueDate: DateUtils.toStandardYearMonthDay(new Date('2024-01-19')),
 		tags: [ 'pets', 'exercise' ],
-		sortPosition: 1000
+		sortPosition: 1000,
+		visible: false
 	},
 	{
 		id: 'c87f4a31-4696-4982-bd2c-cd48de8f0cf3',
@@ -116,7 +125,8 @@ const SAMPLE_INPUT_TASKS: SampleTask[] = [
 		completionDate: new Date('2024-05-01'),
 		priority: 'LOW',
 		tags: [ 'home' ],
-		sortPosition: 1100
+		sortPosition: 1100,
+		visible: false
 	},
 	{
 		id: 'f5b2d93a-b1d7-4f70-9c96-12f9ec8d1e73',
@@ -126,7 +136,8 @@ const SAMPLE_INPUT_TASKS: SampleTask[] = [
 		owner: 'Jane',
 		dueDate: DateUtils.toStandardYearMonthDay(new Date('2025-11-20')),
 		tags: [ 'finance' ],
-		sortPosition: 1200
+		sortPosition: 1200,
+		visible: false
 	},
 	{
 		id: '3b4587b7-6d61-4b4e-859b-05e0a6a32261',
@@ -136,7 +147,8 @@ const SAMPLE_INPUT_TASKS: SampleTask[] = [
 		owner: 'Emily',
 		dueDate: DateUtils.toStandardYearMonthDay(new Date('2025-01-19')),
 		tags: [ 'work' ],
-		sortPosition: 1300
+		sortPosition: 1300,
+		visible: false
 	},
 	{
 		id: 'a4c57919-16ef-46af-aadd-d233935fd24a',
@@ -144,7 +156,8 @@ const SAMPLE_INPUT_TASKS: SampleTask[] = [
 		state: 'ACTIVE',
 		priority: 'HIGH',
 		tags: [ 'chores', 'home' ],
-		sortPosition: 1400
+		sortPosition: 1400,
+		visible: false
 	},
 	{
 		id: '92edc91a-d98c-4a66-b45f-2a7ae0cc79a3',
@@ -155,7 +168,8 @@ const SAMPLE_INPUT_TASKS: SampleTask[] = [
 		owner: 'John',
 		dueDate: DateUtils.toStandardYearMonthDay(new Date('2023-01-23')),
 		tags: [ 'errands' ],
-		sortPosition: 1500
+		sortPosition: 1500,
+		visible: false
 	},
 	{
 		id: 'be38d889-70de-4621-9fbf-295e5c90338b',
@@ -163,7 +177,8 @@ const SAMPLE_INPUT_TASKS: SampleTask[] = [
 		state: 'ACTIVE',
 		priority: 'NORMAL',
 		tags: [ 'personal' ],
-		sortPosition: 1600
+		sortPosition: 1600,
+		visible: false
 	},
 	{
 		id: '0eb67958-6c03-4b3f-a99b-b4b012ccf8c4',
@@ -173,7 +188,8 @@ const SAMPLE_INPUT_TASKS: SampleTask[] = [
 		owner: 'Jane',
 		dueDate: DateUtils.toStandardYearMonthDay(new Date('2025-01-25')),
 		tags: [ 'work' ],
-		sortPosition: 1700
+		sortPosition: 1700,
+		visible: false
 	},
 	{
 		id: 'de6b1e97-d46b-420c-8cc1-f0c69bfb116e',
@@ -182,7 +198,8 @@ const SAMPLE_INPUT_TASKS: SampleTask[] = [
 		priority: 'NORMAL',
 		owner: 'Emily',
 		tags: [ 'family', 'food' ],
-		sortPosition: 1800
+		sortPosition: 1800,
+		visible: false
 	},
 	{
 		id: '72b2e08e-1c4e-42ba-89a2-56b324eb4b12',
@@ -190,7 +207,8 @@ const SAMPLE_INPUT_TASKS: SampleTask[] = [
 		state: 'ACTIVE',
 		priority: 'LOW',
 		tags: [ 'home', 'repair' ],
-		sortPosition: 1900
+		sortPosition: 1900,
+		visible: false
 	}
 ];
 

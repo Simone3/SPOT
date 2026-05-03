@@ -7,7 +7,7 @@ import PriorityNormalIcon from '../icons/PriorityNormalIcon';
 import type { DomainEntry, TaskPriorityValue } from '../../types';
 
 type TaskPriorityProps = {
-	priorityDomain: DomainEntry<TaskPriorityValue>[];
+	priorityDomain: DomainEntry[];
 	value: TaskPriorityValue;
 	onChange: (value: TaskPriorityValue) => void;
 	onBlur: () => void;
@@ -63,14 +63,15 @@ const TaskPriority = ({ priorityDomain, value, onChange, onBlur }: TaskPriorityP
 					if(!open && domain.value !== value) {
 						return undefined;
 					}
+					const priority = domain.value as TaskPriorityValue;
 					return (
 						<div
 							key={domain.key}
 							className='task-priority-picker-option'
 							tabIndex={0}
 							onBlur={onOptionBlur}
-							onClick={open ? () => onNewValueClick(domain.value) : onCurrentValueClick}>
-							{getPriorityIcon(domain.value, true || domain.value === value)}
+							onClick={open ? () => onNewValueClick(priority) : onCurrentValueClick}>
+							{getPriorityIcon(priority, true || domain.value === value)}
 						</div>
 					);
 				})}

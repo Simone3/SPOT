@@ -1,5 +1,5 @@
 
-import type { CurrentDates, TaskDueDate } from '../types';
+import type { CurrentDates } from '../types';
 
 export class DateUtils {
 	static isSameDay(date1: Date, date2: Date): boolean {
@@ -65,7 +65,7 @@ export class DateUtils {
 		}).format(date);
 	}
 
-	static toStandardYearMonthDay(date: Date | null | undefined): TaskDueDate {
-		return date ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}` : undefined;
+	static toStandardYearMonthDay(date: Date | null | undefined): string {
+		return date ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}` : '';
 	}
 }

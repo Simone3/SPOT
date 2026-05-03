@@ -4,23 +4,23 @@ import { useState, useId, useRef, type FocusEvent } from 'react';
 /**
  * A dropdown input that also allows free typing (or in other words: a text input with suggestions)
  */
-type FreeSelectOption<TValue> = {
+type FreeSelectOption = {
 	key: string;
-	value: TValue;
+	value: string;
 	label: string;
 };
 
-type FreeSelectInputProps<TValue> = {
+type FreeSelectInputProps = {
 	label?: string;
 	placeholder?: string;
-	options: FreeSelectOption<TValue>[];
+	options: FreeSelectOption[];
 	disabled?: boolean;
-	value: TValue;
-	onChange: (value: TValue | string) => void;
-	onFinishEditing?: (value: TValue | string | undefined) => void;
+	value: string;
+	onChange: (value: string) => void;
+	onFinishEditing?: (value: string) => void;
 };
 
-const FreeSelectInput = <TValue, >({ label, placeholder, options, disabled, value, onChange, onFinishEditing }: FreeSelectInputProps<TValue>) => {
+const FreeSelectInput = ({ label, placeholder, options, disabled, value, onChange, onFinishEditing }: FreeSelectInputProps) => {
 	const id = useId();
 
 	const [ open, setOpen ] = useState(false);
@@ -35,7 +35,7 @@ const FreeSelectInput = <TValue, >({ label, placeholder, options, disabled, valu
 		}
 	};
 
-	const doClose = (currentValue?: TValue | string) => {
+	const doClose = (currentValue?: string) => {
 		if(open) {
 			setOpen(false);
 			setChangedAfterOpen(false);
@@ -52,7 +52,7 @@ const FreeSelectInput = <TValue, >({ label, placeholder, options, disabled, valu
 	};
 
 	// Filter dropdown options, but only after the user typed something in the free text input
-	const currentStringValue = value === undefined || value === null ? '' : String(value);
+	const currentStringValue = value;
 
 	const filteredOptions = changedAfterOpen && currentStringValue ?
 		options.filter((option) => {
