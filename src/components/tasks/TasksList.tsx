@@ -5,7 +5,7 @@ import Task from './Task';
 import AddIcon from '../icons/AddIcon';
 import RefreshIcon from '../icons/RefreshIcon';
 import SortIcon from '../icons/SortIcon';
-import Header from '../common/Header';
+import Header, { type HeaderAction } from '../common/Header';
 import type { FormDomains, Task as TaskType, TaskChange } from '../../types';
 
 type TasksListProps = {
@@ -45,26 +45,31 @@ const TasksList = ({ title, tasks, inputDomains, onRefreshTasks, onMoveTask, onS
 		}
 	};
 
+	const actions: HeaderAction[] = [];
+	if(showActions) {
+		actions.push({
+			id: 'refresh',
+			icon: <RefreshIcon />,
+			label: 'Refresh',
+			onClick: onRefreshTasks!
+		}, {
+			id: 'sort',
+			icon: <SortIcon />,
+			label: 'Sort by importance',
+			onClick: onSortTasksByImportance!
+		}, {
+			id: 'add',
+			icon: <AddIcon />,
+			label: 'Add task',
+			onClick: onAddNewTask!
+		});
+	}
+
 	return (
 		<div className='tasks-list-container'>
 			<Header
 				title={title}
-				actions={showActions && [{
-					id: 'refresh',
-					icon: <RefreshIcon />,
-					label: 'Refresh',
-					onClick: onRefreshTasks!
-				}, {
-					id: 'sort',
-					icon: <SortIcon />,
-					label: 'Sort by importance',
-					onClick: onSortTasksByImportance!
-				}, {
-					id: 'add',
-					icon: <AddIcon />,
-					label: 'Add task',
-					onClick: onAddNewTask!
-				}]}
+				actions={actions}
 			/>
 			<DragDropProvider onDragEnd={onDragEnd}>
 				{visibleTasks.map((task, index) =>

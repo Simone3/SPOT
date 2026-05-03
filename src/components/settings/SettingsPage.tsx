@@ -4,7 +4,7 @@ import Pane from '../common/Pane';
 const SettingsPage = () => {
 	return (
 		<Page>
-			<Pane>
+			<Pane relativeSize={1}>
 				Settings: work in progress
 			</Pane>
 		</Page>

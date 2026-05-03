@@ -2,7 +2,7 @@ import './Pane.css';
 import type { ReactNode } from 'react';
 
 type PaneProps = {
-	relativeSize?: number;
+	relativeSize: number;
 	children: ReactNode;
 };
 

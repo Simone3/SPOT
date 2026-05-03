@@ -11,14 +11,14 @@ export type HeaderAction = {
 
 type HeaderProps = {
 	title: string;
-	actions?: HeaderAction[] | false;
+	actions: HeaderAction[];
 };
 
 const Header = ({ title, actions }: HeaderProps) => {
 	return (
 		<div className='header-line'>
 			<h3 className='header-title'>{title}</h3>
-			{actions && actions.length > 0 &&
+			{actions.length > 0 &&
 				<div className='header-actions'>
 					{actions.map((action) =>
 						<Clickable onClick={action.onClick} key={action.id}>

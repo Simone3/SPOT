@@ -1,21 +1,26 @@
 import './FreeSelectInput.css';
 import { useState, useId, useRef, type FocusEvent } from 'react';
-import type { DomainEntry, TaskDomainValue } from '../../types';
 
 /**
  * A dropdown input that also allows free typing (or in other words: a text input with suggestions)
  */
-type FreeSelectInputProps<TValue extends TaskDomainValue> = {
+type FreeSelectOption<TValue> = {
+	key: string;
+	value: TValue;
+	label: string;
+};
+
+type FreeSelectInputProps<TValue> = {
 	label?: string;
 	placeholder?: string;
-	options: DomainEntry<TValue>[];
+	options: FreeSelectOption<TValue>[];
 	disabled?: boolean;
 	value: TValue;
 	onChange: (value: TValue | string) => void;
 	onFinishEditing?: (value: TValue | string | undefined) => void;
 };
 
-const FreeSelectInput = <TValue extends TaskDomainValue, >({ label, placeholder, options, disabled, value, onChange, onFinishEditing }: FreeSelectInputProps<TValue>) => {
+const FreeSelectInput = <TValue, >({ label, placeholder, options, disabled, value, onChange, onFinishEditing }: FreeSelectInputProps<TValue>) => {
 	const id = useId();
 
 	const [ open, setOpen ] = useState(false);
@@ -47,10 +52,12 @@ const FreeSelectInput = <TValue extends TaskDomainValue, >({ label, placeholder,
 	};
 
 	// Filter dropdown options, but only after the user typed something in the free text input
-	const filteredOptions = changedAfterOpen && value ?
+	const currentStringValue = value === undefined || value === null ? '' : String(value);
+
+	const filteredOptions = changedAfterOpen && currentStringValue ?
 		options.filter((option) => {
 			// Match case-insensitive substrings but not exactly the same string (case-sensitive)
-			return option.label.toLowerCase().indexOf(value.toLowerCase()) !== -1 && option.label !== value;
+			return option.label.toLowerCase().indexOf(currentStringValue.toLowerCase()) !== -1 && option.label !== currentStringValue;
 		}) :
 		options;
 
@@ -75,7 +82,7 @@ const FreeSelectInput = <TValue extends TaskDomainValue, >({ label, placeholder,
 					spellCheck='false'
 					autoComplete='off'
 					placeholder={placeholder}
-					value={value || ''}
+					value={currentStringValue}
 					onChange={(e) => {
 						onChange(e.target.value);
 						doSetChanged();

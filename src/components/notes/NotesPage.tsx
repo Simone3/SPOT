@@ -4,7 +4,7 @@ import Pane from '../common/Pane';
 const NotesPage = () => {
 	return (
 		<Page>
-			<Pane>
+			<Pane relativeSize={1}>
 				Notes: work in progress
 			</Pane>
 		</Page>

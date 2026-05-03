@@ -7,13 +7,13 @@ import OwnerIcon from '../icons/OwnerIcon';
 import FreeSelectInput from '../inputs/FreeSelectInput';
 import DatePicker from '../inputs/DatePicker';
 import WarningIcon from '../icons/WarningIcon';
-import type { DomainEntry, FormDomains, Task as TaskType } from '../../types';
+import type { FormDomains, Task as TaskType } from '../../types';
 
 /**
  * Returns a string value possibly changed to match an option capitalization
  * (value matches one of the options but not exacly the same case)
  */
-const checkOptionCapitalization = (value: string | undefined, options: DomainEntry[]) => {
+const checkOptionCapitalization = (value: string | undefined, options: { label: string }[]) => {
 	if(!value) {
 		return value;
 	}

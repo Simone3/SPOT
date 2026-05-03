@@ -20,8 +20,8 @@ export interface Task {
 	owner?: TaskOwner;
 	dueDate?: TaskDueDate;
 	tags: TaskTag[];
-	sortPosition?: number;
-	visible?: boolean;
+	sortPosition: number;
+	visible: boolean;
 	completionDate?: Date;
 }
 

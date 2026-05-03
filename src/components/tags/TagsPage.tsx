@@ -4,7 +4,7 @@ import Pane from '../common/Pane';
 const TagsPage = () => {
 	return (
 		<Page>
-			<Pane>
+			<Pane relativeSize={1}>
 				Tags: work in progress
 			</Pane>
 		</Page>

@@ -133,8 +133,8 @@ Field notes:
 - `owner` is a free-form string or `undefined`. The empty owner is displayed as `Me`.
 - `dueDate` is stored as `YYYY-MM-DD` or `undefined`.
 - `tags` is an array of free-form strings.
-- `sortPosition` stores manual ordering for active tasks.
-- `visible` is derived from filters.
+- `sortPosition` stores manual ordering for active tasks. It is required and defaults to `0` when input data does not provide a value.
+- `visible` is derived from filters. It is required and defaults to `false` when input data does not provide a value.
 - `completionDate` is set when a task is completed.
 
 ## Task State
@@ -331,6 +331,8 @@ Input components:
 - `FreeSelectInput`
 - `TextArea`
 - `TextInput`
+
+`ButtonsSelect` and `FreeSelectInput` are generic input components. They accept generic option objects instead of app-specific domain types.
 
 Icons are local React components under `src/components/icons`.
 

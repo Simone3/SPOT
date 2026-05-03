@@ -1,17 +1,23 @@
 import { useId, type MouseEvent } from 'react';
 import './ButtonsSelect.css';
 import Button from './Button';
-import type { DomainEntry, TaskDomainValue } from '../../types';
 
-type ButtonsSelectProps<TValue extends TaskDomainValue> = {
+type ButtonsSelectOption<TValue> = {
+	key: string;
+	value: TValue;
+	label: string;
+	color?: string;
+};
+
+type ButtonsSelectProps<TValue> = {
 	label?: string;
 	allowMultiSelect?: boolean;
-	options: DomainEntry<TValue>[];
+	options: ButtonsSelectOption<TValue>[];
 	value: TValue | TValue[];
 	onChange: (value: TValue | TValue[]) => void;
 };
 
-const ButtonsSelect = <TValue extends TaskDomainValue, >({ label, allowMultiSelect, options, value, onChange }: ButtonsSelectProps<TValue>) => {
+const ButtonsSelect = <TValue, >({ label, allowMultiSelect, options, value, onChange }: ButtonsSelectProps<TValue>) => {
 	const id = useId();
 	const onClickSingle = (optionValue: TValue) => {
 		if(value !== optionValue) {

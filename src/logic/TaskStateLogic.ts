@@ -4,7 +4,9 @@ import { cloneFilters, getInitialFilters, refreshTasksVisibility, refreshTaskVis
 import { DateUtils } from '../utils/DateUtils';
 import type { SetTaskState, Task, TaskChange, TaskFilterChange, TaskStateContainer } from '../types';
 
-const SAMPLE_INPUT_TASKS: Task[] = [
+type SampleTask = Omit<Task, 'visible'> & Partial<Pick<Task, 'visible'>>;
+
+const SAMPLE_INPUT_TASKS: SampleTask[] = [
 	{
 		id: 'd4e92b5e-6879-4c49-bb76-3c7af2a0cbf2',
 		text: 'Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries. Buy groceries.',

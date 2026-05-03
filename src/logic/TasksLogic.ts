@@ -1,6 +1,8 @@
 import { insertIntoManuallySortedList, moveInManuallySortedList, recomputeSortPositions } from './ManuallySortedList';
 import type { Task, TaskChange, TaskPriorityValue, TasksContainer } from '../types';
 
+type TaskInput = Omit<Task, 'sortPosition' | 'visible'> & Partial<Pick<Task, 'sortPosition' | 'visible'>>;
+
 const PRIORITIES_SORT: Record<TaskPriorityValue, number> = {
 	LOW: 0,
 	NORMAL: 1,
@@ -45,7 +47,7 @@ const taskIdCompareFunction = (taskA: Task, taskB: Task): number => {
  * Comparator for active tasks (sort by position and then by ID).
  */
 const activeTasksPositionCompareFunction = (taskA: Task, taskB: Task): number => {
-	const positionCompare = taskA.sortPosition! - taskB.sortPosition!;
+	const positionCompare = taskA.sortPosition - taskB.sortPosition;
 	if(positionCompare !== 0) {
 		return positionCompare;
 	}
@@ -79,7 +81,7 @@ const activeTasksImportanceCompareFunction = (taskA: Task, taskB: Task): number 
 	}
 
 	// Keep original manual sort if all values are the same
-	return taskA.sortPosition! - taskB.sortPosition!;
+	return taskA.sortPosition - taskB.sortPosition;
 };
 
 /**
@@ -115,8 +117,13 @@ export const forceSortActiveTasksByImportance = (tasksContainer: TasksContainer)
 /**
  * Adds a list of back-end tasks into the task lists.
  */
-export const loadBackEndTasks = (tasksContainer: TasksContainer, backEndTasks: Task[]): void => {
-	for(const task of backEndTasks) {
+export const loadBackEndTasks = (tasksContainer: TasksContainer, backEndTasks: TaskInput[]): void => {
+	for(const backEndTask of backEndTasks) {
+		const task: Task = {
+			...backEndTask,
+			sortPosition: backEndTask.sortPosition ?? 0,
+			visible: backEndTask.visible ?? false
+		};
 		if(task.state === 'ACTIVE') {
 			tasksContainer.active.push(task);
 		}
@@ -156,7 +163,7 @@ export const addNewTask = (tasksContainer: TasksContainer): Task => {
 		owner: undefined,
 		dueDate: undefined,
 		tags: [],
-		sortPosition: undefined,
+		sortPosition: 0,
 		visible: false,
 		completionDate: undefined
 	};
