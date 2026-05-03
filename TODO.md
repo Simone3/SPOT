@@ -1,18 +1,22 @@
 
+
+
 convert to typescript
-add to agents
-  "Use plain React with TypeScript and CSS only"
-  - `npm run typecheck`
+	fixes
+	-----
+	setTaskValue not passed to TaskChips but setOwner, setDueDate and setTags
+	-----
+	types.ts split
+	-----
+	do another pass file by file for types
+
+eslint like media tracker - need to upgrade deps?
 
 single css file?
 
 create tests
 
 make it update agents
-
-eslint like media tracker
-
-
 
 
 
@@ -24,6 +28,7 @@ semi transparent background with task importance color?
 filters
 	"me" and "none" filters displayed only if there are actually tasks with empty values?
 	default filter with "me" as owner?
+is it ok that when you complete a task it immediately disappears?
 upgrade all versions (should also fix datepicker warns)
 
 # wire in electron main process: save to disk

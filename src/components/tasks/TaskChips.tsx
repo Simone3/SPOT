@@ -38,7 +38,7 @@ type TaskChipsProps = {
 	setNewTag: (value: string) => void;
 };
 
-const Task = ({ inputDomains, task, setTaskValue, flushTaskChanges, newTag, setNewTag }: TaskChipsProps) => {
+const TaskChips = ({ inputDomains, task, setTaskValue, flushTaskChanges, newTag, setNewTag }: TaskChipsProps) => {
 	const {
 		state,
 		owner,
@@ -107,13 +107,13 @@ const Task = ({ inputDomains, task, setTaskValue, flushTaskChanges, newTag, setN
 						setTaskValue('tags', (prevTags) => [ ...prevTags.slice(0, i), value, ...prevTags.slice(i + 1) ], false);
 					}}
 					onFinishEditing={(value) => {
-							const changedValue = value ? value.trim() : value;
-							if(changedValue) {
-								const normalizedValue = checkOptionCapitalization(changedValue, inputDomains.tags) as string;
-								if(normalizedValue !== value) {
-									// Update value for trimming/capitalization and then flush
-									setTaskValue('tags', (prevTags) => [ ...prevTags.slice(0, i), normalizedValue, ...prevTags.slice(i + 1) ], true);
-								}
+						const changedValue = value ? value.trim() : value;
+						if(changedValue) {
+							const normalizedValue = checkOptionCapitalization(changedValue, inputDomains.tags) as string;
+							if(normalizedValue !== value) {
+								// Update value for trimming/capitalization and then flush
+								setTaskValue('tags', (prevTags) => [ ...prevTags.slice(0, i), normalizedValue, ...prevTags.slice(i + 1) ], true);
+							}
 							else {
 								// Otherwise just flush
 								flushTaskChanges();
@@ -142,12 +142,12 @@ const Task = ({ inputDomains, task, setTaskValue, flushTaskChanges, newTag, setN
 					setNewTag(value);
 				}}
 				onFinishEditing={(value) => {
-						const changedValue = value ? value.trim() : value;
-						if(changedValue) {
-							// Reset new tag input, add as actual tag and then flush
-							const normalizedValue = checkOptionCapitalization(changedValue, inputDomains.tags) as string;
-							setNewTag('');
-							setTaskValue('tags', (prevTags) => [ ...prevTags, normalizedValue ], true);
+					const changedValue = value ? value.trim() : value;
+					if(changedValue) {
+						// Reset new tag input, add as actual tag and then flush
+						const normalizedValue = checkOptionCapitalization(changedValue, inputDomains.tags) as string;
+						setNewTag('');
+						setTaskValue('tags', (prevTags) => [ ...prevTags, normalizedValue ], true);
 					}
 					else if(changedValue !== value) {
 						// Update for trimming
@@ -166,4 +166,4 @@ const Task = ({ inputDomains, task, setTaskValue, flushTaskChanges, newTag, setN
 	);
 };
 
-export default Task;
+export default TaskChips;
