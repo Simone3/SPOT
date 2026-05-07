@@ -30,9 +30,9 @@ const checkOptionCapitalization = (value: string, options: { label: string }[]) 
 type TaskChipsProps = {
 	inputDomains: FormDomains;
 	task: TaskType;
-	setOwner: (owner: TaskType['owner'], flush: boolean) => void;
-	setDueDate: (dueDate: TaskType['dueDate'], flush: boolean) => void;
-	setTags: (tagsOrCallback: TaskType['tags'] | ((prevTags: TaskType['tags']) => TaskType['tags']), flush: boolean) => void;
+	setOwner: (owner: string, flush: boolean) => void;
+	setDueDate: (dueDate: string, flush: boolean) => void;
+	setTags: (changeTags: (prevTags: string[]) => string[], flush: boolean) => void;
 	flushTaskChanges: () => void;
 	newTag: string;
 	setNewTag: (value: string) => void;

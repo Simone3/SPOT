@@ -17,7 +17,6 @@ type TaskProps = {
 };
 
 type SetTaskValue = <TKey extends keyof TaskType>(key: TKey, valueOrCallback: TaskType[TKey] | ((prevValue: TaskType[TKey]) => TaskType[TKey]), flush: boolean) => void;
-type SetTaskTags = (tagsOrCallback: TaskType['tags'] | ((prevTags: TaskType['tags']) => TaskType['tags']), flush: boolean) => void;
 
 const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFromProps, onDelete }: TaskProps) => {
 	// Internal copy of the task, for delayed changes propagation to the parent component (main state)
@@ -88,16 +87,16 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFrom
 		});
 	};
 
-	const setOwner = (owner: TaskType['owner'], flush: boolean) => {
+	const setOwner = (owner: string, flush: boolean) => {
 		setTaskValue('owner', owner, flush);
 	};
 
-	const setDueDate = (dueDate: TaskType['dueDate'], flush: boolean) => {
+	const setDueDate = (dueDate: string, flush: boolean) => {
 		setTaskValue('dueDate', dueDate, flush);
 	};
 
-	const setTags: SetTaskTags = (tagsOrCallback, flush) => {
-		setTaskValue('tags', tagsOrCallback, flush);
+	const setTags = (changeTags: (prevTags: string[]) => string[], flush: boolean) => {
+		setTaskValue('tags', changeTags, flush);
 	};
 
 	// On component unmount, flush any pending changes
