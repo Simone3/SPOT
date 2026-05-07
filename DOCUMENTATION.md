@@ -55,7 +55,7 @@ npm run make
 - `index.html` and `public/index.html` are HTML entry points.
 - `src/index.tsx` mounts the React app and defines routes.
 - `src/index.css` defines global layout and theme variables.
-- `src/types.ts` contains shared TypeScript types for tasks, domains, filters, dates, and icons.
+- `src/types` contains shared TypeScript types split into semantic files for tasks, domains, filters, and dates. Types that have one clear owner stay in the owning `.ts` or `.tsx` file instead.
 - `src/react-app-env.d.ts` contains the React Scripts TypeScript reference.
 - `src/components/common` contains layout and shared UI primitives.
 - `src/components/inputs` contains reusable inputs.
@@ -107,7 +107,7 @@ Known Electron work still pending:
 
 ## Task Data Model
 
-The current task shape is defined as a TypeScript interface in `src/types.ts`:
+The current task shape is defined as a TypeScript interface in `src/types/TaskTypes.ts`:
 
 ```ts
 {
@@ -387,6 +387,7 @@ Future testing priorities:
 - Do not add dependencies unless they clearly reduce work or risk.
 - Keep dependency versions exact in `package.json`.
 - Prefer existing component and logic patterns.
+- Define types in their owning file whenever practical. Shared cross-owner types live in semantic files under `src/types`.
 - Keep tests minimal but meaningful.
 - Run `npm run lint`, `npm run typecheck`, and `npm test` before closing a feature or fix.
 

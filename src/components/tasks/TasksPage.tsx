@@ -4,7 +4,8 @@ import Pane from '../common/Pane';
 import TaskFilters from './TaskFilters';
 import { getInitialTaskState, addTaskToState, refreshVisibleTasksInState, deleteTaskFromState, changeFiltersInState, loadBackEndTasksIntoState, resetFiltersState, updateTaskInState, sortTasksByImportanceInState, moveActiveTaskInState } from '../../logic/TaskStateLogic';
 import TasksList from './TasksList';
-import type { Task, TaskChange, TaskFilterChange } from '../../types';
+import type { Task, TaskChange } from '../../types/TaskTypes';
+import type { TaskFilterChange } from '../../types/FilterTypes';
 
 const TasksPage = () => {
 	const [ taskState, setTaskState ] = useState(getInitialTaskState());

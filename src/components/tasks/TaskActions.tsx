@@ -4,7 +4,7 @@ import Checkbox from '../inputs/Checkbox';
 import Clickable from '../common/Clickable';
 import DeleteIcon from '../icons/DeleteIcon';
 import ConfirmModal from '../common/ConfirmModal';
-import type { Task } from '../../types';
+import type { Task } from '../../types/TaskTypes';
 
 type TaskActionsProps = {
 	task: Task;

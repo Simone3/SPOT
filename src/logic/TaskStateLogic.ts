@@ -2,7 +2,18 @@ import { getInitialDomains, cloneDomains, addDomainsForTasks, removeDomainsForTa
 import { getInitialTasks, cloneTasks, loadBackEndTasks, addNewTask, deleteTask, updateTask, forceSortActiveTasksByImportance, moveActiveTask } from './TasksLogic';
 import { cloneFilters, getInitialFilters, refreshTasksVisibility, refreshTaskVisibility } from './FiltersLogic';
 import { DateUtils } from '../utils/DateUtils';
-import type { SetTaskState, Task, TaskChange, TaskFilterChange, TaskStateContainer } from '../types';
+import type { Dispatch, SetStateAction } from 'react';
+import type { DomainsContainer } from '../types/DomainTypes';
+import type { TaskFilters, TaskFilterChange } from '../types/FilterTypes';
+import type { Task, TaskChange, TasksContainer } from '../types/TaskTypes';
+
+interface TaskStateContainer {
+	tasksContainer: TasksContainer;
+	domainsContainer: DomainsContainer;
+	filters: TaskFilters;
+}
+
+type SetTaskState = Dispatch<SetStateAction<TaskStateContainer>>;
 
 const SAMPLE_INPUT_TASKS: Task[] = [
 	{

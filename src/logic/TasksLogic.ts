@@ -1,5 +1,5 @@
 import { insertIntoManuallySortedList, moveInManuallySortedList, recomputeSortPositions } from './ManuallySortedList';
-import type { Task, TaskChange, TaskPriorityValue, TasksContainer } from '../types';
+import type { Task, TaskChange, TaskPriorityValue, TasksContainer } from '../types/TaskTypes';
 
 const PRIORITIES_SORT: Record<TaskPriorityValue, number> = {
 	LOW: 0,

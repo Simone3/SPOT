@@ -6,7 +6,8 @@ import AddIcon from '../icons/AddIcon';
 import RefreshIcon from '../icons/RefreshIcon';
 import SortIcon from '../icons/SortIcon';
 import Header, { type HeaderAction } from '../common/Header';
-import type { FormDomains, Task as TaskType, TaskChange } from '../../types';
+import type { FormDomains } from '../../types/DomainTypes';
+import type { Task as TaskType, TaskChange } from '../../types/TaskTypes';
 
 type TasksListProps = {
 	title: string;

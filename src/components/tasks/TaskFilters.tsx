@@ -7,7 +7,9 @@ import Header from '../common/Header';
 import ResetIcon from '../icons/ResetIcon';
 import { DatesContext } from '../../contexts/DatesContext';
 import { DateUtils } from '../../utils/DateUtils';
-import type { FilterDomains, TaskFilterChange, TaskFilters as TaskFiltersType, TaskPriorityValue } from '../../types';
+import type { FilterDomains } from '../../types/DomainTypes';
+import type { TaskFilterChange, TaskFilters as TaskFiltersType } from '../../types/FilterTypes';
+import type { TaskPriorityValue } from '../../types/TaskTypes';
 
 type TaskFiltersProps = {
 	domains: FilterDomains;

@@ -1,5 +1,7 @@
 
-import type { DomainEntry, DomainsContainer, FilterDomains, FormDomains, Task, TaskChange, TaskFilters, TasksContainer } from '../types';
+import type { DomainEntry, DomainsContainer, FilterDomains, FormDomains } from '../types/DomainTypes';
+import type { Task, TaskChange, TasksContainer } from '../types/TaskTypes';
+import type { TaskFilters } from '../types/FilterTypes';
 
 type DomainsSection = Partial<FilterDomains & FormDomains>;
 

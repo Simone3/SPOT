@@ -4,7 +4,8 @@ import PriorityLowIcon from '../icons/PriorityLowIcon';
 import PriorityUrgentIcon from '../icons/PriorityUrgentIcon';
 import PriorityHighIcon from '../icons/PriorityHighIcon';
 import PriorityNormalIcon from '../icons/PriorityNormalIcon';
-import type { DomainEntry, TaskPriorityValue } from '../../types';
+import type { DomainEntry } from '../../types/DomainTypes';
+import type { TaskPriorityValue } from '../../types/TaskTypes';
 
 type TaskPriorityProps = {
 	priorityDomain: DomainEntry[];

@@ -1,4 +1,4 @@
-import type { IconProps } from '../../types';
+import type { IconProps } from './IconTypes';
 
 /**
  * https://www.svgrepo.com/svg/522527/edit-3

@@ -7,7 +7,8 @@ import OwnerIcon from '../icons/OwnerIcon';
 import FreeSelectInput from '../inputs/FreeSelectInput';
 import DatePicker from '../inputs/DatePicker';
 import WarningIcon from '../icons/WarningIcon';
-import type { FormDomains, Task as TaskType } from '../../types';
+import type { FormDomains } from '../../types/DomainTypes';
+import type { Task as TaskType } from '../../types/TaskTypes';
 
 /**
  * Returns a string value possibly changed to match an option capitalization

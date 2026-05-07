@@ -5,7 +5,8 @@ import TextArea from '../inputs/TextArea';
 import TaskPriority from './TaskPriority';
 import TaskActions from './TaskActions';
 import TaskChips from './TaskChips';
-import type { FormDomains, Task as TaskType, TaskChange } from '../../types';
+import type { FormDomains } from '../../types/DomainTypes';
+import type { Task as TaskType, TaskChange } from '../../types/TaskTypes';
 
 type TaskProps = {
 	id: string;
