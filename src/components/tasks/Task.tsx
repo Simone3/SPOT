@@ -16,6 +16,9 @@ type TaskProps = {
 	onDelete: () => void;
 };
 
+type SetTaskValue = <TKey extends keyof TaskType>(key: TKey, valueOrCallback: TaskType[TKey] | ((prevValue: TaskType[TKey]) => TaskType[TKey]), flush: boolean) => void;
+type SetTaskTags = (tagsOrCallback: TaskType['tags'] | ((prevTags: TaskType['tags']) => TaskType['tags']), flush: boolean) => void;
+
 const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFromProps, onDelete }: TaskProps) => {
 	// Internal copy of the task, for delayed changes propagation to the parent component (main state)
 	const [ internalTask, setInternalTask ] = useState(taskFromProps);
@@ -68,7 +71,7 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFrom
 	};
 
 	// Helper to update both state and ref when task values change, (re)set the flush timer and (optionally) flush any pending changes afterwards
-	const setTaskValue = <TKey extends keyof TaskType>(key: TKey, valueOrCallback: TaskType[TKey] | ((prevValue: TaskType[TKey]) => TaskType[TKey]), flush: boolean) => {
+	const setTaskValue: SetTaskValue = (key, valueOrCallback, flush) => {
 		setInternalTask((prevInternalTask) => {
 			const newValue = typeof valueOrCallback === 'function' ? valueOrCallback(prevInternalTask[key]) : valueOrCallback;
 			changedValuesRef.current = {
@@ -84,7 +87,19 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFrom
 			return { ...prevInternalTask, [key]: newValue };
 		});
 	};
-	
+
+	const setOwner = (owner: TaskType['owner'], flush: boolean) => {
+		setTaskValue('owner', owner, flush);
+	};
+
+	const setDueDate = (dueDate: TaskType['dueDate'], flush: boolean) => {
+		setTaskValue('dueDate', dueDate, flush);
+	};
+
+	const setTags: SetTaskTags = (tagsOrCallback, flush) => {
+		setTaskValue('tags', tagsOrCallback, flush);
+	};
+
 	// On component unmount, flush any pending changes
 	useEffect(() => {
 		return flushTaskChanges;
@@ -118,7 +133,9 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFrom
 				<TaskChips
 					inputDomains={inputDomains}
 					task={internalTask}
-					setTaskValue={setTaskValue}
+					setOwner={setOwner}
+					setDueDate={setDueDate}
+					setTags={setTags}
 					flushTaskChanges={flushTaskChanges}
 					newTag={newTag}
 					setNewTag={setNewTag}

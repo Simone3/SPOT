@@ -196,6 +196,7 @@ Active list actions:
 - keeps an internal copy of its task while the user edits
 - buffers changed fields in a ref
 - flushes changes after 5 seconds, on blur, when state changes, or on unmount
+- owns the generic task value setter and passes field-specific setters to task chips
 - renders priority, text, owner, due date, tags, completion checkbox, delete action, and drag handle text
 
 `TaskActions`:
@@ -205,6 +206,7 @@ Active list actions:
 
 `TaskChips`:
 
+- receives dedicated owner, due date, and tags setters from `Task`
 - edits owner through `FreeSelectInput`
 - edits due date through `DatePicker`
 - edits existing tags through `FreeSelectInput`

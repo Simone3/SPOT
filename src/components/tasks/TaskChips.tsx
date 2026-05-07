@@ -27,18 +27,18 @@ const checkOptionCapitalization = (value: string, options: { label: string }[]) 
 	}
 };
 
-type SetTaskValue = <TKey extends keyof TaskType>(key: TKey, valueOrCallback: TaskType[TKey] | ((prevValue: TaskType[TKey]) => TaskType[TKey]), flush: boolean) => void;
-
 type TaskChipsProps = {
 	inputDomains: FormDomains;
 	task: TaskType;
-	setTaskValue: SetTaskValue;
+	setOwner: (owner: TaskType['owner'], flush: boolean) => void;
+	setDueDate: (dueDate: TaskType['dueDate'], flush: boolean) => void;
+	setTags: (tagsOrCallback: TaskType['tags'] | ((prevTags: TaskType['tags']) => TaskType['tags']), flush: boolean) => void;
 	flushTaskChanges: () => void;
 	newTag: string;
 	setNewTag: (value: string) => void;
 };
 
-const TaskChips = ({ inputDomains, task, setTaskValue, flushTaskChanges, newTag, setNewTag }: TaskChipsProps) => {
+const TaskChips = ({ inputDomains, task, setOwner, setDueDate, setTags, flushTaskChanges, newTag, setNewTag }: TaskChipsProps) => {
 	const {
 		state,
 		owner,
@@ -57,14 +57,14 @@ const TaskChips = ({ inputDomains, task, setTaskValue, flushTaskChanges, newTag,
 				value={owner || ''}
 				placeholder={'Me'}
 				onChange={(value) => {
-					setTaskValue('owner', value, false);
+					setOwner(value, false);
 				}}
 				onFinishEditing={(value) => {
 					let changedValue = value ? value.trim() : value;
 					changedValue = checkOptionCapitalization(changedValue, inputDomains.owners);
 					if(changedValue !== value) {
 						// Update value for trimming/capitalization and then flush
-						setTaskValue('owner', changedValue, true);
+						setOwner(changedValue, true);
 					}
 					else {
 						// Otherwise just flush
@@ -86,7 +86,7 @@ const TaskChips = ({ inputDomains, task, setTaskValue, flushTaskChanges, newTag,
 			<DatePicker
 				value={dueDate}
 				onChange={(value) => {
-					setTaskValue('dueDate', DateUtils.toStandardYearMonthDay(value), false);
+					setDueDate(DateUtils.toStandardYearMonthDay(value), false);
 				}}
 				placeholder={'No due date'}
 				onBlur={flushTaskChanges}
@@ -104,7 +104,7 @@ const TaskChips = ({ inputDomains, task, setTaskValue, flushTaskChanges, newTag,
 					value={tags[i]}
 					placeholder={'Add tag...'}
 					onChange={(value) => {
-						setTaskValue('tags', (prevTags) => [ ...prevTags.slice(0, i), value, ...prevTags.slice(i + 1) ], false);
+						setTags((prevTags) => [ ...prevTags.slice(0, i), value, ...prevTags.slice(i + 1) ], false);
 					}}
 					onFinishEditing={(value) => {
 						const changedValue = value ? value.trim() : value;
@@ -112,7 +112,7 @@ const TaskChips = ({ inputDomains, task, setTaskValue, flushTaskChanges, newTag,
 							const normalizedValue = checkOptionCapitalization(changedValue, inputDomains.tags) as string;
 							if(normalizedValue !== value) {
 								// Update value for trimming/capitalization and then flush
-								setTaskValue('tags', (prevTags) => [ ...prevTags.slice(0, i), normalizedValue, ...prevTags.slice(i + 1) ], true);
+								setTags((prevTags) => [ ...prevTags.slice(0, i), normalizedValue, ...prevTags.slice(i + 1) ], true);
 							}
 							else {
 								// Otherwise just flush
@@ -121,7 +121,7 @@ const TaskChips = ({ inputDomains, task, setTaskValue, flushTaskChanges, newTag,
 						}
 						else {
 							// Remove any empty tag from the array and then flush
-							setTaskValue('tags', (prevTags) => [ ...prevTags.slice(0, i), ...prevTags.slice(i + 1) ], true);
+							setTags((prevTags) => [ ...prevTags.slice(0, i), ...prevTags.slice(i + 1) ], true);
 						}
 					}}
 					options={inputDomains.tags}
@@ -147,7 +147,7 @@ const TaskChips = ({ inputDomains, task, setTaskValue, flushTaskChanges, newTag,
 						// Reset new tag input, add as actual tag and then flush
 						const normalizedValue = checkOptionCapitalization(changedValue, inputDomains.tags) as string;
 						setNewTag('');
-						setTaskValue('tags', (prevTags) => [ ...prevTags, normalizedValue ], true);
+						setTags((prevTags) => [ ...prevTags, normalizedValue ], true);
 					}
 					else if(changedValue !== value) {
 						// Update for trimming
