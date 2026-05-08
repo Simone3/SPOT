@@ -1,9 +1,6 @@
 import './FreeSelectInput.css';
 import { useState, useId, useRef, type FocusEvent } from 'react';
 
-/**
- * A dropdown input that also allows free typing (or in other words: a text input with suggestions)
- */
 type FreeSelectOption = {
 	key: string;
 	value: string;
@@ -20,6 +17,9 @@ type FreeSelectInputProps = {
 	onFinishEditing?: (value: string) => void;
 };
 
+/**
+ * A dropdown input that also allows free typing (or in other words: a text input with suggestions)
+ */
 const FreeSelectInput = ({ label, placeholder, options, disabled, value, onChange, onFinishEditing }: FreeSelectInputProps) => {
 	const id = useId();
 
