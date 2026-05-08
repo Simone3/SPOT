@@ -1,11 +1,11 @@
 import 'src/components/common/Page.css';
-import type { ReactNode } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 
 type PageProps = {
 	children: ReactNode;
 };
 
-const Page = ({ children }: PageProps) => {
+const Page = ({ children }: PageProps): ReactElement => {
 	return (
 		<div className='page'>
 			{children}

@@ -1,4 +1,5 @@
 import 'src/components/tasks/TaskChips.css';
+import type { ReactElement } from 'react';
 import { DateUtils } from 'src/utils/DateUtils';
 import Chip from 'src/components/common/Chip';
 import TagsIcon from 'src/components/icons/TagsIcon';
@@ -17,7 +18,7 @@ import type { Task as TaskType } from 'src/types/TaskTypes';
  * @param options Available options to match against.
  * @returns The value with matching option capitalization.
  */
-const checkOptionCapitalization = (value: string, options: { label: string }[]) => {
+const checkOptionCapitalization = (value: string, options: { label: string }[]): string => {
 	if(!value) {
 		return value;
 	}
@@ -44,7 +45,7 @@ type TaskChipsProps = {
 	setNewTag: (value: string) => void;
 };
 
-const TaskChips = ({ inputDomains, task, setOwner, setDueDate, setTags, flushTaskChanges, newTag, setNewTag }: TaskChipsProps) => {
+const TaskChips = ({ inputDomains, task, setOwner, setDueDate, setTags, flushTaskChanges, newTag, setNewTag }: TaskChipsProps): ReactElement => {
 	const {
 		state,
 		owner,

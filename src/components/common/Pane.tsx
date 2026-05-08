@@ -1,12 +1,12 @@
 import 'src/components/common/Pane.css';
-import type { ReactNode } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 
 type PaneProps = {
 	relativeSize: number;
 	children: ReactNode;
 };
 
-const Pane = ({ relativeSize, children }: PaneProps) => {
+const Pane = ({ relativeSize, children }: PaneProps): ReactElement => {
 	return (
 		<div className='pane' style={{ flex: relativeSize }}>
 			{children}

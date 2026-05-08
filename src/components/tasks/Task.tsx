@@ -1,5 +1,5 @@
 import 'src/components/tasks/Task.css';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, type ReactElement } from 'react';
 import { useSortable } from '@dnd-kit/react/sortable';
 import TextArea from 'src/components/inputs/TextArea';
 import type { FormDomains } from 'src/types/DomainTypes';
@@ -19,7 +19,7 @@ type TaskProps = {
 
 type SetTaskValue = <TKey extends keyof TaskType>(key: TKey, valueOrCallback: TaskType[TKey] | ((prevValue: TaskType[TKey]) => TaskType[TKey]), flush: boolean) => void;
 
-const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFromProps, onDelete }: TaskProps) => {
+const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFromProps, onDelete }: TaskProps): ReactElement => {
 	// Internal copy of the task, for delayed changes propagation to the parent component (main state)
 	const [ internalTask, setInternalTask ] = useState(taskFromProps);
 	const {
@@ -47,7 +47,7 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFrom
 	const { ref, handleRef } = useSortable({ id, index });
 
 	// Helper to stop the flush timer
-	const clearFlushTimer = () => {
+	const clearFlushTimer = (): void => {
 		if(flushTimerRef.current) {
 			clearTimeout(flushTimerRef.current);
 			flushTimerRef.current = null;
@@ -55,7 +55,7 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFrom
 	};
 
 	// Helper to flush any change to the parent component (main state)
-	const flushTaskChanges = () => {
+	const flushTaskChanges = (): void => {
 		clearFlushTimer();
 		if(Object.keys(changedValuesRef.current).length !== 0) {
 			const changesToFlush = changedValuesRef.current;
@@ -65,7 +65,7 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFrom
 	};
 
 	// Helper to (re)start the flush timer
-	const restartFlushTimer = () => {
+	const restartFlushTimer = (): void => {
 		clearFlushTimer();
 		flushTimerRef.current = setTimeout(flushTaskChanges, 5000);
 	};
@@ -88,15 +88,15 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFrom
 		});
 	};
 
-	const setOwner = (owner: string, flush: boolean) => {
+	const setOwner = (owner: string, flush: boolean): void => {
 		setTaskValue('owner', owner, flush);
 	};
 
-	const setDueDate = (dueDate: string, flush: boolean) => {
+	const setDueDate = (dueDate: string, flush: boolean): void => {
 		setTaskValue('dueDate', dueDate, flush);
 	};
 
-	const setTags = (changeTags: (prevTags: string[]) => string[], flush: boolean) => {
+	const setTags = (changeTags: (prevTags: string[]) => string[], flush: boolean): void => {
 		setTaskValue('tags', changeTags, flush);
 	};
 

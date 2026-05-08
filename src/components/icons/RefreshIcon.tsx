@@ -1,3 +1,4 @@
+import type { ReactElement } from 'react';
 import type { IconProps } from 'src/components/icons/IconTypes';
 
 /**
@@ -8,7 +9,7 @@ import type { IconProps } from 'src/components/icons/IconTypes';
  * @param props Icon display options.
  * @returns The refresh icon SVG.
  */
-const RefreshIcon = (props: IconProps) => {
+const RefreshIcon = (props: IconProps): ReactElement => {
 	const { className } = props;
 
 	return (

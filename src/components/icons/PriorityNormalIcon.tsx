@@ -1,3 +1,4 @@
+import type { ReactElement } from 'react';
 import type { IconProps } from 'src/components/icons/IconTypes';
 
 /**
@@ -5,7 +6,7 @@ import type { IconProps } from 'src/components/icons/IconTypes';
  * @param props Icon display options.
  * @returns The normal-priority icon SVG.
  */
-const PriorityNormalIcon = (props: IconProps) => {
+const PriorityNormalIcon = (props: IconProps): ReactElement => {
 	const { className, style } = props;
 
 	return (

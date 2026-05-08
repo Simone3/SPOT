@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { useId, type ReactElement } from 'react';
 import ReactDatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import 'src/components/inputs/DatePicker.css';
@@ -10,7 +10,7 @@ type DatePickerProps = {
 	onBlur: () => void;
 };
 
-const DatePicker = ({ placeholder, value, onChange, onBlur }: DatePickerProps) => {
+const DatePicker = ({ placeholder, value, onChange, onBlur }: DatePickerProps): ReactElement => {
 	const id = useId();
 
 	return (

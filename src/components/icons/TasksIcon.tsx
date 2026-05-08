@@ -1,3 +1,4 @@
+import type { ReactElement } from 'react';
 import type { IconProps } from 'src/components/icons/IconTypes';
 
 /**
@@ -8,7 +9,7 @@ import type { IconProps } from 'src/components/icons/IconTypes';
  * @param props Icon display options.
  * @returns The tasks icon SVG.
  */
-const TasksIcon = (props: IconProps) => {
+const TasksIcon = (props: IconProps): ReactElement => {
 	const { className } = props;
 
 	return (

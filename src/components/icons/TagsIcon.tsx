@@ -1,3 +1,4 @@
+import type { ReactElement } from 'react';
 import type { IconProps } from 'src/components/icons/IconTypes';
 
 /**
@@ -8,7 +9,7 @@ import type { IconProps } from 'src/components/icons/IconTypes';
  * @param props Icon display options.
  * @returns The tags icon SVG.
  */
-const TagsIcon = (props: IconProps) => {
+const TagsIcon = (props: IconProps): ReactElement => {
 	const { className } = props;
 
 	return (

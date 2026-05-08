@@ -1,5 +1,5 @@
 import 'src/components/inputs/Button.css';
-import type { CSSProperties, MouseEventHandler, ReactNode } from 'react';
+import type { CSSProperties, MouseEventHandler, ReactElement, ReactNode } from 'react';
 
 type ButtonProps = {
 	label: ReactNode;
@@ -8,7 +8,7 @@ type ButtonProps = {
 	style?: CSSProperties;
 };
 
-const Button = ({ label, onClick, className, style }: ButtonProps) => {
+const Button = ({ label, onClick, className, style }: ButtonProps): ReactElement => {
 	return (
 		<button
 			onClick={onClick}

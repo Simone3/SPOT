@@ -1,6 +1,6 @@
 import 'src/components/common/SidebarElement.css';
 import { NavLink } from 'react-router';
-import type { ReactNode } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import Tooltipped from 'src/components/common/Tooltipped';
 
 type SidebarElementProps = {
@@ -9,7 +9,7 @@ type SidebarElementProps = {
 	icon: ReactNode;
 };
 
-const SidebarElement = ({ title, to, icon }: SidebarElementProps) => {
+const SidebarElement = ({ title, to, icon }: SidebarElementProps): ReactElement => {
 	return (
 		<div className='sidebar-element-container'>
 			<Tooltipped text={title}>

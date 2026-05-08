@@ -1,4 +1,5 @@
 import 'src/components/common/ConfirmModal.css';
+import type { ReactElement } from 'react';
 import Button from 'src/components/inputs/Button';
 
 type ConfirmModalProps = {
@@ -10,7 +11,7 @@ type ConfirmModalProps = {
 	onCancel: () => void;
 };
 
-const ConfirmModal = ({ title, content, confirmText, onConfirm, cancelText, onCancel }: ConfirmModalProps) => {
+const ConfirmModal = ({ title, content, confirmText, onConfirm, cancelText, onCancel }: ConfirmModalProps): ReactElement => {
 	return (
 		<div className='confirm-modal-background' onClick={onCancel}>
 			<div className='confirm-modal' onClick={(event) => {

@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { useId, type ReactElement } from 'react';
 import 'src/components/inputs/Checkbox.css';
 
 type CheckboxProps = {
@@ -8,7 +8,7 @@ type CheckboxProps = {
 	accentSelectedColor?: boolean;
 };
 
-const Checkbox = ({ label, value, onChange, accentSelectedColor }: CheckboxProps) => {
+const Checkbox = ({ label, value, onChange, accentSelectedColor }: CheckboxProps): ReactElement => {
 	const id = useId();
 
 	return (

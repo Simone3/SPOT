@@ -1,5 +1,5 @@
 import 'src/components/tasks/TaskFilters.css';
-import { useContext } from 'react';
+import { useContext, type ReactElement } from 'react';
 import ButtonsSelect from 'src/components/inputs/ButtonsSelect';
 import Checkbox from 'src/components/inputs/Checkbox';
 import TextInput from 'src/components/inputs/TextInput';
@@ -18,7 +18,7 @@ type TaskFiltersProps = {
 	onResetDefaultFilters: () => void;
 };
 
-const TaskFilters = ({ domains, filters, onFilterChange, onResetDefaultFilters }: TaskFiltersProps) => {
+const TaskFilters = ({ domains, filters, onFilterChange, onResetDefaultFilters }: TaskFiltersProps): ReactElement => {
 	const currentDates = useContext(DatesContext)!;
 
 	return (

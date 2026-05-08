@@ -1,4 +1,4 @@
-import { createContext, useState, type ReactNode } from 'react';
+import { createContext, useState, type ReactElement, type ReactNode } from 'react';
 import type { CurrentDates } from 'src/types/DateTypes';
 
 export const DatesContext = createContext<CurrentDates | undefined>(undefined);
@@ -7,7 +7,7 @@ type DatesContextProviderProps = {
 	children: ReactNode;
 };
 
-export const DatesContextProvider = ({ children }: DatesContextProviderProps) => {
+export const DatesContextProvider = ({ children }: DatesContextProviderProps): ReactElement => {
 	const [ currentDates ] = useState(() => {
 		const initialState = {} as CurrentDates;
 

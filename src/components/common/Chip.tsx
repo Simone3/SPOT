@@ -1,5 +1,5 @@
 import 'src/components/common/Chip.css';
-import type { ReactNode } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 
 type ChipProps = {
 	leftIcon?: ReactNode;
@@ -7,7 +7,7 @@ type ChipProps = {
 	children: ReactNode;
 };
 
-const Chip = ({ leftIcon, rightIcon, children }: ChipProps) => {
+const Chip = ({ leftIcon, rightIcon, children }: ChipProps): ReactElement => {
 	return (
 		<div className='chip'>
 			{leftIcon}

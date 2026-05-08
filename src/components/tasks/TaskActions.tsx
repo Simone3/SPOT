@@ -1,5 +1,5 @@
 import 'src/components/tasks/TaskActions.css';
-import { useState } from 'react';
+import { useState, type ReactElement } from 'react';
 import Checkbox from 'src/components/inputs/Checkbox';
 import Clickable from 'src/components/common/Clickable';
 import DeleteIcon from 'src/components/icons/DeleteIcon';
@@ -12,7 +12,7 @@ type TaskActionsProps = {
 	onDelete: () => void;
 };
 
-const TaskActions = ({ task, onChangeState, onDelete }: TaskActionsProps) => {
+const TaskActions = ({ task, onChangeState, onDelete }: TaskActionsProps): ReactElement => {
 	const {
 		state
 	} = task;

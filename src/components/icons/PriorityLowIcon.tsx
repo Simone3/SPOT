@@ -1,3 +1,4 @@
+import type { ReactElement } from 'react';
 import type { IconProps } from 'src/components/icons/IconTypes';
 
 /**
@@ -5,7 +6,7 @@ import type { IconProps } from 'src/components/icons/IconTypes';
  * @param props Icon display options.
  * @returns The low-priority icon SVG.
  */
-const PriorityLowIcon = (props: IconProps) => {
+const PriorityLowIcon = (props: IconProps): ReactElement => {
 	const { className, style } = props;
 
 	return (

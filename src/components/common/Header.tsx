@@ -1,5 +1,5 @@
 import 'src/components/common/Header.css';
-import type { ReactNode } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import Clickable from 'src/components/common/Clickable';
 
 export type HeaderAction = {
@@ -14,7 +14,7 @@ type HeaderProps = {
 	actions: HeaderAction[];
 };
 
-const Header = ({ title, actions }: HeaderProps) => {
+const Header = ({ title, actions }: HeaderProps): ReactElement => {
 	return (
 		<div className='header-line'>
 			<h3 className='header-title'>{title}</h3>

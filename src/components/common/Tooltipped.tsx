@@ -1,12 +1,12 @@
 import 'src/components/common/Tooltipped.css';
-import type { ReactNode } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 
 type TooltippedProps = {
 	text: string;
 	children: ReactNode;
 };
 
-const Tooltipped = ({ text, children }: TooltippedProps) => {
+const Tooltipped = ({ text, children }: TooltippedProps): ReactElement => {
 	return (
 		<div className='tooltipped-container'>
 			{children}

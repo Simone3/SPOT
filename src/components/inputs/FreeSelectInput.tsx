@@ -1,5 +1,5 @@
 import 'src/components/inputs/FreeSelectInput.css';
-import { useState, useId, useRef, type FocusEvent } from 'react';
+import { useState, useId, useRef, type FocusEvent, type ReactElement } from 'react';
 
 type FreeSelectOption = {
 	key: string;
@@ -22,7 +22,7 @@ type FreeSelectInputProps = {
  * @param props Free-select input settings and callbacks.
  * @returns The editable select input.
  */
-const FreeSelectInput = (props: FreeSelectInputProps) => {
+const FreeSelectInput = (props: FreeSelectInputProps): ReactElement => {
 	const { label, placeholder, options, disabled, value, onChange, onFinishEditing } = props;
 
 	const id = useId();
@@ -33,13 +33,13 @@ const FreeSelectInput = (props: FreeSelectInputProps) => {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const inputRef = useRef<HTMLInputElement>(null);
 
-	const doOpen = () => {
+	const doOpen = (): void => {
 		if(!open) {
 			setOpen(true);
 		}
 	};
 
-	const doClose = (currentValue?: string) => {
+	const doClose = (currentValue?: string): void => {
 		if(open) {
 			setOpen(false);
 			setChangedAfterOpen(false);
@@ -49,7 +49,7 @@ const FreeSelectInput = (props: FreeSelectInputProps) => {
 		}
 	};
 
-	const doSetChanged = () => {
+	const doSetChanged = (): void => {
 		if(open && !changedAfterOpen) {
 			setChangedAfterOpen(true);
 		}
@@ -65,7 +65,7 @@ const FreeSelectInput = (props: FreeSelectInputProps) => {
 		}) :
 		options;
 
-	const onBlur = (e: FocusEvent<HTMLElement>) => {
+	const onBlur = (e: FocusEvent<HTMLElement>): void => {
 		if(!containerRef.current!.contains(e.relatedTarget)) {
 			doClose();
 		}

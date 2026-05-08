@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { useId, type ReactElement } from 'react';
 import 'src/components/inputs/TextInput.css';
 
 type TextInputProps = {
@@ -8,7 +8,7 @@ type TextInputProps = {
 	onChange: (value: string) => void;
 };
 
-const TextInput = ({ label, placeholder, value, onChange }: TextInputProps) => {
+const TextInput = ({ label, placeholder, value, onChange }: TextInputProps): ReactElement => {
 	const id = useId();
 	return (
 		<div className='text-input-container'>

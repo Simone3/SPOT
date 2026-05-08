@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactElement } from 'react';
 import Page from 'src/components/common/Page';
 import Pane from 'src/components/common/Pane';
 import { getInitialTaskState, addTaskToState, refreshVisibleTasksInState, deleteTaskFromState, changeFiltersInState, loadBackEndTasksIntoState, resetFiltersState, updateTaskInState, sortTasksByImportanceInState, moveActiveTaskInState } from 'src/logic/TaskStateLogic';
@@ -7,7 +7,7 @@ import type { TaskFilterChange } from 'src/types/FilterTypes';
 import TasksList from 'src/components/tasks/TasksList';
 import TaskFilters from 'src/components/tasks/TaskFilters';
 
-const TasksPage = () => {
+const TasksPage = (): ReactElement => {
 	const [ taskState, setTaskState ] = useState(getInitialTaskState());
 
 	useEffect(() => {
@@ -19,35 +19,35 @@ const TasksPage = () => {
 		};
 	}, []);
 
-	const onFilterChange = (changedFilters: TaskFilterChange) => {
+	const onFilterChange = (changedFilters: TaskFilterChange): void => {
 		changeFiltersInState(setTaskState, changedFilters);
 	};
 
-	const onResetDefaultFilters = () => {
+	const onResetDefaultFilters = (): void => {
 		resetFiltersState(setTaskState);
 	};
 
-	const onRefreshTasks = () => {
+	const onRefreshTasks = (): void => {
 		refreshVisibleTasksInState(setTaskState);
 	};
 
-	const onMoveActiveTask = (fromIndex: number, toIndex: number) => {
+	const onMoveActiveTask = (fromIndex: number, toIndex: number): void => {
 		moveActiveTaskInState(setTaskState, fromIndex, toIndex);
 	};
 
-	const onSortTasksByImportance = () => {
+	const onSortTasksByImportance = (): void => {
 		sortTasksByImportanceInState(setTaskState);
 	};
 
-	const onAddNewTask = () => {
+	const onAddNewTask = (): void => {
 		addTaskToState(setTaskState);
 	};
 
-	const onUpdateTask = (oldTask: Task, changedValues: TaskChange) => {
+	const onUpdateTask = (oldTask: Task, changedValues: TaskChange): void => {
 		updateTaskInState(setTaskState, oldTask, changedValues);
 	};
 
-	const onDeleteTask = (task: Task) => {
+	const onDeleteTask = (task: Task): void => {
 		deleteTaskFromState(setTaskState, task);
 	};
 

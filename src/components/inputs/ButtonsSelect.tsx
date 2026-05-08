@@ -1,4 +1,4 @@
-import { useId, type MouseEvent } from 'react';
+import { useId, type MouseEvent, type ReactElement } from 'react';
 import 'src/components/inputs/ButtonsSelect.css';
 import Button from 'src/components/inputs/Button';
 
@@ -17,15 +17,15 @@ type ButtonsSelectProps = {
 	onChange: (value: string | string[]) => void;
 };
 
-const ButtonsSelect = ({ label, allowMultiSelect, options, value, onChange }: ButtonsSelectProps) => {
+const ButtonsSelect = ({ label, allowMultiSelect, options, value, onChange }: ButtonsSelectProps): ReactElement => {
 	const id = useId();
-	const onClickSingle = (optionValue: string) => {
+	const onClickSingle = (optionValue: string): void => {
 		if(value !== optionValue) {
 			onChange(optionValue);
 		}
 	};
 
-	const onClickMultiple = (event: MouseEvent<HTMLButtonElement>, optionValue: string) => {
+	const onClickMultiple = (event: MouseEvent<HTMLButtonElement>, optionValue: string): void => {
 		const selectedValues = value as string[];
 		const selectedIndex = selectedValues.indexOf(optionValue);
 		if(event.metaKey || event.ctrlKey) {
