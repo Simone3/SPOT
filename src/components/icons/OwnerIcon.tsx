@@ -5,6 +5,8 @@ import type { IconProps } from './IconTypes';
  * COLLECTION: Forge Line Interface Icons
  * LICENSE: PD License
  * AUTHOR: theforgesmith
+ * @param root0
+ * @param root0.className
  */
 const OwnerIcon = ({ className }: IconProps) => {
 	return (

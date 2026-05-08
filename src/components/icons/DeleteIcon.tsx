@@ -5,6 +5,8 @@ import type { IconProps } from './IconTypes';
  * COLLECTION: Olicons Various Icons
  * LICENSE: PD License
  * AUTHOR: owlling
+ * @param root0
+ * @param root0.className
  */
 const DeleteIcon = ({ className }: IconProps) => {
 	return (

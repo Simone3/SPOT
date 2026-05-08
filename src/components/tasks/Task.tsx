@@ -2,11 +2,11 @@ import './Task.css';
 import { useState, useRef, useEffect } from 'react';
 import { useSortable } from '@dnd-kit/react/sortable';
 import TextArea from '../inputs/TextArea';
+import type { FormDomains } from '../../types/DomainTypes';
+import type { Task as TaskType, TaskChange } from '../../types/TaskTypes';
 import TaskPriority from './TaskPriority';
 import TaskActions from './TaskActions';
 import TaskChips from './TaskChips';
-import type { FormDomains } from '../../types/DomainTypes';
-import type { Task as TaskType, TaskChange } from '../../types/TaskTypes';
 
 type TaskProps = {
 	id: string;

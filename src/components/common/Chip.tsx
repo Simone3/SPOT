@@ -8,7 +8,6 @@ type ChipProps = {
 };
 
 const Chip = ({ leftIcon, rightIcon, children }: ChipProps) => {
-
 	return (
 		<div className='chip'>
 			{leftIcon}

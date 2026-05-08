@@ -1,5 +1,5 @@
-import { insertIntoManuallySortedList, moveInManuallySortedList, recomputeSortPositions } from './ManuallySortedList';
 import type { Task, TaskChange, TaskPriorityValue, TasksContainer } from '../types/TaskTypes';
+import { insertIntoManuallySortedList, moveInManuallySortedList, recomputeSortPositions } from './ManuallySortedList';
 
 const PRIORITIES_SORT: Record<TaskPriorityValue, number> = {
 	LOW: 0,
@@ -20,6 +20,7 @@ export const getInitialTasks = (): TasksContainer => {
 
 /**
  * Clones the object and the contained lists (but not each task).
+ * @param tasksContainer
  */
 export const cloneTasks = (tasksContainer: TasksContainer): TasksContainer => {
 	return {
@@ -30,6 +31,8 @@ export const cloneTasks = (tasksContainer: TasksContainer): TasksContainer => {
 
 /**
  * Default comparator (by ID)
+ * @param taskA
+ * @param taskB
  */
 const taskIdCompareFunction = (taskA: Task, taskB: Task): number => {
 	if(taskA.id < taskB.id) {
@@ -43,6 +46,8 @@ const taskIdCompareFunction = (taskA: Task, taskB: Task): number => {
 
 /**
  * Comparator for active tasks (sort by position and then by ID).
+ * @param taskA
+ * @param taskB
  */
 const activeTasksPositionCompareFunction = (taskA: Task, taskB: Task): number => {
 	const positionCompare = taskA.sortPosition - taskB.sortPosition;
@@ -54,6 +59,8 @@ const activeTasksPositionCompareFunction = (taskA: Task, taskB: Task): number =>
 
 /**
  * Comparator for refreshing active tasks positions (sort by priority DESC, then due date DESC and then default to original manual sort).
+ * @param taskA
+ * @param taskB
  */
 const activeTasksImportanceCompareFunction = (taskA: Task, taskB: Task): number => {
 	const priorityCompare = PRIORITIES_SORT[taskB.priority] - PRIORITIES_SORT[taskA.priority];
@@ -84,6 +91,8 @@ const activeTasksImportanceCompareFunction = (taskA: Task, taskB: Task): number 
 
 /**
  * Comparator for completed tasks (sort by completion date DESC and then by ID).
+ * @param taskA
+ * @param taskB
  */
 const completedTasksCompareFunction = (taskA: Task, taskB: Task): number => {
 	const completionCompare = taskB.completionDate!.getTime() - taskA.completionDate!.getTime();
@@ -95,6 +104,7 @@ const completedTasksCompareFunction = (taskA: Task, taskB: Task): number => {
 
 /**
  * Sorts all task lists.
+ * @param tasksContainer
  */
 const sortAllTasks = (tasksContainer: TasksContainer): void => {
 	tasksContainer.active.sort(activeTasksPositionCompareFunction);
@@ -103,6 +113,7 @@ const sortAllTasks = (tasksContainer: TasksContainer): void => {
 
 /**
  * Re-computes the sorting of active tasks by importance (priority / due date), possibly overriding the existing manual sort.
+ * @param tasksContainer
  */
 export const forceSortActiveTasksByImportance = (tasksContainer: TasksContainer): void => {
 	// Re-sort the whole list based on importance rules
@@ -114,6 +125,8 @@ export const forceSortActiveTasksByImportance = (tasksContainer: TasksContainer)
 
 /**
  * Adds a list of back-end tasks into the task lists.
+ * @param tasksContainer
+ * @param backEndTasks
  */
 export const loadBackEndTasks = (tasksContainer: TasksContainer, backEndTasks: Task[]): void => {
 	for(const task of backEndTasks) {
@@ -130,6 +143,8 @@ export const loadBackEndTasks = (tasksContainer: TasksContainer, backEndTasks: T
 
 /**
  * Adds a task to the beginning of the completed tasks list (and also sets the completion date to now).
+ * @param tasksContainer
+ * @param task
  */
 const insertCompletedTask = (tasksContainer: TasksContainer, task: Task): void => {
 	task.completionDate = new Date();
@@ -138,6 +153,8 @@ const insertCompletedTask = (tasksContainer: TasksContainer, task: Task): void =
 
 /**
  * Adds a task to the beginning of the (manually sorted) active tasks list (and also removes any completion date).
+ * @param tasksContainer
+ * @param task
  */
 const insertActiveTask = (tasksContainer: TasksContainer, task: Task): void => {
 	task.completionDate = undefined;
@@ -146,6 +163,7 @@ const insertActiveTask = (tasksContainer: TasksContainer, task: Task): void => {
 
 /**
  * Adds a new "empty" task to the proper tasks lists and returns it.
+ * @param tasksContainer
  */
 export const addNewTask = (tasksContainer: TasksContainer): Task => {
 	const newTask: Task = {
@@ -170,6 +188,9 @@ export const addNewTask = (tasksContainer: TasksContainer): Task => {
  * Moves an active task at position "fromIndex" to position "toIndex" (i.e. it will be placed in the position BEFORE the current "toIndex" element).
  * It also updates the "sortPosition" field in the moved task.
  * It may recompute the "sortPosition" fields of other tasks if space needs to be made.
+ * @param tasksContainer
+ * @param fromIndex
+ * @param toIndex
  */
 export const moveActiveTask = (tasksContainer: TasksContainer, fromIndex: number, toIndex: number): void => {
 	moveInManuallySortedList(tasksContainer.active, fromIndex, toIndex);
@@ -177,9 +198,13 @@ export const moveActiveTask = (tasksContainer: TasksContainer, fromIndex: number
 
 /**
  * Helper to remove a task from an array.
+ * @param taskList
+ * @param task
  */
 const removeTaskFromList = (taskList: Task[], task: Task): void => {
-	const index = taskList.findIndex((arrayTask) => task.id === arrayTask.id);
+	const index = taskList.findIndex((arrayTask) => {
+		return task.id === arrayTask.id;
+	});
 	if(index !== -1) {
 		taskList.splice(index, 1);
 	}
@@ -187,9 +212,14 @@ const removeTaskFromList = (taskList: Task[], task: Task): void => {
 
 /**
  * Helper to replace a task from an array.
+ * @param taskList
+ * @param oldTask
+ * @param newTask
  */
 const replaceTaskInList = (taskList: Task[], oldTask: Task, newTask: Task): void => {
-	const index = taskList.findIndex((arrayTask) => oldTask.id === arrayTask.id);
+	const index = taskList.findIndex((arrayTask) => {
+		return oldTask.id === arrayTask.id;
+	});
 	if(index !== -1) {
 		taskList[index] = newTask;
 	}
@@ -197,6 +227,8 @@ const replaceTaskInList = (taskList: Task[], oldTask: Task, newTask: Task): void
 
 /**
  * Removes a task from its task list.
+ * @param tasksContainer
+ * @param task
  */
 export const deleteTask = (tasksContainer: TasksContainer, task: Task): void => {
 	if(task.state === 'ACTIVE') {
@@ -210,6 +242,9 @@ export const deleteTask = (tasksContainer: TasksContainer, task: Task): void => 
 /**
  * Updates a task.
  * Returns the new task.
+ * @param tasksContainer
+ * @param oldTask
+ * @param changedValues
  */
 export const updateTask = (tasksContainer: TasksContainer, oldTask: Task, changedValues: TaskChange): Task => {
 	const newTask = {

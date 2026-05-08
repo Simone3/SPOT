@@ -1,5 +1,5 @@
 import './TaskPriority.css';
-import { useState, useId, useRef, type CSSProperties, type FocusEvent, type ReactNode } from 'react';
+import { useState, useId, useRef, type CSSProperties, type FocusEvent, type ReactElement, type ReactNode } from 'react';
 import PriorityLowIcon from '../icons/PriorityLowIcon';
 import PriorityUrgentIcon from '../icons/PriorityUrgentIcon';
 import PriorityHighIcon from '../icons/PriorityHighIcon';
@@ -14,7 +14,7 @@ type TaskPriorityProps = {
 	onBlur: () => void;
 };
 
-const TaskPriority = ({ priorityDomain, value, onChange, onBlur }: TaskPriorityProps) => {
+const TaskPriority = ({ priorityDomain, value, onChange, onBlur }: TaskPriorityProps): ReactElement => {
 	const id = useId();
 
 	const [ open, setOpen ] = useState(false);
@@ -33,15 +33,15 @@ const TaskPriority = ({ priorityDomain, value, onChange, onBlur }: TaskPriorityP
 			case 'LOW':
 				return <PriorityLowIcon style={style}/>;
 			default:
-				throw Error(`Unmapped icon for ${priority} in priority picker`);
+				throw Error('Unmapped icon in priority picker');
 		}
 	};
 
-	const onCurrentValueClick = () => {
+	const onCurrentValueClick = (): void => {
 		setOpen(true);
 	};
 
-	const onNewValueClick = (newValue: TaskPriorityValue) => {
+	const onNewValueClick = (newValue: TaskPriorityValue): void => {
 		if(value !== newValue) {
 			onChange(newValue);
 		}
@@ -49,7 +49,7 @@ const TaskPriority = ({ priorityDomain, value, onChange, onBlur }: TaskPriorityP
 		onBlur();
 	};
 
-	const onOptionBlur = (e: FocusEvent<HTMLDivElement>) => {
+	const onOptionBlur = (e: FocusEvent<HTMLDivElement>): void => {
 		if(!containerRef.current!.contains(e.relatedTarget)) {
 			setOpen(false);
 			onBlur();
@@ -71,8 +71,12 @@ const TaskPriority = ({ priorityDomain, value, onChange, onBlur }: TaskPriorityP
 							className='task-priority-picker-option'
 							tabIndex={0}
 							onBlur={onOptionBlur}
-							onClick={open ? () => onNewValueClick(priority) : onCurrentValueClick}>
-							{getPriorityIcon(priority, true || domain.value === value)}
+							onClick={open ?
+								() => {
+									return onNewValueClick(priority);
+								} :
+								onCurrentValueClick}>
+							{getPriorityIcon(priority, true)}
 						</div>
 					);
 				})}

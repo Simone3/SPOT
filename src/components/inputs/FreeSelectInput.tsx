@@ -19,6 +19,14 @@ type FreeSelectInputProps = {
 
 /**
  * A dropdown input that also allows free typing (or in other words: a text input with suggestions)
+ * @param root0
+ * @param root0.label
+ * @param root0.placeholder
+ * @param root0.options
+ * @param root0.disabled
+ * @param root0.value
+ * @param root0.onChange
+ * @param root0.onFinishEditing
  */
 const FreeSelectInput = ({ label, placeholder, options, disabled, value, onChange, onFinishEditing }: FreeSelectInputProps) => {
 	const id = useId();

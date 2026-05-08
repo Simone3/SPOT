@@ -1,9 +1,7 @@
-import { useId } from 'react';
+import type { ReactElement } from 'react';
 import { MDXEditor } from '@mdxeditor/editor';
 import '@mdxeditor/editor/style.css';
 import './TextArea.css';
-
-const UntypedMDXEditor = MDXEditor as any;
 
 type TextAreaProps = {
 	placeholder?: string;
@@ -12,12 +10,10 @@ type TextAreaProps = {
 	onBlur: () => void;
 };
 
-const TextArea = ({ placeholder, value, onChange, onBlur }: TextAreaProps) => {
-	const id = useId();
+const TextArea = ({ placeholder, value, onChange, onBlur }: TextAreaProps): ReactElement => {
 	return (
 		<div className={`textarea-container`}>
-			<UntypedMDXEditor
-				id={id}
+			<MDXEditor
 				contentEditableClassName='textarea-input'
 				placeholder={placeholder}
 				markdown={value}

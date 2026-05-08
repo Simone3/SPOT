@@ -1,13 +1,16 @@
 import './TasksList.css';
-import { DragDropProvider } from '@dnd-kit/react';
+import { DragDropProvider, type DragEndEvent } from '@dnd-kit/react';
 import { isSortable } from '@dnd-kit/react/sortable';
-import Task from './Task';
+import type { ReactElement } from 'react';
 import AddIcon from '../icons/AddIcon';
 import RefreshIcon from '../icons/RefreshIcon';
 import SortIcon from '../icons/SortIcon';
 import Header, { type HeaderAction } from '../common/Header';
 import type { FormDomains } from '../../types/DomainTypes';
 import type { Task as TaskType, TaskChange } from '../../types/TaskTypes';
+import Task from './Task';
+
+type DragEndEventPayload = Parameters<DragEndEvent>[0];
 
 type TasksListProps = {
 	title: string;
@@ -22,7 +25,7 @@ type TasksListProps = {
 	showActions: boolean;
 };
 
-const TasksList = ({ title, tasks, inputDomains, onRefreshTasks, onMoveTask, onSortTasksByImportance, onAddNewTask, onUpdateTask, onDeleteTask, showActions }: TasksListProps) => {
+const TasksList = ({ title, tasks, inputDomains, onRefreshTasks, onMoveTask, onSortTasksByImportance, onAddNewTask, onUpdateTask, onDeleteTask, showActions }: TasksListProps): ReactElement => {
 	const visibleTasks: TaskType[] = [];
 	const originalIndices: number[] = [];
 	for(let i = 0; i < tasks.length; i++) {
@@ -32,14 +35,14 @@ const TasksList = ({ title, tasks, inputDomains, onRefreshTasks, onMoveTask, onS
 		}
 	}
 
-	const onDragEnd = (event: any) => {
+	const onDragEnd = (event: DragEndEventPayload): void => {
 		if(event.canceled) {
 			return;
 		}
 
 		const { source } = event.operation;
 		if(isSortable(source)) {
-			const { initialIndex, index } = source as { initialIndex: number; index: number };
+			const { initialIndex, index } = source;
 			if(initialIndex !== index) {
 				onMoveTask!(originalIndices[initialIndex], originalIndices[index]);
 			}
@@ -73,8 +76,8 @@ const TasksList = ({ title, tasks, inputDomains, onRefreshTasks, onMoveTask, onS
 				actions={actions}
 			/>
 			<DragDropProvider onDragEnd={onDragEnd}>
-				{visibleTasks.map((task, index) =>
-					<Task
+				{visibleTasks.map((task, index) => {
+					return <Task
 						id={task.id}
 						key={task.id}
 						index={index}
@@ -86,7 +89,8 @@ const TasksList = ({ title, tasks, inputDomains, onRefreshTasks, onMoveTask, onS
 						onDelete={() => {
 							onDeleteTask(task);
 						}}
-					/>)
+					/>;
+				})
 				}
 			</DragDropProvider>
 			{visibleTasks.length === 0 && <div className='tasks-list-empty-message'>No task found! Change the current filters or create new tasks.</div>}

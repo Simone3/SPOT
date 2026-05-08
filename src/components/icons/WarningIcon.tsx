@@ -5,6 +5,8 @@ import type { IconProps } from './IconTypes';
  * COLLECTION: Quill Oval Interface Icons
  * LICENSE: MIT License
  * AUTHOR: yourtempo
+ * @param root0
+ * @param root0.className
  */
 const WarningIcon = ({ className }: IconProps) => {
 	return (

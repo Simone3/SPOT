@@ -51,6 +51,7 @@ npm run make
 - `AGENTS.md` contains contributor and automation instructions. Keep it aligned with this document.
 - `README.md` intentionally stays minimal.
 - `DOCUMENTATION.md` is this detailed project reference.
+- `eslint.config.js` contains the flat ESLint configuration used by `npm run lint`.
 - `main.js`, `preload.js`, and `renderer.js` are the Electron layer.
 - `index.html` and `public/index.html` are HTML entry points.
 - `src/index.tsx` mounts the React app and defines routes.

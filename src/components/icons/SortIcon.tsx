@@ -5,6 +5,8 @@ import type { IconProps } from './IconTypes';
  * COLLECTION: Gentlecons Interface Icons
  * LICENSE: CC Attribution License
  * AUTHOR: Konstantin Filatov
+ * @param root0
+ * @param root0.className
  */
 const SortIcon = ({ className }: IconProps) => {
 	return (

@@ -5,6 +5,8 @@ import type { IconProps } from './IconTypes';
  * COLLECTION: Sanity Interface Sharp Line Icons
  * LICENSE: MIT License
  * AUTHOR: Sanity.io
+ * @param root0
+ * @param root0.className
  */
 const ResetIcon = ({ className }: IconProps) => {
 	return (

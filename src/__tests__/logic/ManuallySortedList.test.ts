@@ -22,7 +22,9 @@ const shuffle = <TElement>(array: TElement[]): TElement[] => {
 
 const check = (list: TestItem[], expectedListOfIds?: number[]): void => {
 	if(expectedListOfIds) {
-		expect(list.map((v) => v.id)).toEqual(expectedListOfIds);
+		expect(list.map((v) => {
+			return v.id;
+		})).toEqual(expectedListOfIds);
 	}
 	for(let i = 0; i < list.length - 1; i++) {
 		expect(list[i + 1].sortPosition - list[i].sortPosition).toBeGreaterThan(0);

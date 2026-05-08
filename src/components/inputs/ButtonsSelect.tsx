@@ -53,7 +53,13 @@ const ButtonsSelect = ({ label, allowMultiSelect, options, value, onChange }: Bu
 			{label && <label htmlFor={id} className='buttons-select-label'>{label}</label>}
 			<div id={id} className='buttons-select-options'>
 				{options.map((option) => {
-					const onClick = allowMultiSelect ? (event: MouseEvent<HTMLButtonElement>) => onClickMultiple(event, option.value) : () => onClickSingle(option.value);
+					const onClick = allowMultiSelect ?
+						(event: MouseEvent<HTMLButtonElement>) => {
+							return onClickMultiple(event, option.value);
+						} :
+						() => {
+							return onClickSingle(option.value);
+						};
 					const isSelected = allowMultiSelect ? (value as string[]).includes(option.value) : value === option.value;
 					const extraStyle = isSelected && option.color ? { backgroundColor: option.color } : undefined;
 					return (

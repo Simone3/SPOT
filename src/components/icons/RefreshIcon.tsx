@@ -5,6 +5,8 @@ import type { IconProps } from './IconTypes';
  * COLLECTION: Dazzle Line Icons
  * LICENSE: CC Attribution License
  * AUTHOR: Dazzle UI
+ * @param root0
+ * @param root0.className
  */
 const RefreshIcon = ({ className }: IconProps) => {
 	return (

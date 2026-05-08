@@ -5,6 +5,8 @@ import type { IconProps } from './IconTypes';
  * COLLECTION: Nimble Tiny Line Icons
  * LICENSE: CC Attribution License
  * AUTHOR: Zlatko Najdenovski
+ * @param root0
+ * @param root0.className
  */
 const SettingsIcon = ({ className }: IconProps) => {
 	return (

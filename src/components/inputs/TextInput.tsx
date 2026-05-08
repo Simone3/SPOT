@@ -19,7 +19,9 @@ const TextInput = ({ label, placeholder, value, onChange }: TextInputProps) => {
 				type='text'
 				placeholder={placeholder}
 				value={value}
-				onChange={(e) => onChange(e.target.value)}
+				onChange={(e) => {
+					return onChange(e.target.value);
+				}}
 			/>
 		</div>
 	);

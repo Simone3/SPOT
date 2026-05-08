@@ -11,6 +11,9 @@ export interface ManuallySortedItem {
  * unsortedStartIndex is the element that starts the "unsorted section".
  * The function finds the element at index X >= unsortedStartIndex + 1 that has a sortPosition bigger than referenceSortPosition and is able to fit all
  * elements between them.
+ * @param list
+ * @param referenceSortPosition
+ * @param unsortedStartIndex
  */
 const fixSortPositionsInUnsortedSection = <TElement extends ManuallySortedItem>(list: TElement[], referenceSortPosition: number, unsortedStartIndex: number): number => {
 	let i = unsortedStartIndex + 1;
@@ -43,6 +46,9 @@ const fixSortPositionsInUnsortedSection = <TElement extends ManuallySortedItem>(
  * Inserts an item at position "index" (shifting all following elements, the current "index" element included).
  * It also sets the "sortPosition" field in the new element.
  * It may recompute the "sortPosition" fields of other elements if space needs to be made.
+ * @param list
+ * @param element
+ * @param index
  */
 export const insertIntoManuallySortedList = <TElement extends ManuallySortedItem>(list: TElement[], element: TElement, index: number): TElement[] => {
 	if(!Array.isArray(list)) {
@@ -80,6 +86,9 @@ export const insertIntoManuallySortedList = <TElement extends ManuallySortedItem
  * Moves the item at position "fromIndex" to position "toIndex" (i.e. it will be placed in the position BEFORE the current "toIndex" element).
  * It also updates the "sortPosition" field in the moved element.
  * It may recompute the "sortPosition" fields of other elements if space needs to be made.
+ * @param list
+ * @param fromIndex
+ * @param toIndex
  */
 export const moveInManuallySortedList = <TElement extends ManuallySortedItem>(list: TElement[], fromIndex: number, toIndex: number): TElement[] => {
 	if(!Array.isArray(list)) {
@@ -102,6 +111,7 @@ export const moveInManuallySortedList = <TElement extends ManuallySortedItem>(li
 
 /**
  * Given a SORTED list, recomputes the "sortPosition" fields whenever necessary (i.e. where tasks are out of order with non-ascending "sortPosition" fields)
+ * @param list
  */
 export const recomputeSortPositions = <TElement extends ManuallySortedItem>(list: TElement[]): TElement[] => {
 	if(list.length <= 1) {

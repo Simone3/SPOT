@@ -37,13 +37,17 @@ const TaskFilters = ({ domains, filters, onFilterChange, onResetDefaultFilters }
 					label='Filter content'
 					placeholder='Search...'
 					value={filters.text}
-					onChange={(value) => onFilterChange({ text: value })}/>
+					onChange={(value) => {
+						return onFilterChange({ text: value });
+					}}/>
 				{domains.priorities.length > 0 &&
 					<ButtonsSelect
 						label='Filter priorities'
 						allowMultiSelect={true}
 						value={filters.priorities}
-						onChange={(value) => onFilterChange({ priorities: value as TaskPriorityValue[] })}
+						onChange={(value) => {
+							return onFilterChange({ priorities: value as TaskPriorityValue[] });
+						}}
 						options={domains.priorities}/>
 				}
 				{domains.owners.length > 0 &&
@@ -51,7 +55,9 @@ const TaskFilters = ({ domains, filters, onFilterChange, onResetDefaultFilters }
 						label='Filter owners'
 						allowMultiSelect={true}
 						value={filters.owners}
-						onChange={(value) => onFilterChange({ owners: value as string[] })}
+						onChange={(value) => {
+							return onFilterChange({ owners: value as string[] });
+						}}
 						options={domains.owners}/>
 				}
 				{domains.dueDates.length > 0 &&
@@ -59,8 +65,12 @@ const TaskFilters = ({ domains, filters, onFilterChange, onResetDefaultFilters }
 						label='Filter due dates'
 						allowMultiSelect={true}
 						value={filters.dueDates}
-						onChange={(value) => onFilterChange({ dueDates: value as string[] })}
-						options={domains.dueDates.map((dueDateDomain) => ({ ...dueDateDomain, label: !dueDateDomain.value ? dueDateDomain.label : DateUtils.toSmartString(new Date(dueDateDomain.value), currentDates) }))
+						onChange={(value) => {
+							return onFilterChange({ dueDates: value as string[] });
+						}}
+						options={domains.dueDates.map((dueDateDomain) => {
+							return { ...dueDateDomain, label: !dueDateDomain.value ? dueDateDomain.label : DateUtils.toSmartString(new Date(dueDateDomain.value), currentDates) };
+						})
 						}/>
 				}
 				{domains.tags.length > 0 &&
@@ -68,13 +78,17 @@ const TaskFilters = ({ domains, filters, onFilterChange, onResetDefaultFilters }
 						label='Filter tags'
 						allowMultiSelect={true}
 						value={filters.tags}
-						onChange={(value) => onFilterChange({ tags: value as string[] })}
+						onChange={(value) => {
+							return onFilterChange({ tags: value as string[] });
+						}}
 						options={domains.tags}/>
 				}
 				<Checkbox
 					label='Show completed'
 					value={filters.showCompleted}
-					onChange={(value) => onFilterChange({ showCompleted: value })}
+					onChange={(value) => {
+						return onFilterChange({ showCompleted: value });
+					}}
 					accentSelectedColor={true}/>
 			</div>
 		</div>

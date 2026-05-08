@@ -5,6 +5,8 @@ import type { IconProps } from './IconTypes';
  * COLLECTION: Generica Tiny Interface Icons
  * LICENSE: CC Attribution License
  * AUTHOR: Vlad Cristea
+ * @param root0
+ * @param root0.className
  */
 const EditIcon = ({ className }: IconProps) => {
 	return (

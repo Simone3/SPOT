@@ -15,6 +15,7 @@
 - Define TypeScript types in the owning `.ts`/`.tsx` file whenever practical. Shared cross-owner types live under `src/types` in semantic files such as `TaskTypes.ts`, `DomainTypes.ts`, or `FilterTypes.ts`.
 - Use plain React with TypeScript and CSS only. Do not add frameworks such as Vite or Next.js.
 - Keep the code style consistent with the existing codebase, including spacing and newline conventions.
+- `eslint.config.js` contains the flat ESLint configuration used by `npm run lint`.
 
 ## Testing And Validation
 - Testing should stay minimal but meaningful: focused unit tests for important logic plus at least 1-2 smoke tests for critical user flows.

@@ -13,13 +13,17 @@ import type { Task as TaskType } from '../../types/TaskTypes';
 /**
  * Returns a string value possibly changed to match an option capitalization
  * (value matches one of the options but not exacly the same case)
+ * @param value
+ * @param options
  */
 const checkOptionCapitalization = (value: string, options: { label: string }[]) => {
 	if(!value) {
 		return value;
 	}
 	const compareValue = value.trim().toLowerCase();
-	const caseInsensitiveMatch = options.find((option) => option.label.toLowerCase() === compareValue);
+	const caseInsensitiveMatch = options.find((option) => {
+		return option.label.toLowerCase() === compareValue;
+	});
 	if(caseInsensitiveMatch && caseInsensitiveMatch.label !== value) {
 		return caseInsensitiveMatch.label;
 	}
@@ -105,15 +109,19 @@ const TaskChips = ({ inputDomains, task, setOwner, setDueDate, setTags, flushTas
 					value={tags[i]}
 					placeholder={'Add tag...'}
 					onChange={(value) => {
-						setTags((prevTags) => [ ...prevTags.slice(0, i), value, ...prevTags.slice(i + 1) ], false);
+						setTags((prevTags) => {
+							return [ ...prevTags.slice(0, i), value, ...prevTags.slice(i + 1) ];
+						}, false);
 					}}
 					onFinishEditing={(value) => {
 						const changedValue = value ? value.trim() : value;
 						if(changedValue) {
-							const normalizedValue = checkOptionCapitalization(changedValue, inputDomains.tags) as string;
+							const normalizedValue = checkOptionCapitalization(changedValue, inputDomains.tags);
 							if(normalizedValue !== value) {
 								// Update value for trimming/capitalization and then flush
-								setTags((prevTags) => [ ...prevTags.slice(0, i), normalizedValue, ...prevTags.slice(i + 1) ], true);
+								setTags((prevTags) => {
+									return [ ...prevTags.slice(0, i), normalizedValue, ...prevTags.slice(i + 1) ];
+								}, true);
 							}
 							else {
 								// Otherwise just flush
@@ -122,7 +130,9 @@ const TaskChips = ({ inputDomains, task, setOwner, setDueDate, setTags, flushTas
 						}
 						else {
 							// Remove any empty tag from the array and then flush
-							setTags((prevTags) => [ ...prevTags.slice(0, i), ...prevTags.slice(i + 1) ], true);
+							setTags((prevTags) => {
+								return [ ...prevTags.slice(0, i), ...prevTags.slice(i + 1) ];
+							}, true);
 						}
 					}}
 					options={inputDomains.tags}
@@ -146,9 +156,11 @@ const TaskChips = ({ inputDomains, task, setOwner, setDueDate, setTags, flushTas
 					const changedValue = value ? value.trim() : value;
 					if(changedValue) {
 						// Reset new tag input, add as actual tag and then flush
-						const normalizedValue = checkOptionCapitalization(changedValue, inputDomains.tags) as string;
+						const normalizedValue = checkOptionCapitalization(changedValue, inputDomains.tags);
 						setNewTag('');
-						setTags((prevTags) => [ ...prevTags, normalizedValue ], true);
+						setTags((prevTags) => {
+							return [ ...prevTags, normalizedValue ];
+						}, true);
 					}
 					else if(changedValue !== value) {
 						// Update for trimming
@@ -162,7 +174,9 @@ const TaskChips = ({ inputDomains, task, setOwner, setDueDate, setTags, flushTas
 
 	return (
 		<div className='task-chips'>
-			{chips.map((chip) => chip)}
+			{chips.map((chip) => {
+				return chip;
+			})}
 		</div>
 	);
 };

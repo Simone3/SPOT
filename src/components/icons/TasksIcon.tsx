@@ -5,6 +5,8 @@ import type { IconProps } from './IconTypes';
  * COLLECTION: Iconsax Line Oval Icons
  * LICENSE: MIT License
  * AUTHOR: Iconsax
+ * @param root0
+ * @param root0.className
  */
 const TasksIcon = ({ className }: IconProps) => {
 	return (

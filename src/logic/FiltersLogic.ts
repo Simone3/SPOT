@@ -18,6 +18,7 @@ export const getInitialFilters = (): TaskFilters => {
 
 /**
  * Clones the object and the contained lists.
+ * @param filters
  */
 export const cloneFilters = (filters: TaskFilters): TaskFilters => {
 	return {
@@ -32,6 +33,8 @@ export const cloneFilters = (filters: TaskFilters): TaskFilters => {
 
 /**
  * Checks if a specific tasks matches a set of filters.
+ * @param task
+ * @param filters
  */
 const matchesFilters = (task: Task, filters: TaskFilters): boolean => {
 	if(task.state === 'COMPLETED' && !filters.showCompleted) {
@@ -50,7 +53,9 @@ const matchesFilters = (task: Task, filters: TaskFilters): boolean => {
 		return false;
 	}
 
-	if(filters.tags.length > 0 && (task.tags.length === 0 || task.tags.every((tag) => !filters.tags.includes(tag)))) {
+	if(filters.tags.length > 0 && (task.tags.length === 0 || task.tags.every((tag) => {
+		return !filters.tags.includes(tag);
+	}))) {
 		return false;
 	}
 
@@ -63,6 +68,8 @@ const matchesFilters = (task: Task, filters: TaskFilters): boolean => {
 
 /**
  * Refreshes the "visibile" field of a task based on the given filters.
+ * @param task
+ * @param filters
  */
 export const refreshTaskVisibility = (task: Task, filters: TaskFilters): void => {
 	task.visible = matchesFilters(task, filters);
@@ -70,6 +77,8 @@ export const refreshTaskVisibility = (task: Task, filters: TaskFilters): void =>
 
 /**
  * Helper to refresh the "visibile" field in an array based on the new filters.
+ * @param taskList
+ * @param filters
  */
 const refreshTasksVisibilityHelper = (taskList: Task[], filters: TaskFilters): void => {
 	for(let i = 0; i < taskList.length; i++) {
@@ -87,6 +96,9 @@ const refreshTasksVisibilityHelper = (taskList: Task[], filters: TaskFilters): v
 /**
  * Refreshes the "visibile" field of all tasks based on the new filters.
  * It clones any changed task.
+ * @param tasksContainer
+ * @param oldFilters
+ * @param newFilters
  */
 export const refreshTasksVisibility = (tasksContainer: TasksContainer, oldFilters: TaskFilters, newFilters: TaskFilters | (TaskFilters & TaskFilterChange)): void => {
 	// Always refresh active tasks

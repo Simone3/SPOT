@@ -5,6 +5,8 @@ import type { IconProps } from './IconTypes';
  * COLLECTION: Solar Linear Icons
  * LICENSE: CC Attribution License
  * AUTHOR: Solar Icons
+ * @param root0
+ * @param root0.className
  */
 const CalendarIcon = ({ className }: IconProps) => {
 	return (

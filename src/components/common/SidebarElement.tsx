@@ -1,7 +1,7 @@
 import './SidebarElement.css';
 import { NavLink } from 'react-router';
-import Tooltipped from './Tooltipped';
 import type { ReactNode } from 'react';
+import Tooltipped from './Tooltipped';
 
 type SidebarElementProps = {
 	title: string;

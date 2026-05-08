@@ -1,6 +1,6 @@
 import './Header.css';
-import Clickable from './Clickable';
 import type { ReactNode } from 'react';
+import Clickable from './Clickable';
 
 export type HeaderAction = {
 	id: string;
@@ -20,11 +20,12 @@ const Header = ({ title, actions }: HeaderProps) => {
 			<h3 className='header-title'>{title}</h3>
 			{actions.length > 0 &&
 				<div className='header-actions'>
-					{actions.map((action) =>
-						<Clickable onClick={action.onClick} key={action.id}>
+					{actions.map((action) => {
+						return <Clickable onClick={action.onClick} key={action.id}>
 							{action.icon}
 							<div className='header-action-label'>{action.label}</div>
-						</Clickable>)
+						</Clickable>;
+					})
 					}
 				</div>
 			}
