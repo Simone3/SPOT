@@ -1,4 +1,4 @@
-import './Pane.css';
+import 'src/components/common/Pane.css';
 import type { ReactNode } from 'react';
 
 type PaneProps = {

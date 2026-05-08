@@ -1,4 +1,4 @@
-import './Clickable.css';
+import 'src/components/common/Clickable.css';
 import type { MouseEventHandler, ReactNode } from 'react';
 
 type ClickableProps = {

@@ -1,4 +1,4 @@
-import type { IconProps } from './IconTypes';
+import type { IconProps } from 'src/components/icons/IconTypes';
 
 /**
  * https://www.svgrepo.com/svg/521856/sort

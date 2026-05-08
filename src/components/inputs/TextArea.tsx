@@ -1,7 +1,7 @@
 import type { ReactElement } from 'react';
 import { MDXEditor } from '@mdxeditor/editor';
 import '@mdxeditor/editor/style.css';
-import './TextArea.css';
+import 'src/components/inputs/TextArea.css';
 
 type TextAreaProps = {
 	placeholder?: string;

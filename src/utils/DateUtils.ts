@@ -1,5 +1,5 @@
 
-import type { CurrentDates } from '../types/DateTypes';
+import type { CurrentDates } from 'src/types/DateTypes';
 
 export class DateUtils {
 	static isSameDay(date1: Date, date2: Date): boolean {

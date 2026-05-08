@@ -1,10 +1,10 @@
-import './TaskActions.css';
+import 'src/components/tasks/TaskActions.css';
 import { useState } from 'react';
-import Checkbox from '../inputs/Checkbox';
-import Clickable from '../common/Clickable';
-import DeleteIcon from '../icons/DeleteIcon';
-import ConfirmModal from '../common/ConfirmModal';
-import type { Task } from '../../types/TaskTypes';
+import Checkbox from 'src/components/inputs/Checkbox';
+import Clickable from 'src/components/common/Clickable';
+import DeleteIcon from 'src/components/icons/DeleteIcon';
+import ConfirmModal from 'src/components/common/ConfirmModal';
+import type { Task } from 'src/types/TaskTypes';
 
 type TaskActionsProps = {
 	task: Task;

@@ -1,14 +1,14 @@
-import './TaskChips.css';
-import { DateUtils } from '../../utils/DateUtils';
-import Chip from '../common/Chip';
-import TagsIcon from '../icons/TagsIcon';
-import CalendarIcon from '../icons/CalendarIcon';
-import OwnerIcon from '../icons/OwnerIcon';
-import FreeSelectInput from '../inputs/FreeSelectInput';
-import DatePicker from '../inputs/DatePicker';
-import WarningIcon from '../icons/WarningIcon';
-import type { FormDomains } from '../../types/DomainTypes';
-import type { Task as TaskType } from '../../types/TaskTypes';
+import 'src/components/tasks/TaskChips.css';
+import { DateUtils } from 'src/utils/DateUtils';
+import Chip from 'src/components/common/Chip';
+import TagsIcon from 'src/components/icons/TagsIcon';
+import CalendarIcon from 'src/components/icons/CalendarIcon';
+import OwnerIcon from 'src/components/icons/OwnerIcon';
+import FreeSelectInput from 'src/components/inputs/FreeSelectInput';
+import DatePicker from 'src/components/inputs/DatePicker';
+import WarningIcon from 'src/components/icons/WarningIcon';
+import type { FormDomains } from 'src/types/DomainTypes';
+import type { Task as TaskType } from 'src/types/TaskTypes';
 
 /**
  * Returns a string value possibly changed to match an option capitalization

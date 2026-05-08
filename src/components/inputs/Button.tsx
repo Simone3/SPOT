@@ -1,4 +1,4 @@
-import './Button.css';
+import 'src/components/inputs/Button.css';
 import type { CSSProperties, MouseEventHandler, ReactNode } from 'react';
 
 type ButtonProps = {

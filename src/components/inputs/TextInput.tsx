@@ -1,5 +1,5 @@
 import { useId } from 'react';
-import './TextInput.css';
+import 'src/components/inputs/TextInput.css';
 
 type TextInputProps = {
 	label?: string;

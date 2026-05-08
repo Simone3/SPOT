@@ -1,5 +1,5 @@
 import { useId } from 'react';
-import './Checkbox.css';
+import 'src/components/inputs/Checkbox.css';
 
 type CheckboxProps = {
 	label?: string;

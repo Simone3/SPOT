@@ -67,6 +67,10 @@ npm run make
 - `src/utils` contains general utilities.
 - `src/__tests__` contains Jest tests.
 
+## Source Imports
+
+React source files use absolute imports rooted at `src/...`, including local CSS imports, instead of relative `./` or `../` paths. `tsconfig.json` sets `baseUrl` to the repository root so TypeScript, React Scripts, Jest, and ESLint can resolve those imports consistently.
+
 ## Application Shell
 
 `src/index.tsx` renders:

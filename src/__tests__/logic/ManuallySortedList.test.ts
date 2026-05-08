@@ -1,4 +1,4 @@
-import { insertIntoManuallySortedList, moveInManuallySortedList, recomputeSortPositions, type ManuallySortedItem } from '../../logic/ManuallySortedList';
+import { insertIntoManuallySortedList, moveInManuallySortedList, recomputeSortPositions, type ManuallySortedItem } from 'src/logic/ManuallySortedList';
 
 type TestItem = ManuallySortedItem & {
 	id: number;

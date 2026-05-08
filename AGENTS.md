@@ -12,6 +12,7 @@
 - Do NOT introduce extra libraries unless you justify them briefly and they clearly reduce work or risk.
 - `package.json` dependencies must always use exact versions; do not use modifiers such as `^` or `~`.
 - Prefer existing project patterns over new abstractions when they are available. However, do centralize behavior into shared components/utilities whenever convenient.
+- Use absolute imports from `src/...` for in-repository React source files and assets instead of relative `./` or `../` imports.
 - Define TypeScript types in the owning `.ts`/`.tsx` file whenever practical. Shared cross-owner types live under `src/types` in semantic files such as `TaskTypes.ts`, `DomainTypes.ts`, or `FilterTypes.ts`.
 - Use plain React with TypeScript and CSS only. Do not add frameworks such as Vite or Next.js.
 - Keep the code style consistent with the existing codebase, including spacing and newline conventions.

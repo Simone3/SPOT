@@ -1,12 +1,12 @@
-import './Task.css';
+import 'src/components/tasks/Task.css';
 import { useState, useRef, useEffect } from 'react';
 import { useSortable } from '@dnd-kit/react/sortable';
-import TextArea from '../inputs/TextArea';
-import type { FormDomains } from '../../types/DomainTypes';
-import type { Task as TaskType, TaskChange } from '../../types/TaskTypes';
-import TaskPriority from './TaskPriority';
-import TaskActions from './TaskActions';
-import TaskChips from './TaskChips';
+import TextArea from 'src/components/inputs/TextArea';
+import type { FormDomains } from 'src/types/DomainTypes';
+import type { Task as TaskType, TaskChange } from 'src/types/TaskTypes';
+import TaskPriority from 'src/components/tasks/TaskPriority';
+import TaskActions from 'src/components/tasks/TaskActions';
+import TaskChips from 'src/components/tasks/TaskChips';
 
 type TaskProps = {
 	id: string;

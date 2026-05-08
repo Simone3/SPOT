@@ -1,5 +1,5 @@
-import type { Task, TaskChange, TaskPriorityValue, TasksContainer } from '../types/TaskTypes';
-import { insertIntoManuallySortedList, moveInManuallySortedList, recomputeSortPositions } from './ManuallySortedList';
+import type { Task, TaskChange, TaskPriorityValue, TasksContainer } from 'src/types/TaskTypes';
+import { insertIntoManuallySortedList, moveInManuallySortedList, recomputeSortPositions } from 'src/logic/ManuallySortedList';
 
 const PRIORITIES_SORT: Record<TaskPriorityValue, number> = {
 	LOW: 0,

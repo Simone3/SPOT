@@ -1,6 +1,6 @@
 
-import type { Task, TasksContainer } from '../types/TaskTypes';
-import type { TaskFilterChange, TaskFilters } from '../types/FilterTypes';
+import type { Task, TasksContainer } from 'src/types/TaskTypes';
+import type { TaskFilterChange, TaskFilters } from 'src/types/FilterTypes';
 
 /**
  * Returns a new object containing the initial filters.

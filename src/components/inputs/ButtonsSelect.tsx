@@ -1,6 +1,6 @@
 import { useId, type MouseEvent } from 'react';
-import './ButtonsSelect.css';
-import Button from './Button';
+import 'src/components/inputs/ButtonsSelect.css';
+import Button from 'src/components/inputs/Button';
 
 type ButtonsSelectOption = {
 	key: string;

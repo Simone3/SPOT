@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import Page from '../common/Page';
-import Pane from '../common/Pane';
-import { getInitialTaskState, addTaskToState, refreshVisibleTasksInState, deleteTaskFromState, changeFiltersInState, loadBackEndTasksIntoState, resetFiltersState, updateTaskInState, sortTasksByImportanceInState, moveActiveTaskInState } from '../../logic/TaskStateLogic';
-import type { Task, TaskChange } from '../../types/TaskTypes';
-import type { TaskFilterChange } from '../../types/FilterTypes';
-import TasksList from './TasksList';
-import TaskFilters from './TaskFilters';
+import Page from 'src/components/common/Page';
+import Pane from 'src/components/common/Pane';
+import { getInitialTaskState, addTaskToState, refreshVisibleTasksInState, deleteTaskFromState, changeFiltersInState, loadBackEndTasksIntoState, resetFiltersState, updateTaskInState, sortTasksByImportanceInState, moveActiveTaskInState } from 'src/logic/TaskStateLogic';
+import type { Task, TaskChange } from 'src/types/TaskTypes';
+import type { TaskFilterChange } from 'src/types/FilterTypes';
+import TasksList from 'src/components/tasks/TasksList';
+import TaskFilters from 'src/components/tasks/TaskFilters';
 
 const TasksPage = () => {
 	const [ taskState, setTaskState ] = useState(getInitialTaskState());

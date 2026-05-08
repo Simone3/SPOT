@@ -1,4 +1,4 @@
-import './Chip.css';
+import 'src/components/common/Chip.css';
 import type { ReactNode } from 'react';
 
 type ChipProps = {

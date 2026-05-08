@@ -451,7 +451,14 @@ module.exports = defineConfig([
 			'import/no-absolute-path': 'off',
 			'import/no-dynamic-require': 'warn',
 			'import/no-internal-modules': [ 'warn', {
-				allow: [ 'src/**', 'react-dom/client' ]
+				allow: [
+					'src/**',
+					'@dnd-kit/react/sortable',
+					'@fontsource/inter/*.css',
+					'@mdxeditor/editor/style.css',
+					'react-datepicker/dist/react-datepicker.css',
+					'react-dom/client'
+				]
 			}],
 			'import/no-webpack-loader-syntax': 'off',
 			'import/no-self-import': 'off',

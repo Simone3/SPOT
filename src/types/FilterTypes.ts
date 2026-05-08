@@ -1,4 +1,4 @@
-import type { TaskPriorityValue } from './TaskTypes';
+import type { TaskPriorityValue } from 'src/types/TaskTypes';
 
 export interface TaskFilters {
 	text: string;

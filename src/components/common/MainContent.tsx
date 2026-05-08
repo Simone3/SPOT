@@ -1,4 +1,4 @@
-import './MainContent.css';
+import 'src/components/common/MainContent.css';
 import type { ReactNode } from 'react';
 
 type MainContentProps = {

@@ -1,6 +1,6 @@
-import './Header.css';
+import 'src/components/common/Header.css';
 import type { ReactNode } from 'react';
-import Clickable from './Clickable';
+import Clickable from 'src/components/common/Clickable';
 
 export type HeaderAction = {
 	id: string;

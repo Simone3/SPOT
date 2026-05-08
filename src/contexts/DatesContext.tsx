@@ -1,5 +1,5 @@
 import { createContext, useState, type ReactNode } from 'react';
-import type { CurrentDates } from '../types/DateTypes';
+import type { CurrentDates } from 'src/types/DateTypes';
 
 export const DatesContext = createContext<CurrentDates | undefined>(undefined);
 

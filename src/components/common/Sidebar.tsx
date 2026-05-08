@@ -1,9 +1,9 @@
-import './Sidebar.css';
-import NotesIcon from '../icons/NotesIcon';
-import SettingsIcon from '../icons/SettingsIcon';
-import TagsIcon from '../icons/TagsIcon';
-import TasksIcon from '../icons/TasksIcon';
-import SidebarElement from './SidebarElement';
+import 'src/components/common/Sidebar.css';
+import NotesIcon from 'src/components/icons/NotesIcon';
+import SettingsIcon from 'src/components/icons/SettingsIcon';
+import TagsIcon from 'src/components/icons/TagsIcon';
+import TasksIcon from 'src/components/icons/TasksIcon';
+import SidebarElement from 'src/components/common/SidebarElement';
 
 const Sidebar = () => {
 	return (

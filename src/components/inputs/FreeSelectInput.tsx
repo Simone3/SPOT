@@ -1,4 +1,4 @@
-import './FreeSelectInput.css';
+import 'src/components/inputs/FreeSelectInput.css';
 import { useState, useId, useRef, type FocusEvent } from 'react';
 
 type FreeSelectOption = {

@@ -1,11 +1,11 @@
-import './TaskPriority.css';
+import 'src/components/tasks/TaskPriority.css';
 import { useState, useId, useRef, type CSSProperties, type FocusEvent, type ReactElement, type ReactNode } from 'react';
-import PriorityLowIcon from '../icons/PriorityLowIcon';
-import PriorityUrgentIcon from '../icons/PriorityUrgentIcon';
-import PriorityHighIcon from '../icons/PriorityHighIcon';
-import PriorityNormalIcon from '../icons/PriorityNormalIcon';
-import type { DomainEntry } from '../../types/DomainTypes';
-import type { TaskPriorityValue } from '../../types/TaskTypes';
+import PriorityLowIcon from 'src/components/icons/PriorityLowIcon';
+import PriorityUrgentIcon from 'src/components/icons/PriorityUrgentIcon';
+import PriorityHighIcon from 'src/components/icons/PriorityHighIcon';
+import PriorityNormalIcon from 'src/components/icons/PriorityNormalIcon';
+import type { DomainEntry } from 'src/types/DomainTypes';
+import type { TaskPriorityValue } from 'src/types/TaskTypes';
 
 type TaskPriorityProps = {
 	priorityDomain: DomainEntry[];

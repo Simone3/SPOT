@@ -1,15 +1,15 @@
-import './TaskFilters.css';
+import 'src/components/tasks/TaskFilters.css';
 import { useContext } from 'react';
-import ButtonsSelect from '../inputs/ButtonsSelect';
-import Checkbox from '../inputs/Checkbox';
-import TextInput from '../inputs/TextInput';
-import Header from '../common/Header';
-import ResetIcon from '../icons/ResetIcon';
-import { DatesContext } from '../../contexts/DatesContext';
-import { DateUtils } from '../../utils/DateUtils';
-import type { FilterDomains } from '../../types/DomainTypes';
-import type { TaskFilterChange, TaskFilters as TaskFiltersType } from '../../types/FilterTypes';
-import type { TaskPriorityValue } from '../../types/TaskTypes';
+import ButtonsSelect from 'src/components/inputs/ButtonsSelect';
+import Checkbox from 'src/components/inputs/Checkbox';
+import TextInput from 'src/components/inputs/TextInput';
+import Header from 'src/components/common/Header';
+import ResetIcon from 'src/components/icons/ResetIcon';
+import { DatesContext } from 'src/contexts/DatesContext';
+import { DateUtils } from 'src/utils/DateUtils';
+import type { FilterDomains } from 'src/types/DomainTypes';
+import type { TaskFilterChange, TaskFilters as TaskFiltersType } from 'src/types/FilterTypes';
+import type { TaskPriorityValue } from 'src/types/TaskTypes';
 
 type TaskFiltersProps = {
 	domains: FilterDomains;

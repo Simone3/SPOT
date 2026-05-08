@@ -1,4 +1,4 @@
-import './Tooltipped.css';
+import 'src/components/common/Tooltipped.css';
 import type { ReactNode } from 'react';
 
 type TooltippedProps = {

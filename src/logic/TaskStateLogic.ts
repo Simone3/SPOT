@@ -1,11 +1,11 @@
 import type { Dispatch, SetStateAction } from 'react';
-import { DateUtils } from '../utils/DateUtils';
-import type { DomainsContainer } from '../types/DomainTypes';
-import type { TaskFilters, TaskFilterChange } from '../types/FilterTypes';
-import type { Task, TaskChange, TasksContainer } from '../types/TaskTypes';
-import { cloneFilters, getInitialFilters, refreshTasksVisibility, refreshTaskVisibility } from './FiltersLogic';
-import { getInitialTasks, cloneTasks, loadBackEndTasks, addNewTask, deleteTask, updateTask, forceSortActiveTasksByImportance, moveActiveTask } from './TasksLogic';
-import { getInitialDomains, cloneDomains, addDomainsForTasks, removeDomainsForTask, updateDomainsForTask, addDomainsForTask, updateFiltersOnDomainsChange } from './DomainsLogic';
+import { DateUtils } from 'src/utils/DateUtils';
+import type { DomainsContainer } from 'src/types/DomainTypes';
+import type { TaskFilters, TaskFilterChange } from 'src/types/FilterTypes';
+import type { Task, TaskChange, TasksContainer } from 'src/types/TaskTypes';
+import { cloneFilters, getInitialFilters, refreshTasksVisibility, refreshTaskVisibility } from 'src/logic/FiltersLogic';
+import { getInitialTasks, cloneTasks, loadBackEndTasks, addNewTask, deleteTask, updateTask, forceSortActiveTasksByImportance, moveActiveTask } from 'src/logic/TasksLogic';
+import { getInitialDomains, cloneDomains, addDomainsForTasks, removeDomainsForTask, updateDomainsForTask, addDomainsForTask, updateFiltersOnDomainsChange } from 'src/logic/DomainsLogic';
 
 interface TaskStateContainer {
 	tasksContainer: TasksContainer;

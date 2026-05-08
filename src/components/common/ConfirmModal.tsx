@@ -1,5 +1,5 @@
-import './ConfirmModal.css';
-import Button from '../inputs/Button';
+import 'src/components/common/ConfirmModal.css';
+import Button from 'src/components/inputs/Button';
 
 type ConfirmModalProps = {
 	title: string;

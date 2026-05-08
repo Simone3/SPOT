@@ -1,5 +1,5 @@
-import Page from '../common/Page';
-import Pane from '../common/Pane';
+import Page from 'src/components/common/Page';
+import Pane from 'src/components/common/Pane';
 
 const NotesPage = () => {
 	return (

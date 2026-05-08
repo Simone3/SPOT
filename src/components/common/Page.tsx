@@ -1,4 +1,4 @@
-import './Page.css';
+import 'src/components/common/Page.css';
 import type { ReactNode } from 'react';
 
 type PageProps = {
