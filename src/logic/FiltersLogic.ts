@@ -4,6 +4,7 @@ import type { TaskFilterChange, TaskFilters } from '../types/FilterTypes';
 
 /**
  * Returns a new object containing the initial filters.
+ * @returns Default task filters.
  */
 export const getInitialFilters = (): TaskFilters => {
 	return {
@@ -18,7 +19,8 @@ export const getInitialFilters = (): TaskFilters => {
 
 /**
  * Clones the object and the contained lists.
- * @param filters
+ * @param filters Filters to clone.
+ * @returns A shallow clone of the filters.
  */
 export const cloneFilters = (filters: TaskFilters): TaskFilters => {
 	return {
@@ -33,8 +35,9 @@ export const cloneFilters = (filters: TaskFilters): TaskFilters => {
 
 /**
  * Checks if a specific tasks matches a set of filters.
- * @param task
- * @param filters
+ * @param task Task to test.
+ * @param filters Filters to apply.
+ * @returns Whether the task matches.
  */
 const matchesFilters = (task: Task, filters: TaskFilters): boolean => {
 	if(task.state === 'COMPLETED' && !filters.showCompleted) {
@@ -68,8 +71,8 @@ const matchesFilters = (task: Task, filters: TaskFilters): boolean => {
 
 /**
  * Refreshes the "visibile" field of a task based on the given filters.
- * @param task
- * @param filters
+ * @param task Task to update.
+ * @param filters Filters controlling visibility.
  */
 export const refreshTaskVisibility = (task: Task, filters: TaskFilters): void => {
 	task.visible = matchesFilters(task, filters);
@@ -77,8 +80,8 @@ export const refreshTaskVisibility = (task: Task, filters: TaskFilters): void =>
 
 /**
  * Helper to refresh the "visibile" field in an array based on the new filters.
- * @param taskList
- * @param filters
+ * @param taskList Task list to update.
+ * @param filters Filters controlling visibility.
  */
 const refreshTasksVisibilityHelper = (taskList: Task[], filters: TaskFilters): void => {
 	for(let i = 0; i < taskList.length; i++) {
@@ -96,9 +99,9 @@ const refreshTasksVisibilityHelper = (taskList: Task[], filters: TaskFilters): v
 /**
  * Refreshes the "visibile" field of all tasks based on the new filters.
  * It clones any changed task.
- * @param tasksContainer
- * @param oldFilters
- * @param newFilters
+ * @param tasksContainer Task lists to update.
+ * @param oldFilters Previous filter values.
+ * @param newFilters New filter values.
  */
 export const refreshTasksVisibility = (tasksContainer: TasksContainer, oldFilters: TaskFilters, newFilters: TaskFilters | (TaskFilters & TaskFilterChange)): void => {
 	// Always refresh active tasks

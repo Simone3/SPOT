@@ -65,6 +65,7 @@ const NO_DUE_DATE: DomainEntry = {
 
 /**
  * Returns a new object containing the initial domains.
+ * @returns Default filter and form domains.
  */
 export const getInitialDomains = (): DomainsContainer => {
 	return {
@@ -84,7 +85,8 @@ export const getInitialDomains = (): DomainsContainer => {
 
 /**
  * Clones the object and the contained lists (but not each domain entry).
- * @param domainsContainer
+ * @param domainsContainer Domains to clone.
+ * @returns A shallow clone of the domains container.
  */
 export const cloneDomains = (domainsContainer: DomainsContainer): DomainsContainer => {
 	return {
@@ -104,8 +106,9 @@ export const cloneDomains = (domainsContainer: DomainsContainer): DomainsContain
 
 /**
  * Comparator for domain entries (sort by value).
- * @param entryA
- * @param entryB
+ * @param entryA First domain entry to compare.
+ * @param entryB Second domain entry to compare.
+ * @returns The domain value sort order.
  */
 const domainCompareFunction = (entryA: DomainEntry, entryB: DomainEntry): number => {
 	if(entryA.value < entryB.value) {
@@ -119,7 +122,7 @@ const domainCompareFunction = (entryA: DomainEntry, entryB: DomainEntry): number
 
 /**
  * Sorts all domains.
- * @param domainsContainer
+ * @param domainsContainer Domain lists to sort in place.
  */
 const sortAllDomains = (domainsContainer: DomainsContainer): void => {
 	// Sort all lists (except priorities, which are already sorted by default)
@@ -132,8 +135,8 @@ const sortAllDomains = (domainsContainer: DomainsContainer): void => {
 
 /**
  * Removes a domain value from a domain list (either by removing the entry altogether or by cloning & updating the entry counter).
- * @param domainsList
- * @param oldDomainValue
+ * @param domainsList Domain list to update.
+ * @param oldDomainValue Domain value to remove.
  */
 const removeDomain = (domainsList: DomainEntry[], oldDomainValue: string): void => {
 	// Find old domain by value
@@ -159,8 +162,8 @@ const removeDomain = (domainsList: DomainEntry[], oldDomainValue: string): void 
 
 /**
  * Adds a domain value to a domain list (either by creating a new entry or by cloning & updating an existing entry counter).
- * @param domainsList
- * @param newDomainValue
+ * @param domainsList Domain list to update.
+ * @param newDomainValue Domain value to add.
  */
 const addDomain = (domainsList: DomainEntry[], newDomainValue: string): void => {
 	// Find new domain by value
@@ -196,8 +199,9 @@ const addDomain = (domainsList: DomainEntry[], newDomainValue: string): void => 
 
 /**
  * Returns the index in the domains list where the given domain value is located or -1 if not present.
- * @param domainsList
- * @param domainValue
+ * @param domainsList Domain list to search.
+ * @param domainValue Domain value to find.
+ * @returns The domain entry index, or -1.
  */
 const findDomain = (domainsList: DomainEntry[], domainValue: string): number => {
 	for(let i = 0; i < domainsList.length; i++) {
@@ -223,10 +227,10 @@ const taskDomainHandlers: TaskDomainHandler[] = [
  * Updates all domains of the given task in the given domains section.
  * If oldTask is empty, the domains are added.
  * If newTask is empty, the domains are removed.
- * @param domainsSection
- * @param oldTask
- * @param newTask
- * @param changedTaskValues
+ * @param domainsSection Domain section to update.
+ * @param oldTask Previous task values, when present.
+ * @param newTask New task values, when present.
+ * @param changedTaskValues Task fields that changed.
  */
 const updateDomainsForTaskInSection = (domainsSection: DomainsSection, oldTask: Task | undefined, newTask: Task | undefined, changedTaskValues: TaskChange | undefined): void => {
 	// Loop all dynamic handlers
@@ -279,10 +283,10 @@ const updateDomainsForTaskInSection = (domainsSection: DomainsSection, oldTask: 
  * Helper to update any changed task domains in their respective domains lists, without sorting.
  * If oldTask is empty, the domains are added.
  * If newTask is empty, the domains are removed.
- * @param domainsContainer
- * @param oldTask
- * @param newTask
- * @param changedTaskValues
+ * @param domainsContainer Domain lists to update.
+ * @param oldTask Previous task values, when present.
+ * @param newTask New task values, when present.
+ * @param changedTaskValues Task fields that changed.
  */
 const updateDomainsForTaskHelper = (domainsContainer: DomainsContainer, oldTask: Task | undefined, newTask: Task | undefined, changedTaskValues: TaskChange | undefined): void => {
 	// The form section needs to be updated in any case (it contains domains for ALL tasks, both active and completed)
@@ -313,8 +317,8 @@ const updateDomainsForTaskHelper = (domainsContainer: DomainsContainer, oldTask:
 
 /**
  * Adds all domains of a given task to their respective domains lists, keeping them in order.
- * @param domainsContainer
- * @param task
+ * @param domainsContainer Domain lists to update.
+ * @param task Task providing domain values.
  */
 export const addDomainsForTask = (domainsContainer: DomainsContainer, task: Task): void => {
 	updateDomainsForTaskHelper(domainsContainer, undefined, task, undefined);
@@ -323,8 +327,8 @@ export const addDomainsForTask = (domainsContainer: DomainsContainer, task: Task
 
 /**
  * Removes all domains of a given task from their respective domains lists, keeping them in order.
- * @param domainsContainer
- * @param task
+ * @param domainsContainer Domain lists to update.
+ * @param task Task providing domain values.
  */
 export const removeDomainsForTask = (domainsContainer: DomainsContainer, task: Task): void => {
 	updateDomainsForTaskHelper(domainsContainer, task, undefined, undefined);
@@ -333,10 +337,10 @@ export const removeDomainsForTask = (domainsContainer: DomainsContainer, task: T
 
 /**
  * Updates any changed task domains in their respective domains lists, keeping them in order.
- * @param domainsContainer
- * @param oldTask
- * @param newTask
- * @param changedTaskValues
+ * @param domainsContainer Domain lists to update.
+ * @param oldTask Previous task values.
+ * @param newTask New task values.
+ * @param changedTaskValues Task fields that changed.
  */
 export const updateDomainsForTask = (domainsContainer: DomainsContainer, oldTask: Task, newTask: Task, changedTaskValues: TaskChange): void => {
 	updateDomainsForTaskHelper(domainsContainer, oldTask, newTask, changedTaskValues);
@@ -345,8 +349,8 @@ export const updateDomainsForTask = (domainsContainer: DomainsContainer, oldTask
 
 /**
  * For each task, adds all its domains to their respective domains lists, keeping them in order.
- * @param domainsContainer
- * @param tasksContainer
+ * @param domainsContainer Domain lists to populate.
+ * @param tasksContainer Task lists providing domain values.
  */
 export const addDomainsForTasks = (domainsContainer: DomainsContainer, tasksContainer: TasksContainer): void => {
 	for(const task of tasksContainer.active) {
@@ -362,8 +366,8 @@ export const addDomainsForTasks = (domainsContainer: DomainsContainer, tasksCont
 
 /**
  * Removes any filter that does not match the current domains values.
- * @param filtersDomains
- * @param filters
+ * @param filtersDomains Current filter domain values.
+ * @param filters Filters to update in place.
  */
 export const updateFiltersOnDomainsChange = (filtersDomains: FilterDomains, filters: TaskFilters): void => {
 	for(const handler of taskDomainHandlers) {

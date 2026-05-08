@@ -5,10 +5,12 @@ import type { IconProps } from './IconTypes';
  * COLLECTION: Gentlecons Interface Icons
  * LICENSE: CC Attribution License
  * AUTHOR: Konstantin Filatov
- * @param root0
- * @param root0.className
+ * @param props Icon display options.
+ * @returns The sort icon SVG.
  */
-const SortIcon = ({ className }: IconProps) => {
+const SortIcon = (props: IconProps) => {
+	const { className } = props;
+
 	return (
 		<svg viewBox='0 0 24 24' fill='none' className={className}>
 			<path d='M11.1924 5.65685C11.5829 5.26633 11.5829 4.63316 11.1924 4.24264L8.36397 1.41421C8.30576 1.356 8.24485 1.30212 8.18165 1.25259C7.50286 0.720577 6.55947 0.689024 5.84929 1.15793C5.73839 1.23115 5.63317 1.31658 5.53554 1.41421L2.70711 4.24264C2.31658 4.63316 2.31658 5.26633 2.70711 5.65685C3.09763 6.04738 3.7308 6.04738 4.12132 5.65685L6.00003 3.77814V18C6.00003 18.5523 6.44775 19 7.00003 19C7.55232 19 8.00003 18.5523 8.00003 18V3.8787L9.77818 5.65685C10.1687 6.04737 10.8019 6.04737 11.1924 5.65685Z' fill='currentColor'/>

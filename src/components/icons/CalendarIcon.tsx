@@ -5,10 +5,12 @@ import type { IconProps } from './IconTypes';
  * COLLECTION: Solar Linear Icons
  * LICENSE: CC Attribution License
  * AUTHOR: Solar Icons
- * @param root0
- * @param root0.className
+ * @param props Icon display options.
+ * @returns The calendar icon SVG.
  */
-const CalendarIcon = ({ className }: IconProps) => {
+const CalendarIcon = (props: IconProps) => {
+	const { className } = props;
+
 	return (
 		<svg viewBox='0 0 24 24' fill='none' className={className}>
 			<path d='M2 12C2 8.22876 2 6.34315 3.17157 5.17157C4.34315 4 6.22876 4 10 4H14C17.7712 4 19.6569 4 20.8284 5.17157C22 6.34315 22 8.22876 22 12V14C22 17.7712 22 19.6569 20.8284 20.8284C19.6569 22 17.7712 22 14 22H10C6.22876 22 4.34315 22 3.17157 20.8284C2 19.6569 2 17.7712 2 14V12Z' stroke='currentColor' strokeWidth='1.5'/>

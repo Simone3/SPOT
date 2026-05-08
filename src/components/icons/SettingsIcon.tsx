@@ -5,10 +5,12 @@ import type { IconProps } from './IconTypes';
  * COLLECTION: Nimble Tiny Line Icons
  * LICENSE: CC Attribution License
  * AUTHOR: Zlatko Najdenovski
- * @param root0
- * @param root0.className
+ * @param props Icon display options.
+ * @returns The settings icon SVG.
  */
-const SettingsIcon = ({ className }: IconProps) => {
+const SettingsIcon = (props: IconProps) => {
+	const { className } = props;
+
 	return (
 		<svg viewBox='0 0 32 32' fill='none' className={className}>
 			<g clipPath='url(#clip0_901_985)'>

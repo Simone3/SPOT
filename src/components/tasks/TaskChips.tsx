@@ -13,8 +13,9 @@ import type { Task as TaskType } from '../../types/TaskTypes';
 /**
  * Returns a string value possibly changed to match an option capitalization
  * (value matches one of the options but not exacly the same case)
- * @param value
- * @param options
+ * @param value User-entered value to normalize.
+ * @param options Available options to match against.
+ * @returns The value with matching option capitalization.
  */
 const checkOptionCapitalization = (value: string, options: { label: string }[]) => {
 	if(!value) {

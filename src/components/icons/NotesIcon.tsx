@@ -5,10 +5,12 @@ import type { IconProps } from './IconTypes';
  * COLLECTION: Iconsax Line Oval Icons
  * LICENSE: MIT License
  * AUTHOR: Iconsax
- * @param root0
- * @param root0.className
+ * @param props Icon display options.
+ * @returns The notes icon SVG.
  */
-const NotesIcon = ({ className }: IconProps) => {
+const NotesIcon = (props: IconProps) => {
+	const { className } = props;
+
 	return (
 		<svg viewBox='0 0 24 24' fill='none' className={className}>
 			<path d='M8 2V5' stroke='currentColor' strokeWidth='1.5' strokeMiterlimit='10' strokeLinecap='round' strokeLinejoin='round'/>

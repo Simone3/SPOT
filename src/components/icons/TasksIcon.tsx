@@ -5,10 +5,12 @@ import type { IconProps } from './IconTypes';
  * COLLECTION: Iconsax Line Oval Icons
  * LICENSE: MIT License
  * AUTHOR: Iconsax
- * @param root0
- * @param root0.className
+ * @param props Icon display options.
+ * @returns The tasks icon SVG.
  */
-const TasksIcon = ({ className }: IconProps) => {
+const TasksIcon = (props: IconProps) => {
+	const { className } = props;
+
 	return (
 		<svg viewBox='0 0 24 24' fill='none' className={className}>
 			<path d='M12.37 8.87988H17.62' stroke='currentColor' strokeWidth='1.5' strokeLinecap='round' strokeLinejoin='round'/>

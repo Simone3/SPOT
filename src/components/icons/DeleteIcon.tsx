@@ -5,10 +5,12 @@ import type { IconProps } from './IconTypes';
  * COLLECTION: Olicons Various Icons
  * LICENSE: PD License
  * AUTHOR: owlling
- * @param root0
- * @param root0.className
+ * @param props Icon display options.
+ * @returns The delete icon SVG.
  */
-const DeleteIcon = ({ className }: IconProps) => {
+const DeleteIcon = (props: IconProps) => {
+	const { className } = props;
+
 	return (
 		<svg viewBox='0 0 32 32' className={className}>
 			<g fill='none' fillRule='evenodd'>

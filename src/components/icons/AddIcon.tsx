@@ -5,10 +5,12 @@ import type { IconProps } from './IconTypes';
  * COLLECTION: Solar Linear Icons
  * LICENSE: CC Attribution License
  * AUTHOR: Solar Icons
- * @param root0
- * @param root0.className
+ * @param props Icon display options.
+ * @returns The add icon SVG.
  */
-const AddIcon = ({ className }: IconProps) => {
+const AddIcon = (props: IconProps) => {
+	const { className } = props;
+
 	return (
 		<svg viewBox='0 0 24 24' fill='none' className={className}>
 			<circle cx='12' cy='12' r='10' stroke='currentColor' strokeWidth='1.5'/>

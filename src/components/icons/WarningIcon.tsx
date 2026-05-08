@@ -5,10 +5,12 @@ import type { IconProps } from './IconTypes';
  * COLLECTION: Quill Oval Interface Icons
  * LICENSE: MIT License
  * AUTHOR: yourtempo
- * @param root0
- * @param root0.className
+ * @param props Icon display options.
+ * @returns The warning icon SVG.
  */
-const WarningIcon = ({ className }: IconProps) => {
+const WarningIcon = (props: IconProps) => {
+	const { className } = props;
+
 	return (
 		<svg viewBox='0 0 32 32' fill='none' className={className}>
 			<path stroke='currentColor' strokeLinecap='round' strokeLinejoin='round' strokeWidth='2' d='M15.12 4.623a1 1 0 011.76 0l11.32 20.9A1 1 0 0127.321 27H4.679a1 1 0 01-.88-1.476l11.322-20.9zM16 18v-6'/>

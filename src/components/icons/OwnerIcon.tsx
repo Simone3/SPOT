@@ -5,10 +5,12 @@ import type { IconProps } from './IconTypes';
  * COLLECTION: Forge Line Interface Icons
  * LICENSE: PD License
  * AUTHOR: theforgesmith
- * @param root0
- * @param root0.className
+ * @param props Icon display options.
+ * @returns The owner icon SVG.
  */
-const OwnerIcon = ({ className }: IconProps) => {
+const OwnerIcon = (props: IconProps) => {
+	const { className } = props;
+
 	return (
 		<svg viewBox='0 0 64 64' strokeWidth='3' stroke='currentColor' fill='none' className={className}>
 			<circle cx='32' cy='18.14' r='11.14' />
