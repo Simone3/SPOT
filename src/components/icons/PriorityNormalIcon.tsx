@@ -17,4 +17,4 @@ const PriorityNormalIcon = (props: IconProps): ReactElement => {
 	);
 };
 
-export default PriorityNormalIcon;
+export { PriorityNormalIcon };

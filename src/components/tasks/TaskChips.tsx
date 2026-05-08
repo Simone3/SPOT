@@ -1,13 +1,13 @@
 import 'src/components/tasks/TaskChips.css';
 import type { ReactElement } from 'react';
 import { DateUtils } from 'src/utils/DateUtils';
-import Chip from 'src/components/common/Chip';
-import TagsIcon from 'src/components/icons/TagsIcon';
-import CalendarIcon from 'src/components/icons/CalendarIcon';
-import OwnerIcon from 'src/components/icons/OwnerIcon';
-import FreeSelectInput from 'src/components/inputs/FreeSelectInput';
-import DatePicker from 'src/components/inputs/DatePicker';
-import WarningIcon from 'src/components/icons/WarningIcon';
+import { Chip } from 'src/components/common/Chip';
+import { TagsIcon } from 'src/components/icons/TagsIcon';
+import { CalendarIcon } from 'src/components/icons/CalendarIcon';
+import { OwnerIcon } from 'src/components/icons/OwnerIcon';
+import { FreeSelectInput } from 'src/components/inputs/FreeSelectInput';
+import { DatePicker } from 'src/components/inputs/DatePicker';
+import { WarningIcon } from 'src/components/icons/WarningIcon';
 import type { FormDomains } from 'src/types/DomainTypes';
 import type { Task as TaskType } from 'src/types/TaskTypes';
 
@@ -183,4 +183,4 @@ const TaskChips = ({ inputDomains, task, setOwner, setDueDate, setTags, flushTas
 	);
 };
 
-export default TaskChips;
+export { TaskChips };

@@ -19,4 +19,4 @@ const Button = ({ label, onClick, className, style }: ButtonProps): ReactElement
 	);
 };
 
-export default Button;
+export { Button };

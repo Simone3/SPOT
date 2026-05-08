@@ -20,4 +20,4 @@ const WarningIcon = (props: IconProps): ReactElement => {
 	);
 };
 
-export default WarningIcon;
+export { WarningIcon };

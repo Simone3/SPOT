@@ -27,4 +27,4 @@ const SettingsIcon = (props: IconProps): ReactElement => {
 	);
 };
 
-export default SettingsIcon;
+export { SettingsIcon };

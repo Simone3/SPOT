@@ -20,4 +20,4 @@ const SortIcon = (props: IconProps): ReactElement => {
 	);
 };
 
-export default SortIcon;
+export { SortIcon };

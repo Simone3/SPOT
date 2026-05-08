@@ -21,4 +21,4 @@ const Checkbox = ({ label, value, onChange, accentSelectedColor }: CheckboxProps
 	);
 };
 
-export default Checkbox;
+export { Checkbox };

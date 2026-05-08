@@ -1,10 +1,10 @@
 import 'src/components/common/Sidebar.css';
 import type { ReactElement } from 'react';
-import NotesIcon from 'src/components/icons/NotesIcon';
-import SettingsIcon from 'src/components/icons/SettingsIcon';
-import TagsIcon from 'src/components/icons/TagsIcon';
-import TasksIcon from 'src/components/icons/TasksIcon';
-import SidebarElement from 'src/components/common/SidebarElement';
+import { NotesIcon } from 'src/components/icons/NotesIcon';
+import { SettingsIcon } from 'src/components/icons/SettingsIcon';
+import { TagsIcon } from 'src/components/icons/TagsIcon';
+import { TasksIcon } from 'src/components/icons/TasksIcon';
+import { SidebarElement } from 'src/components/common/SidebarElement';
 
 const Sidebar = (): ReactElement => {
 	return (
@@ -21,4 +21,4 @@ const Sidebar = (): ReactElement => {
 	);
 };
 
-export default Sidebar;
+export { Sidebar };

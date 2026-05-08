@@ -2,13 +2,13 @@ import 'src/components/tasks/TasksList.css';
 import { DragDropProvider, type DragEndEvent } from '@dnd-kit/react';
 import { isSortable } from '@dnd-kit/react/sortable';
 import type { ReactElement } from 'react';
-import AddIcon from 'src/components/icons/AddIcon';
-import RefreshIcon from 'src/components/icons/RefreshIcon';
-import SortIcon from 'src/components/icons/SortIcon';
-import Header, { type HeaderAction } from 'src/components/common/Header';
+import { AddIcon } from 'src/components/icons/AddIcon';
+import { RefreshIcon } from 'src/components/icons/RefreshIcon';
+import { SortIcon } from 'src/components/icons/SortIcon';
+import { Header, type HeaderAction } from 'src/components/common/Header';
 import type { FormDomains } from 'src/types/DomainTypes';
 import type { Task as TaskType, TaskChange } from 'src/types/TaskTypes';
-import Task from 'src/components/tasks/Task';
+import { Task } from 'src/components/tasks/Task';
 
 type DragEndEventPayload = Parameters<DragEndEvent>[0];
 
@@ -98,4 +98,4 @@ const TasksList = ({ title, tasks, inputDomains, onRefreshTasks, onMoveTask, onS
 	);
 };
 
-export default TasksList;
+export { TasksList };

@@ -26,4 +26,4 @@ const TextArea = ({ placeholder, value, onChange, onBlur }: TextAreaProps): Reac
 	);
 };
 
-export default TextArea;
+export { TextArea };

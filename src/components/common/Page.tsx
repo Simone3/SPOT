@@ -13,4 +13,4 @@ const Page = ({ children }: PageProps): ReactElement => {
 	);
 };
 
-export default Page;
+export { Page };

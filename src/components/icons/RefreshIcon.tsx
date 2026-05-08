@@ -19,4 +19,4 @@ const RefreshIcon = (props: IconProps): ReactElement => {
 	);
 };
 
-export default RefreshIcon;
+export { RefreshIcon };

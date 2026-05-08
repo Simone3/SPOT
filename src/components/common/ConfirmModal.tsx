@@ -1,6 +1,6 @@
 import 'src/components/common/ConfirmModal.css';
 import type { ReactElement } from 'react';
-import Button from 'src/components/inputs/Button';
+import { Button } from 'src/components/inputs/Button';
 
 type ConfirmModalProps = {
 	title: string;
@@ -28,4 +28,4 @@ const ConfirmModal = ({ title, content, confirmText, onConfirm, cancelText, onCa
 	);
 };
 
-export default ConfirmModal;
+export { ConfirmModal };

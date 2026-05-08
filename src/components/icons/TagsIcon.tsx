@@ -21,4 +21,4 @@ const TagsIcon = (props: IconProps): ReactElement => {
 	);
 };
 
-export default TagsIcon;
+export { TagsIcon };

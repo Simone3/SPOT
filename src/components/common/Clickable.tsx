@@ -14,4 +14,4 @@ const Clickable = ({ children, onClick }: ClickableProps): ReactElement => {
 	);
 };
 
-export default Clickable;
+export { Clickable };

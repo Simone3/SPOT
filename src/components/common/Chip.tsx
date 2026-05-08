@@ -19,4 +19,4 @@ const Chip = ({ leftIcon, rightIcon, children }: ChipProps): ReactElement => {
 	);
 };
 
-export default Chip;
+export { Chip };

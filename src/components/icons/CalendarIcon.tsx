@@ -28,4 +28,4 @@ const CalendarIcon = (props: IconProps): ReactElement => {
 	);
 };
 
-export default CalendarIcon;
+export { CalendarIcon };

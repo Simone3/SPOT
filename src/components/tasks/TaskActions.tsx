@@ -1,9 +1,9 @@
 import 'src/components/tasks/TaskActions.css';
 import { useState, type ReactElement } from 'react';
-import Checkbox from 'src/components/inputs/Checkbox';
-import Clickable from 'src/components/common/Clickable';
-import DeleteIcon from 'src/components/icons/DeleteIcon';
-import ConfirmModal from 'src/components/common/ConfirmModal';
+import { Checkbox } from 'src/components/inputs/Checkbox';
+import { Clickable } from 'src/components/common/Clickable';
+import { DeleteIcon } from 'src/components/icons/DeleteIcon';
+import { ConfirmModal } from 'src/components/common/ConfirmModal';
 import type { Task } from 'src/types/TaskTypes';
 
 type TaskActionsProps = {
@@ -45,4 +45,4 @@ const TaskActions = ({ task, onChangeState, onDelete }: TaskActionsProps): React
 	);
 };
 
-export default TaskActions;
+export { TaskActions };

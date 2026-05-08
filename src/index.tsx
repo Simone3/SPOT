@@ -4,12 +4,12 @@ import 'src/index.css';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router';
-import TasksPage from 'src/components/tasks/TasksPage';
-import NotesPage from 'src/components/notes/NotesPage';
-import Sidebar from 'src/components/common/Sidebar';
-import MainContent from 'src/components/common/MainContent';
-import TagsPage from 'src/components/tags/TagsPage';
-import SettingsPage from 'src/components/settings/SettingsPage';
+import { TasksPage } from 'src/components/tasks/TasksPage';
+import { NotesPage } from 'src/components/notes/NotesPage';
+import { Sidebar } from 'src/components/common/Sidebar';
+import { MainContent } from 'src/components/common/MainContent';
+import { TagsPage } from 'src/components/tags/TagsPage';
+import { SettingsPage } from 'src/components/settings/SettingsPage';
 import { DatesContextProvider } from 'src/contexts/DatesContext';
 
 const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);

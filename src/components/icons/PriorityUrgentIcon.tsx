@@ -18,4 +18,4 @@ const PriorityUrgentIcon = (props: IconProps): ReactElement => {
 	);
 };
 
-export default PriorityUrgentIcon;
+export { PriorityUrgentIcon };

@@ -27,4 +27,4 @@ const TextInput = ({ label, placeholder, value, onChange }: TextInputProps): Rea
 	);
 };
 
-export default TextInput;
+export { TextInput };

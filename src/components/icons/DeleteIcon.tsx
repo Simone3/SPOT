@@ -22,4 +22,4 @@ const DeleteIcon = (props: IconProps): ReactElement => {
 	);
 };
 
-export default DeleteIcon;
+export { DeleteIcon };

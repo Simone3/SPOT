@@ -1,7 +1,7 @@
 import 'src/components/common/SidebarElement.css';
 import { NavLink } from 'react-router';
 import type { ReactElement, ReactNode } from 'react';
-import Tooltipped from 'src/components/common/Tooltipped';
+import { Tooltipped } from 'src/components/common/Tooltipped';
 
 type SidebarElementProps = {
 	title: string;
@@ -21,4 +21,4 @@ const SidebarElement = ({ title, to, icon }: SidebarElementProps): ReactElement 
 	);
 };
 
-export default SidebarElement;
+export { SidebarElement };

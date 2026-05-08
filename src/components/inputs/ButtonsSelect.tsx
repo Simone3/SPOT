@@ -1,6 +1,6 @@
 import { useId, type MouseEvent, type ReactElement } from 'react';
 import 'src/components/inputs/ButtonsSelect.css';
-import Button from 'src/components/inputs/Button';
+import { Button } from 'src/components/inputs/Button';
 
 type ButtonsSelectOption = {
 	key: string;
@@ -77,4 +77,4 @@ const ButtonsSelect = ({ label, allowMultiSelect, options, value, onChange }: Bu
 	);
 };
 
-export default ButtonsSelect;
+export { ButtonsSelect };

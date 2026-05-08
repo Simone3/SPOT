@@ -13,4 +13,4 @@ const MainContent = ({ children }: MainContentProps): ReactElement => {
 	);
 };
 
-export default MainContent;
+export { MainContent };

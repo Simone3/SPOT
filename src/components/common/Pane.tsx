@@ -14,4 +14,4 @@ const Pane = ({ relativeSize, children }: PaneProps): ReactElement => {
 	);
 };
 
-export default Pane;
+export { Pane };

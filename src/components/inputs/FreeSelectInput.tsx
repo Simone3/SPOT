@@ -120,4 +120,4 @@ const FreeSelectInput = (props: FreeSelectInputProps): ReactElement => {
 	);
 };
 
-export default FreeSelectInput;
+export { FreeSelectInput };

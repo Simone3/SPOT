@@ -17,4 +17,4 @@ const PriorityLowIcon = (props: IconProps): ReactElement => {
 	);
 };
 
-export default PriorityLowIcon;
+export { PriorityLowIcon };

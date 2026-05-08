@@ -19,4 +19,4 @@ const ResetIcon = (props: IconProps): ReactElement => {
 	);
 };
 
-export default ResetIcon;
+export { ResetIcon };

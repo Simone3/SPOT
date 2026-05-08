@@ -20,4 +20,4 @@ const EditIcon = (props: IconProps): ReactElement => {
 	);
 };
 
-export default EditIcon;
+export { EditIcon };

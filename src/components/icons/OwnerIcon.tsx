@@ -20,4 +20,4 @@ const OwnerIcon = (props: IconProps): ReactElement => {
 	);
 };
 
-export default OwnerIcon;
+export { OwnerIcon };

@@ -20,4 +20,4 @@ const AddIcon = (props: IconProps): ReactElement => {
 	);
 };
 
-export default AddIcon;
+export { AddIcon };

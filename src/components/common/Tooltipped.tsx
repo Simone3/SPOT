@@ -17,4 +17,4 @@ const Tooltipped = ({ text, children }: TooltippedProps): ReactElement => {
 	);
 };
 
-export default Tooltipped;
+export { Tooltipped };

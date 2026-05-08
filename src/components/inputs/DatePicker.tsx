@@ -32,4 +32,4 @@ const DatePicker = ({ placeholder, value, onChange, onBlur }: DatePickerProps): 
 	);
 };
 
-export default DatePicker;
+export { DatePicker };

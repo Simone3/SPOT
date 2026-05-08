@@ -23,4 +23,4 @@ const NotesIcon = (props: IconProps): ReactElement => {
 	);
 };
 
-export default NotesIcon;
+export { NotesIcon };

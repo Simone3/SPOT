@@ -23,4 +23,4 @@ const TasksIcon = (props: IconProps): ReactElement => {
 	);
 };
 
-export default TasksIcon;
+export { TasksIcon };

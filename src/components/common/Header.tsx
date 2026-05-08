@@ -1,6 +1,6 @@
 import 'src/components/common/Header.css';
 import type { ReactElement, ReactNode } from 'react';
-import Clickable from 'src/components/common/Clickable';
+import { Clickable } from 'src/components/common/Clickable';
 
 export type HeaderAction = {
 	id: string;
@@ -33,4 +33,4 @@ const Header = ({ title, actions }: HeaderProps): ReactElement => {
 	);
 };
 
-export default Header;
+export { Header };

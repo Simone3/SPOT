@@ -1,11 +1,11 @@
 import { useState, useEffect, type ReactElement } from 'react';
-import Page from 'src/components/common/Page';
-import Pane from 'src/components/common/Pane';
+import { Page } from 'src/components/common/Page';
+import { Pane } from 'src/components/common/Pane';
 import { getInitialTaskState, addTaskToState, refreshVisibleTasksInState, deleteTaskFromState, changeFiltersInState, loadBackEndTasksIntoState, resetFiltersState, updateTaskInState, sortTasksByImportanceInState, moveActiveTaskInState } from 'src/logic/TaskStateLogic';
 import type { Task, TaskChange } from 'src/types/TaskTypes';
 import type { TaskFilterChange } from 'src/types/FilterTypes';
-import TasksList from 'src/components/tasks/TasksList';
-import TaskFilters from 'src/components/tasks/TaskFilters';
+import { TasksList } from 'src/components/tasks/TasksList';
+import { TaskFilters } from 'src/components/tasks/TaskFilters';
 
 const TasksPage = (): ReactElement => {
 	const [ taskState, setTaskState ] = useState(getInitialTaskState());
@@ -89,4 +89,4 @@ const TasksPage = (): ReactElement => {
 	);
 };
 
-export default TasksPage;
+export { TasksPage };

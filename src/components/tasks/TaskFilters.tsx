@@ -1,10 +1,10 @@
 import 'src/components/tasks/TaskFilters.css';
 import { useContext, type ReactElement } from 'react';
-import ButtonsSelect from 'src/components/inputs/ButtonsSelect';
-import Checkbox from 'src/components/inputs/Checkbox';
-import TextInput from 'src/components/inputs/TextInput';
-import Header from 'src/components/common/Header';
-import ResetIcon from 'src/components/icons/ResetIcon';
+import { ButtonsSelect } from 'src/components/inputs/ButtonsSelect';
+import { Checkbox } from 'src/components/inputs/Checkbox';
+import { TextInput } from 'src/components/inputs/TextInput';
+import { Header } from 'src/components/common/Header';
+import { ResetIcon } from 'src/components/icons/ResetIcon';
 import { DatesContext } from 'src/contexts/DatesContext';
 import { DateUtils } from 'src/utils/DateUtils';
 import type { FilterDomains } from 'src/types/DomainTypes';
@@ -95,4 +95,4 @@ const TaskFilters = ({ domains, filters, onFilterChange, onResetDefaultFilters }
 	);
 };
 
-export default TaskFilters;
+export { TaskFilters };

@@ -17,4 +17,4 @@ const PriorityHighIcon = (props: IconProps): ReactElement => {
 	);
 };
 
-export default PriorityHighIcon;
+export { PriorityHighIcon };
