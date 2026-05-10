@@ -290,10 +290,8 @@ Forced importance sorting is implemented in `src/logic/TasksLogic.ts`. The inten
 
 1. Priority descending: Urgent, High, Normal, Low.
 2. Due date presence first.
-3. Due date descending when both tasks have a due date.
+3. Due date descending when both tasks have a due date, using the stored `YYYY-MM-DD` string order.
 4. Existing manual `sortPosition` as fallback.
-
-Current caveat: due dates are stored as `YYYY-MM-DD` strings, while the comparator subtracts due date values directly. Review this when polishing sort behavior.
 
 Completed tasks are sorted by `completionDate` descending, then by ID.
 
@@ -360,13 +358,15 @@ The current visual direction is dark, direct, and utilitarian.
 
 ## Testing
 
-Current test coverage is focused on `ManuallySortedList`:
+Current test coverage includes focused regression checks for:
 
 - insertion at start, middle, and end
-- position recomputation
-- move operations
-- random operation checks
-- large random insert and move scenarios
+- manual sort position recomputation, move operations, and random operation checks
+- task loading, importance sorting, state changes, and new-task defaults
+- filter cloning and task visibility matching
+- domain counting, active/filter domain separation, and selected-filter cleanup
+- date comparison and display formatting
+- smoke coverage for task filters and task list interactions
 
 Validation commands:
 
@@ -378,8 +378,7 @@ npm test
 
 Future testing priorities:
 
-- focused unit tests for task, domain, filter, and date logic
-- smoke tests for adding, editing, completing, deleting, filtering, and sorting tasks
+- broader interaction coverage as task editing and drag-and-drop behavior are polished
 - integration coverage for persistence once the Electron/storage layer exists
 
 ## Development Rules
@@ -400,7 +399,7 @@ Future testing priorities:
 
 The most important remaining work is:
 
-- Add broader tests around task, domain, and filter logic.
+- Add persistence and Electron-shell integration tests once storage exists.
 - Improve accessibility and focus behavior in reusable inputs and clickables.
 - Remove or hide debug drag-handle text in tasks when the drag UI is polished.
 - Make `DatesContextProvider` refresh date labels after midnight.

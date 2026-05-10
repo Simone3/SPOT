@@ -76,7 +76,12 @@ const activeTasksImportanceCompareFunction = (taskA: Task, taskB: Task): number 
 	let dueDateCompare = 0;
 	if(taskA.dueDate && taskB.dueDate) {
 		// Due date DESC if both tasks have it
-		dueDateCompare = Number(taskB.dueDate) - Number(taskA.dueDate);
+		if(taskA.dueDate < taskB.dueDate) {
+			dueDateCompare = 1;
+		}
+		else if(taskA.dueDate > taskB.dueDate) {
+			dueDateCompare = -1;
+		}
 	}
 	else if(taskA.dueDate) {
 		// If only task A has a due date, it goes first
