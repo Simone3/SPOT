@@ -1,6 +1,6 @@
+import { makeTask } from '../testUtils';
 import { addDomainsForTasks, getInitialDomains, removeDomainsForTask, updateDomainsForTask, updateFiltersOnDomainsChange } from 'src/logic/DomainsLogic';
 import { getInitialFilters } from 'src/logic/FiltersLogic';
-import { makeTask } from 'src/testUtils/TaskTestFactory';
 import type { DomainEntry } from 'src/types/DomainTypes';
 import type { TaskFilters } from 'src/types/FilterTypes';
 import type { TasksContainer } from 'src/types/TaskTypes';

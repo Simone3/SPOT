@@ -65,7 +65,7 @@ npm run make
 - `src/contexts` contains app-level React contexts.
 - `src/logic` contains state and domain logic.
 - `src/utils` contains general utilities.
-- `src/__tests__` contains Jest tests.
+- `tests` contains Jest tests, test setup, and test-only helpers.
 
 ## Source Imports
 

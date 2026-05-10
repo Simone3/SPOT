@@ -10,8 +10,8 @@ const jsdocPlugin = require('eslint-plugin-jsdoc');
 const reactPlugin = require('eslint-plugin-react');
 const reactHooksPlugin = require('eslint-plugin-react-hooks');
 
-const sharedFiles = [ 'src/**/*.ts', 'src/**/*.tsx' ];
-const testFiles = [ 'src/**/__tests__/**/*.ts', 'src/**/__tests__/**/*.tsx', 'src/**/*.test.ts', 'src/**/*.test.tsx' ];
+const sharedFiles = [ 'src/**/*.ts', 'src/**/*.tsx', 'tests/**/*.ts', 'tests/**/*.tsx' ];
+const testFiles = [ 'tests/**/*.test.ts', 'tests/**/*.test.tsx' ];
 const importResolverExtensions = [ '.js', '.jsx', '.ts', '.tsx', '.d.ts', '.json', '.css', '.svg', '.png' ];
 
 const warnifyRuleConfig = (ruleConfig) => {
@@ -453,6 +453,7 @@ module.exports = defineConfig([
 			'import/no-internal-modules': [ 'warn', {
 				allow: [
 					'src/**',
+					'tests/**',
 					'@dnd-kit/react/sortable',
 					'@fontsource/inter/*.css',
 					'@mdxeditor/editor/style.css',

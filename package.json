@@ -6,13 +6,13 @@
 	"scripts": {
 		"start-react": "BROWSER='google chrome' react-scripts start",
 		"build-react": "react-scripts build",
-		"test-react": "react-scripts test --watchAll=false",
+		"test-react": "react-scripts test --watchAll=false --roots tests --testMatch '<rootDir>/tests/**/*.{spec,test}.{js,jsx,ts,tsx}' --setupFilesAfterEnv '<rootDir>/tests/setupTests.ts'",
 		"eject-react": "react-scripts eject",
 		"start": "electron-forge start",
-		"test": "react-scripts test --watchAll=false",
+		"test": "react-scripts test --watchAll=false --roots tests --testMatch '<rootDir>/tests/**/*.{spec,test}.{js,jsx,ts,tsx}' --setupFilesAfterEnv '<rootDir>/tests/setupTests.ts'",
 		"package": "electron-forge package",
 		"make": "electron-forge make",
-		"lint": "eslint 'src/**/*.ts' 'src/**/*.tsx'",
+		"lint": "eslint 'src/**/*.ts' 'src/**/*.tsx' 'tests/**/*.ts' 'tests/**/*.tsx'",
 		"typecheck": "tsc --noEmit"
 	},
 	"repository": {

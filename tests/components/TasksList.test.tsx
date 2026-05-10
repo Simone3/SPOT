@@ -1,7 +1,7 @@
 import type { ChangeEvent, ReactElement, ReactNode } from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { makeFormDomains, makeTask } from '../testUtils';
 import { TasksList } from 'src/components/tasks/TasksList';
-import { makeFormDomains, makeTask } from 'src/testUtils/TaskTestFactory';
 import type { Task } from 'src/types/TaskTypes';
 
 jest.mock('src/components/inputs/TextArea', () => {

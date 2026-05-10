@@ -1,5 +1,5 @@
+import { makeTask } from '../testUtils';
 import { cloneFilters, getInitialFilters, refreshTasksVisibility, refreshTaskVisibility } from 'src/logic/FiltersLogic';
-import { makeTask } from 'src/testUtils/TaskTestFactory';
 import type { TaskFilters } from 'src/types/FilterTypes';
 import type { TasksContainer } from 'src/types/TaskTypes';
 

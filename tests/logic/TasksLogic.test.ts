@@ -1,5 +1,5 @@
+import { makeTask, taskIds } from '../testUtils';
 import { addNewTask, forceSortActiveTasksByImportance, getInitialTasks, loadBackEndTasks, updateTask } from 'src/logic/TasksLogic';
-import { makeTask, taskIds } from 'src/testUtils/TaskTestFactory';
 import type { TasksContainer } from 'src/types/TaskTypes';
 
 describe('TasksLogic', () => {
