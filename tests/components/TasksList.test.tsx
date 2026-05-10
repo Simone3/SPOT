@@ -81,6 +81,10 @@ const renderTasksList = (tasks: Task[]) => {
 };
 
 describe('TasksList', () => {
+	afterEach(() => {
+		jest.restoreAllMocks();
+	});
+
 	test('renders only visible tasks and wires list-level actions', () => {
 		const visibleTask = makeTask({
 			text: 'Visible task',
@@ -105,6 +109,7 @@ describe('TasksList', () => {
 	});
 
 	test('saves task edits, completes tasks, and confirms deletion', async() => {
+		const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 		const task = makeTask({
 			text: 'Original task',
 			visible: true
@@ -117,6 +122,9 @@ describe('TasksList', () => {
 				value: 'Updated task'
 			}
 		});
+
+		expect(props.onUpdateTask).not.toHaveBeenCalled();
+
 		fireEvent.blur(taskText);
 
 		expect(props.onUpdateTask).toHaveBeenCalledWith(task, { text: 'Updated task' });
@@ -127,6 +135,11 @@ describe('TasksList', () => {
 		await waitFor(() => {
 			expect(props.onUpdateTask).toHaveBeenCalledWith(task, { state: 'COMPLETED' });
 		});
+		expect(consoleErrorSpy.mock.calls.some((call) => {
+			return call.some((value) => {
+				return String(value).includes('Cannot update a component');
+			});
+		})).toBe(false);
 
 		const deleteAction = container.querySelector('.task-actions .clickable');
 		if(!deleteAction) {

@@ -1,5 +1,5 @@
 import 'src/components/tasks/Task.css';
-import { useState, useRef, useEffect, type ReactElement } from 'react';
+import { useState, useRef, useEffect, useCallback, type ReactElement } from 'react';
 import { useSortable } from '@dnd-kit/react/sortable';
 import { TextArea } from 'src/components/inputs/TextArea';
 import type { FormDomains } from 'src/types/DomainTypes';
@@ -18,10 +18,12 @@ type TaskProps = {
 };
 
 type SetTaskValue = <TKey extends keyof TaskType>(key: TKey, valueOrCallback: TaskType[TKey] | ((prevValue: TaskType[TKey]) => TaskType[TKey]), flush: boolean) => void;
+type TaskValueUpdater<TKey extends keyof TaskType> = (prevValue: TaskType[TKey]) => TaskType[TKey];
 
 const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFromProps, onDelete }: TaskProps): ReactElement => {
 	// Internal copy of the task, for delayed changes propagation to the parent component (main state)
 	const [ internalTask, setInternalTask ] = useState(taskFromProps);
+	const internalTaskRef = useRef(taskFromProps);
 	const {
 		text,
 		state,
@@ -47,45 +49,46 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFrom
 	const { ref, handleRef } = useSortable({ id, index });
 
 	// Helper to stop the flush timer
-	const clearFlushTimer = (): void => {
+	const clearFlushTimer = useCallback((): void => {
 		if(flushTimerRef.current) {
 			clearTimeout(flushTimerRef.current);
 			flushTimerRef.current = null;
 		}
-	};
+	}, []);
 
 	// Helper to flush any change to the parent component (main state)
-	const flushTaskChanges = (): void => {
+	const flushTaskChanges = useCallback((): void => {
 		clearFlushTimer();
 		if(Object.keys(changedValuesRef.current).length !== 0) {
 			const changesToFlush = changedValuesRef.current;
 			changedValuesRef.current = {};
 			onSaveRef.current(changesToFlush);
 		}
-	};
+	}, [ clearFlushTimer ]);
 
 	// Helper to (re)start the flush timer
-	const restartFlushTimer = (): void => {
+	const restartFlushTimer = useCallback((): void => {
 		clearFlushTimer();
 		flushTimerRef.current = setTimeout(flushTaskChanges, 5000);
-	};
+	}, [ clearFlushTimer, flushTaskChanges ]);
 
 	// Helper to update both state and ref when task values change, (re)set the flush timer and (optionally) flush any pending changes afterwards
 	const setTaskValue: SetTaskValue = (key, valueOrCallback, flush) => {
-		setInternalTask((prevInternalTask) => {
-			const newValue = typeof valueOrCallback === 'function' ? valueOrCallback(prevInternalTask[key]) : valueOrCallback;
-			changedValuesRef.current = {
-				...changedValuesRef.current,
-				[key]: newValue
-			};
-			if(flush) {
-				flushTaskChanges();
-			}
-			else {
-				restartFlushTimer();
-			}
-			return { ...prevInternalTask, [key]: newValue };
-		});
+		const currentTask = internalTaskRef.current;
+		const newValue = typeof valueOrCallback === 'function' ? (valueOrCallback as TaskValueUpdater<typeof key>)(currentTask[key]) : valueOrCallback;
+		const newTask = { ...currentTask, [key]: newValue };
+		internalTaskRef.current = newTask;
+		changedValuesRef.current = {
+			...changedValuesRef.current,
+			[key]: newValue
+		};
+		setInternalTask(newTask);
+		if(flush) {
+			flushTaskChanges();
+		}
+		else {
+			restartFlushTimer();
+		}
 	};
 
 	const setOwner = (owner: string, flush: boolean): void => {
@@ -103,7 +106,7 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFrom
 	// On component unmount, flush any pending changes
 	useEffect(() => {
 		return flushTaskChanges;
-	});
+	}, [ flushTaskChanges ]);
 
 	// Dynamic container class
 	let containerClass = 'task-container';
