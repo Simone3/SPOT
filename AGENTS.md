@@ -15,7 +15,6 @@
 - Use absolute imports from `src/...` for in-repository React source files and assets instead of relative `./` or `../` imports.
 - Define TypeScript types in the owning `.ts`/`.tsx` file whenever practical. Shared cross-owner types live under `src/types` in semantic files such as `TaskTypes.ts`, `DomainTypes.ts`, or `FilterTypes.ts`.
 - Use plain React with TypeScript and CSS only. Do not add frameworks such as Vite or Next.js.
-- `npm run start-react` and `npm run build-react` use `scripts/react-scripts-with-warning-filter.js` to suppress the known missing source map warnings from `@dnd-kit/react` while preserving other React Scripts warnings.
 - Keep the code style consistent with the existing codebase, including spacing and newline conventions.
 - `eslint.config.js` contains the flat ESLint configuration used by `npm run lint`.
 

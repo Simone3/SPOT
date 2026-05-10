@@ -52,7 +52,6 @@ npm run make
 - `README.md` intentionally stays minimal.
 - `DOCUMENTATION.md` is this detailed project reference.
 - `eslint.config.js` contains the flat ESLint configuration used by `npm run lint`.
-- `scripts/react-scripts-with-warning-filter.js` wraps React Scripts start and build commands. It suppresses the known missing source map warnings from `@dnd-kit/react` while keeping other source maps and warnings enabled.
 - `main.js`, `preload.js`, and `renderer.js` are the Electron layer.
 - `index.html` and `public/index.html` are HTML entry points.
 - `src/index.tsx` mounts the React app and defines routes.
