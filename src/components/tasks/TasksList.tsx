@@ -10,8 +10,6 @@ import type { FormDomains } from 'src/types/DomainTypes';
 import type { Task as TaskType, TaskChange } from 'src/types/TaskTypes';
 import { Task } from 'src/components/tasks/Task';
 
-type DragEndEventPayload = Parameters<DragEndEvent>[0];
-
 type TasksListProps = {
 	title: string;
 	tasks: TaskType[];
@@ -35,7 +33,7 @@ const TasksList = ({ title, tasks, inputDomains, onRefreshTasks, onMoveTask, onS
 		}
 	}
 
-	const onDragEnd = (event: DragEndEventPayload): void => {
+	const onDragEnd = (event: DragEndEvent): void => {
 		if(event.canceled) {
 			return;
 		}

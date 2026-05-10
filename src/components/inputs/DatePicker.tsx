@@ -18,7 +18,7 @@ const DatePicker = ({ placeholder, value, onChange, onBlur }: DatePickerProps): 
 			<ReactDatePicker
 				id={id}
 				selected={value ? new Date(value) : undefined}
-				onChange={(date) => {
+				onChange={(date: Date | null) => {
 					onChange(date);
 				}}
 				onBlur={onBlur}
