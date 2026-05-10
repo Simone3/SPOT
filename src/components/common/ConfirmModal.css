@@ -34,7 +34,7 @@
     gap: 20px;
 }
 
-.confirm-modal-button-confirm {
+.button.confirm-modal-button-confirm {
     background-color: var(--colors-danger);
     color: white;
 }

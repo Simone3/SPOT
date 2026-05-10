@@ -1,13 +1,4 @@
 
-eslint like media tracker - need to upgrade deps?
-
-create tests
-
-make it update agents
-
-
-
-
 # refactor
 manual sort
 	sort handle ui
@@ -17,7 +8,6 @@ filters
 	"me" and "none" filters displayed only if there are actually tasks with empty values?
 	default filter with "me" as owner?
 is it ok that when you complete a task it immediately disappears?
-upgrade all versions (should also fix datepicker warns)
 
 # wire in electron main process: save to disk
 careful with sort positions, especially when they change in more than one task at a time (manual sort recompute + re-sort by urgency)
