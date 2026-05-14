@@ -106,7 +106,7 @@ export const moveInManuallySortedList = <TElement extends ManuallySortedItem>(li
 		return list;
 	}
 
-	// Remove element from toIndex, clone it and re-add it to toIndex (this can probably be implemented more efficiently but enough for now...)
+	// Remove the element and re-add it at the requested index (this can probably be implemented more efficiently but enough for now...)
 	const [ element ] = list.splice(fromIndex, 1);
 	insertIntoManuallySortedList(list, element, toIndex);
 	return list;

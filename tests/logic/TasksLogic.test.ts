@@ -1,10 +1,58 @@
 import { makeTask, taskIds } from '../testUtils';
-import { addNewTask, forceSortActiveTasksByImportance, getInitialTasks, loadBackEndTasks, updateTask } from 'src/logic/TasksLogic';
+import { addNewTask, cloneTasks, forceSortActiveTasksByImportance, getInitialTasks, loadBackEndTasks, moveActiveTask, updateTask } from 'src/logic/TasksLogic';
 import type { TasksContainer } from 'src/types/TaskTypes';
 
 describe('TasksLogic', () => {
 	afterEach(() => {
 		jest.useRealTimers();
+	});
+
+	test('clones task containers without sharing task objects or mutable fields', () => {
+		const activeTask = makeTask({
+			tags: [ 'work' ],
+			sortPosition: 100
+		});
+		const completedTask = makeTask({
+			state: 'COMPLETED',
+			tags: [ 'done' ],
+			completionDate: new Date('2026-05-01'),
+			sortPosition: 200
+		});
+		const tasksContainer: TasksContainer = {
+			active: [ activeTask ],
+			completed: [ completedTask ]
+		};
+
+		const clonedTasksContainer = cloneTasks(tasksContainer);
+
+		expect(clonedTasksContainer.active[0]).not.toBe(activeTask);
+		expect(clonedTasksContainer.active[0].tags).not.toBe(activeTask.tags);
+		expect(clonedTasksContainer.completed[0]).not.toBe(completedTask);
+		expect(clonedTasksContainer.completed[0].completionDate).not.toBe(completedTask.completionDate);
+
+		clonedTasksContainer.active[0].tags.push('home');
+		clonedTasksContainer.active[0].sortPosition = 999;
+		clonedTasksContainer.completed[0].completionDate!.setFullYear(2030);
+
+		expect(activeTask.tags).toEqual([ 'work' ]);
+		expect(activeTask.sortPosition).toBe(100);
+		expect(completedTask.completionDate).toEqual(new Date('2026-05-01'));
+	});
+
+	test('loads backend tasks into owned state copies', () => {
+		const tasksContainer = getInitialTasks();
+		const sourceTask = makeTask({
+			tags: [ 'source' ]
+		});
+
+		loadBackEndTasks(tasksContainer, [ sourceTask ]);
+
+		expect(tasksContainer.active[0]).not.toBe(sourceTask);
+		expect(tasksContainer.active[0].tags).not.toBe(sourceTask.tags);
+
+		tasksContainer.active[0].tags.push('state');
+
+		expect(sourceTask.tags).toEqual([ 'source' ]);
 	});
 
 	test('loads backend tasks into state-specific sorted lists', () => {
@@ -68,6 +116,72 @@ describe('TasksLogic', () => {
 		expect(tasksContainer.active.map((task) => {
 			return task.sortPosition;
 		})).toEqual([ 200, 350, 400, 1400, 2400, 3400 ]);
+	});
+
+	test('preserves source task objects when sorting a cloned container', () => {
+		const tasksContainer: TasksContainer = {
+			active: [
+				makeTask({ id: 'normal', priority: 'NORMAL', sortPosition: 0 }),
+				makeTask({ id: 'urgent', priority: 'URGENT', sortPosition: 100 })
+			],
+			completed: []
+		};
+		const clonedTasksContainer = cloneTasks(tasksContainer);
+
+		forceSortActiveTasksByImportance(clonedTasksContainer);
+
+		expect(taskIds(clonedTasksContainer.active)).toEqual([ 'urgent', 'normal' ]);
+		expect(clonedTasksContainer.active.map((task) => {
+			return task.sortPosition;
+		})).toEqual([ 100, 1100 ]);
+		expect(taskIds(tasksContainer.active)).toEqual([ 'normal', 'urgent' ]);
+		expect(tasksContainer.active.map((task) => {
+			return task.sortPosition;
+		})).toEqual([ 0, 100 ]);
+	});
+
+	test('preserves source task objects when moving tasks in a cloned container', () => {
+		const tasksContainer: TasksContainer = {
+			active: [
+				makeTask({ id: 'first', sortPosition: 100 }),
+				makeTask({ id: 'second', sortPosition: 200 }),
+				makeTask({ id: 'third', sortPosition: 300 })
+			],
+			completed: []
+		};
+		const clonedTasksContainer = cloneTasks(tasksContainer);
+
+		moveActiveTask(clonedTasksContainer, 2, 0);
+
+		expect(taskIds(clonedTasksContainer.active)).toEqual([ 'third', 'first', 'second' ]);
+		expect(clonedTasksContainer.active[0].sortPosition).toBe(-900);
+		expect(taskIds(tasksContainer.active)).toEqual([ 'first', 'second', 'third' ]);
+		expect(tasksContainer.active.map((task) => {
+			return task.sortPosition;
+		})).toEqual([ 100, 200, 300 ]);
+	});
+
+	test('updates tasks without sharing mutable fields with the previous task', () => {
+		const oldTask = makeTask({
+			tags: [ 'old' ],
+			completionDate: new Date('2026-01-01')
+		});
+		const tasksContainer: TasksContainer = {
+			active: [ oldTask ],
+			completed: []
+		};
+
+		const updatedTask = updateTask(tasksContainer, oldTask, { text: 'Updated task' });
+
+		expect(updatedTask).not.toBe(oldTask);
+		expect(updatedTask.tags).not.toBe(oldTask.tags);
+		expect(updatedTask.completionDate).not.toBe(oldTask.completionDate);
+
+		updatedTask.tags.push('new');
+		updatedTask.completionDate!.setFullYear(2030);
+
+		expect(oldTask.tags).toEqual([ 'old' ]);
+		expect(oldTask.completionDate).toEqual(new Date('2026-01-01'));
 	});
 
 	test('moves tasks between active and completed lists when state changes', () => {

@@ -19,15 +19,23 @@ export const getInitialTasks = (): TasksContainer => {
 	};
 };
 
+const cloneTask = (task: Task): Task => {
+	return {
+		...task,
+		tags: [ ...task.tags ],
+		completionDate: task.completionDate ? new Date(task.completionDate) : undefined
+	};
+};
+
 /**
- * Clones the object and the contained lists (but not each task).
+ * Clones the object, the contained lists, and each task.
  * @param tasksContainer Task lists to clone.
- * @returns A shallow clone of the task container.
+ * @returns A clone of the task container.
  */
 export const cloneTasks = (tasksContainer: TasksContainer): TasksContainer => {
 	return {
-		active: [ ...tasksContainer.active ],
-		completed: [ ...tasksContainer.completed ]
+		active: tasksContainer.active.map(cloneTask),
+		completed: tasksContainer.completed.map(cloneTask)
 	};
 };
 
@@ -141,11 +149,12 @@ export const forceSortActiveTasksByImportance = (tasksContainer: TasksContainer)
  */
 export const loadBackEndTasks = (tasksContainer: TasksContainer, backEndTasks: Task[]): void => {
 	for(const task of backEndTasks) {
-		if(task.state === 'ACTIVE') {
-			tasksContainer.active.push(task);
+		const clonedTask = cloneTask(task);
+		if(clonedTask.state === 'ACTIVE') {
+			tasksContainer.active.push(clonedTask);
 		}
 		else {
-			tasksContainer.completed.push(task);
+			tasksContainer.completed.push(clonedTask);
 		}
 	}
 
@@ -260,10 +269,10 @@ export const deleteTask = (tasksContainer: TasksContainer, task: Task): void => 
  * @returns The updated task.
  */
 export const updateTask = (tasksContainer: TasksContainer, oldTask: Task, changedValues: TaskChange): Task => {
-	const newTask = {
+	const newTask = cloneTask({
 		...oldTask,
 		...changedValues
-	};
+	});
 
 	// If state changes, move the task from one list to the other (and set/reset the completion date)
 	if(oldTask.state !== newTask.state) {
