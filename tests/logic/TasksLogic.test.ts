@@ -7,7 +7,7 @@ describe('TasksLogic', () => {
 		jest.useRealTimers();
 	});
 
-	test('clones task containers without sharing task objects or mutable fields', () => {
+	test('shallow-clones task containers while sharing task objects', () => {
 		const activeTask = makeTask({
 			tags: [ 'work' ],
 			sortPosition: 100
@@ -25,18 +25,13 @@ describe('TasksLogic', () => {
 
 		const clonedTasksContainer = cloneTasks(tasksContainer);
 
-		expect(clonedTasksContainer.active[0]).not.toBe(activeTask);
-		expect(clonedTasksContainer.active[0].tags).not.toBe(activeTask.tags);
-		expect(clonedTasksContainer.completed[0]).not.toBe(completedTask);
-		expect(clonedTasksContainer.completed[0].completionDate).not.toBe(completedTask.completionDate);
-
-		clonedTasksContainer.active[0].tags.push('home');
-		clonedTasksContainer.active[0].sortPosition = 999;
-		clonedTasksContainer.completed[0].completionDate!.setFullYear(2030);
-
-		expect(activeTask.tags).toEqual([ 'work' ]);
-		expect(activeTask.sortPosition).toBe(100);
-		expect(completedTask.completionDate).toEqual(new Date('2026-05-01'));
+		expect(clonedTasksContainer).not.toBe(tasksContainer);
+		expect(clonedTasksContainer.active).not.toBe(tasksContainer.active);
+		expect(clonedTasksContainer.completed).not.toBe(tasksContainer.completed);
+		expect(clonedTasksContainer.active[0]).toBe(activeTask);
+		expect(clonedTasksContainer.active[0].tags).toBe(activeTask.tags);
+		expect(clonedTasksContainer.completed[0]).toBe(completedTask);
+		expect(clonedTasksContainer.completed[0].completionDate).toBe(completedTask.completionDate);
 	});
 
 	test('loads backend tasks into owned state copies', () => {
@@ -119,11 +114,10 @@ describe('TasksLogic', () => {
 	});
 
 	test('preserves source task objects when sorting a cloned container', () => {
+		const normalTask = makeTask({ id: 'normal', priority: 'NORMAL', sortPosition: 0 });
+		const urgentTask = makeTask({ id: 'urgent', priority: 'URGENT', sortPosition: 100 });
 		const tasksContainer: TasksContainer = {
-			active: [
-				makeTask({ id: 'normal', priority: 'NORMAL', sortPosition: 0 }),
-				makeTask({ id: 'urgent', priority: 'URGENT', sortPosition: 100 })
-			],
+			active: [ normalTask, urgentTask ],
 			completed: []
 		};
 		const clonedTasksContainer = cloneTasks(tasksContainer);
@@ -134,6 +128,8 @@ describe('TasksLogic', () => {
 		expect(clonedTasksContainer.active.map((task) => {
 			return task.sortPosition;
 		})).toEqual([ 100, 1100 ]);
+		expect(clonedTasksContainer.active[0]).toBe(urgentTask);
+		expect(clonedTasksContainer.active[1]).not.toBe(normalTask);
 		expect(taskIds(tasksContainer.active)).toEqual([ 'normal', 'urgent' ]);
 		expect(tasksContainer.active.map((task) => {
 			return task.sortPosition;
@@ -141,12 +137,11 @@ describe('TasksLogic', () => {
 	});
 
 	test('preserves source task objects when moving tasks in a cloned container', () => {
+		const firstTask = makeTask({ id: 'first', sortPosition: 100 });
+		const secondTask = makeTask({ id: 'second', sortPosition: 200 });
+		const thirdTask = makeTask({ id: 'third', sortPosition: 300 });
 		const tasksContainer: TasksContainer = {
-			active: [
-				makeTask({ id: 'first', sortPosition: 100 }),
-				makeTask({ id: 'second', sortPosition: 200 }),
-				makeTask({ id: 'third', sortPosition: 300 })
-			],
+			active: [ firstTask, secondTask, thirdTask ],
 			completed: []
 		};
 		const clonedTasksContainer = cloneTasks(tasksContainer);
@@ -155,10 +150,37 @@ describe('TasksLogic', () => {
 
 		expect(taskIds(clonedTasksContainer.active)).toEqual([ 'third', 'first', 'second' ]);
 		expect(clonedTasksContainer.active[0].sortPosition).toBe(-900);
+		expect(clonedTasksContainer.active[0]).not.toBe(thirdTask);
+		expect(clonedTasksContainer.active[1]).toBe(firstTask);
+		expect(clonedTasksContainer.active[2]).toBe(secondTask);
 		expect(taskIds(tasksContainer.active)).toEqual([ 'first', 'second', 'third' ]);
 		expect(tasksContainer.active.map((task) => {
 			return task.sortPosition;
 		})).toEqual([ 100, 200, 300 ]);
+	});
+
+	test('clones every task whose sort position is recomputed during a move', () => {
+		const firstTask = makeTask({ id: 'first', sortPosition: 0 });
+		const secondTask = makeTask({ id: 'second', sortPosition: 1 });
+		const thirdTask = makeTask({ id: 'third', sortPosition: 2 });
+		const tasksContainer: TasksContainer = {
+			active: [ firstTask, secondTask, thirdTask ],
+			completed: []
+		};
+		const clonedTasksContainer = cloneTasks(tasksContainer);
+
+		moveActiveTask(clonedTasksContainer, 2, 1);
+
+		expect(taskIds(clonedTasksContainer.active)).toEqual([ 'first', 'third', 'second' ]);
+		expect(clonedTasksContainer.active.map((task) => {
+			return task.sortPosition;
+		})).toEqual([ 0, 1000, 2000 ]);
+		expect(clonedTasksContainer.active[0]).toBe(firstTask);
+		expect(clonedTasksContainer.active[1]).not.toBe(thirdTask);
+		expect(clonedTasksContainer.active[2]).not.toBe(secondTask);
+		expect(tasksContainer.active.map((task) => {
+			return task.sortPosition;
+		})).toEqual([ 0, 1, 2 ]);
 	});
 
 	test('updates tasks without sharing mutable fields with the previous task', () => {

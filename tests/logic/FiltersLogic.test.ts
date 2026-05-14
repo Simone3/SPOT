@@ -71,8 +71,10 @@ describe('FiltersLogic', () => {
 		refreshTasksVisibility(tasksContainer, oldFilters, newFilters);
 
 		expect(tasksContainer.active[0]).not.toBe(matchingTask);
+		expect(tasksContainer.active[0].tags).not.toBe(matchingTask.tags);
 		expect(tasksContainer.active[0].visible).toBe(true);
 		expect(tasksContainer.active[1].visible).toBe(false);
+		expect(tasksContainer.completed[0].completionDate).not.toBe(completedTask.completionDate);
 		expect(tasksContainer.completed[0].visible).toBe(false);
 	});
 

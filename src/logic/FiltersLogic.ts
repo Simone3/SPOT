@@ -1,6 +1,7 @@
 
 import type { Task, TasksContainer } from 'src/types/TaskTypes';
 import type { TaskFilterChange, TaskFilters } from 'src/types/FilterTypes';
+import { cloneTask } from 'src/logic/TasksLogic';
 
 /**
  * Returns a new object containing the initial filters.
@@ -88,10 +89,9 @@ const refreshTasksVisibilityHelper = (taskList: Task[], filters: TaskFilters): v
 		const task = taskList[i];
 		const newVisibility = matchesFilters(task, filters);
 		if(task.visible !== newVisibility) {
-			taskList[i] = {
-				...task,
-				visible: newVisibility
-			};
+			const newTask = cloneTask(task);
+			newTask.visible = newVisibility;
+			taskList[i] = newTask;
 		}
 	}
 };

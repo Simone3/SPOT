@@ -173,7 +173,7 @@ Field notes:
 - `tags`
 - `showCompleted`
 
-The state helpers clone top-level containers, lists, task objects, and mutable task fields before updating them. Some lower-level list helpers intentionally update task fields such as `sortPosition` in place, so state code must work on cloned task objects before calling them.
+The state helpers clone top-level containers and lists before updating them. Task objects remain shared until one of their fields changes; edit, visibility, and sort helpers clone each changed task object, including mutable task fields, before writing to it.
 
 ## Task UI
 
@@ -362,7 +362,7 @@ Current test coverage includes focused regression checks for:
 
 - insertion at start, middle, and end
 - manual sort position recomputation, move operations, and random operation checks
-- task cloning, task loading, importance sorting, state changes, and new-task defaults
+- task shallow cloning, task loading, importance sorting, state changes, and new-task defaults
 - filter cloning and task visibility matching
 - domain counting, active/filter domain separation, and selected-filter cleanup
 - date comparison and display formatting

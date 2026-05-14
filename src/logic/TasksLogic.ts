@@ -19,7 +19,7 @@ export const getInitialTasks = (): TasksContainer => {
 	};
 };
 
-const cloneTask = (task: Task): Task => {
+export const cloneTask = (task: Task): Task => {
 	return {
 		...task,
 		tags: [ ...task.tags ],
@@ -28,14 +28,14 @@ const cloneTask = (task: Task): Task => {
 };
 
 /**
- * Clones the object, the contained lists, and each task.
+ * Clones the object and the contained lists, while keeping task objects shared.
  * @param tasksContainer Task lists to clone.
- * @returns A clone of the task container.
+ * @returns A shallow clone of the task container.
  */
 export const cloneTasks = (tasksContainer: TasksContainer): TasksContainer => {
 	return {
-		active: tasksContainer.active.map(cloneTask),
-		completed: tasksContainer.completed.map(cloneTask)
+		active: [ ...tasksContainer.active ],
+		completed: [ ...tasksContainer.completed ]
 	};
 };
 
@@ -139,7 +139,7 @@ export const forceSortActiveTasksByImportance = (tasksContainer: TasksContainer)
 	tasksContainer.active.sort(activeTasksImportanceCompareFunction);
 
 	// Re-compute sort positions where needed
-	recomputeSortPositions(tasksContainer.active);
+	recomputeSortPositions(tasksContainer.active, cloneTask);
 };
 
 /**
@@ -214,7 +214,7 @@ export const addNewTask = (tasksContainer: TasksContainer): Task => {
  * @param toIndex Destination active task index.
  */
 export const moveActiveTask = (tasksContainer: TasksContainer, fromIndex: number, toIndex: number): void => {
-	moveInManuallySortedList(tasksContainer.active, fromIndex, toIndex);
+	moveInManuallySortedList(tasksContainer.active, fromIndex, toIndex, cloneTask);
 };
 
 /**
