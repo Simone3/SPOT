@@ -149,12 +149,11 @@ export const forceSortActiveTasksByImportance = (tasksContainer: TasksContainer)
  */
 export const loadBackEndTasks = (tasksContainer: TasksContainer, backEndTasks: Task[]): void => {
 	for(const task of backEndTasks) {
-		const clonedTask = cloneTask(task);
-		if(clonedTask.state === 'ACTIVE') {
-			tasksContainer.active.push(clonedTask);
+		if(task.state === 'ACTIVE') {
+			tasksContainer.active.push(task);
 		}
 		else {
-			tasksContainer.completed.push(clonedTask);
+			tasksContainer.completed.push(task);
 		}
 	}
 

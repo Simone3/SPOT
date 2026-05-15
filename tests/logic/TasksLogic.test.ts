@@ -34,22 +34,6 @@ describe('TasksLogic', () => {
 		expect(clonedTasksContainer.completed[0].completionDate).toBe(completedTask.completionDate);
 	});
 
-	test('loads backend tasks into owned state copies', () => {
-		const tasksContainer = getInitialTasks();
-		const sourceTask = makeTask({
-			tags: [ 'source' ]
-		});
-
-		loadBackEndTasks(tasksContainer, [ sourceTask ]);
-
-		expect(tasksContainer.active[0]).not.toBe(sourceTask);
-		expect(tasksContainer.active[0].tags).not.toBe(sourceTask.tags);
-
-		tasksContainer.active[0].tags.push('state');
-
-		expect(sourceTask.tags).toEqual([ 'source' ]);
-	});
-
 	test('loads backend tasks into state-specific sorted lists', () => {
 		const tasksContainer = getInitialTasks();
 		const activeLater = makeTask({ id: 'active-later', sortPosition: 20 });

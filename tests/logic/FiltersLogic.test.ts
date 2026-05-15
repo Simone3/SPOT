@@ -2,6 +2,7 @@ import { makeTask } from '../testUtils';
 import { cloneFilters, getInitialFilters, refreshTasksVisibility, refreshTaskVisibility } from 'src/logic/FiltersLogic';
 import type { TaskFilters } from 'src/types/FilterTypes';
 import type { TasksContainer } from 'src/types/TaskTypes';
+import { cloneTask } from 'src/logic/TasksLogic';
 
 describe('FiltersLogic', () => {
 	test('clones filters without sharing array fields', () => {
@@ -68,7 +69,7 @@ describe('FiltersLogic', () => {
 			showCompleted: false
 		};
 
-		refreshTasksVisibility(tasksContainer, oldFilters, newFilters);
+		refreshTasksVisibility(tasksContainer, oldFilters, newFilters, cloneTask);
 
 		expect(tasksContainer.active[0]).not.toBe(matchingTask);
 		expect(tasksContainer.active[0].tags).not.toBe(matchingTask.tags);

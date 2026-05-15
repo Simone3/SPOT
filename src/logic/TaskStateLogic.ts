@@ -4,7 +4,7 @@ import type { DomainsContainer } from 'src/types/DomainTypes';
 import type { TaskFilters, TaskFilterChange } from 'src/types/FilterTypes';
 import type { Task, TaskChange, TasksContainer } from 'src/types/TaskTypes';
 import { cloneFilters, getInitialFilters, refreshTasksVisibility, refreshTaskVisibility } from 'src/logic/FiltersLogic';
-import { getInitialTasks, cloneTasks, loadBackEndTasks, addNewTask, deleteTask, updateTask, forceSortActiveTasksByImportance, moveActiveTask } from 'src/logic/TasksLogic';
+import { getInitialTasks, cloneTask, cloneTasks, loadBackEndTasks, addNewTask, deleteTask, updateTask, forceSortActiveTasksByImportance, moveActiveTask } from 'src/logic/TasksLogic';
 import { getInitialDomains, cloneDomains, addDomainsForTasks, removeDomainsForTask, updateDomainsForTask, addDomainsForTask, updateFiltersOnDomainsChange } from 'src/logic/DomainsLogic';
 
 interface TaskStateContainer {
@@ -243,7 +243,7 @@ export const loadBackEndTasksIntoState = (setTaskState: SetTaskState): void => {
 		addDomainsForTasks(newDomainsContainer, newTasksContainer);
 
 		// Compute initial visibility of all tasks
-		refreshTasksVisibility(newTasksContainer, prevTaskState.filters, prevTaskState.filters);
+		refreshTasksVisibility(newTasksContainer, prevTaskState.filters, prevTaskState.filters, cloneTask);
 
 		return {
 			tasksContainer: newTasksContainer,
@@ -335,7 +335,7 @@ export const changeFiltersInState = (setTaskState: SetTaskState, changedFilters:
 		};
 
 		// Simply refresh the task lists based on the new filters
-		refreshTasksVisibility(newTasksContainer, prevTaskState.filters, newFilters);
+		refreshTasksVisibility(newTasksContainer, prevTaskState.filters, newFilters, cloneTask);
 
 		return {
 			tasksContainer: newTasksContainer,
@@ -351,7 +351,7 @@ export const resetFiltersState = (setTaskState: SetTaskState): void => {
 		const newFilters = getInitialFilters();
 
 		// Simply refresh the task lists based on the new filters
-		refreshTasksVisibility(newTasksContainer, prevTaskState.filters, newFilters);
+		refreshTasksVisibility(newTasksContainer, prevTaskState.filters, newFilters, cloneTask);
 
 		return {
 			tasksContainer: newTasksContainer,
@@ -366,7 +366,7 @@ export const refreshVisibleTasksInState = (setTaskState: SetTaskState): void => 
 		const newTasksContainer = cloneTasks(prevTaskState.tasksContainer);
 
 		// Simply refresh the task lists based on the current filters
-		refreshTasksVisibility(newTasksContainer, prevTaskState.filters, prevTaskState.filters);
+		refreshTasksVisibility(newTasksContainer, prevTaskState.filters, prevTaskState.filters, cloneTask);
 
 		return {
 			tasksContainer: newTasksContainer,

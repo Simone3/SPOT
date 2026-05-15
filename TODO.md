@@ -7,11 +7,11 @@ semi transparent background with task importance color?
 filters
 	"me" and "none" filters displayed only if there are actually tasks with empty values?
 	default filter with "me" as owner?
-is it ok that when you complete a task it immediately disappears?
+is it ok that when you complete a task it immediately disappears? flush changes when exit hovering task? or timed?
 
 # wire in electron main process: save to disk
 careful with sort positions, especially when they change in more than one task at a time (manual sort recompute + re-sort by urgency)
-sqllite?
+sqllite? or just file(s) that are easier to share/upload/etc. with drive? separate db / files for completed and active?
 how often?
 async
 debounce changes and merge changes on same element (text typing)

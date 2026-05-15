@@ -1,7 +1,6 @@
 
 import type { Task, TasksContainer } from 'src/types/TaskTypes';
-import type { TaskFilterChange, TaskFilters } from 'src/types/FilterTypes';
-import { cloneTask } from 'src/logic/TasksLogic';
+import type { TaskFilters } from 'src/types/FilterTypes';
 
 /**
  * Returns a new object containing the initial filters.
@@ -83,8 +82,9 @@ export const refreshTaskVisibility = (task: Task, filters: TaskFilters): void =>
  * Helper to refresh the "visibile" field in an array based on the new filters.
  * @param taskList Task list to update.
  * @param filters Filters controlling visibility.
+ * @param cloneTask Callback to clone a task.
  */
-const refreshTasksVisibilityHelper = (taskList: Task[], filters: TaskFilters): void => {
+const refreshTasksVisibilityHelper = (taskList: Task[], filters: TaskFilters, cloneTask: (task: Task) => Task): void => {
 	for(let i = 0; i < taskList.length; i++) {
 		const task = taskList[i];
 		const newVisibility = matchesFilters(task, filters);
@@ -102,13 +102,14 @@ const refreshTasksVisibilityHelper = (taskList: Task[], filters: TaskFilters): v
  * @param tasksContainer Task lists to update.
  * @param oldFilters Previous filter values.
  * @param newFilters New filter values.
+ * @param cloneTask Callback to clone a task.
  */
-export const refreshTasksVisibility = (tasksContainer: TasksContainer, oldFilters: TaskFilters, newFilters: TaskFilters | (TaskFilters & TaskFilterChange)): void => {
+export const refreshTasksVisibility = (tasksContainer: TasksContainer, oldFilters: TaskFilters, newFilters: TaskFilters, cloneTask: (task: Task) => Task): void => {
 	// Always refresh active tasks
-	refreshTasksVisibilityHelper(tasksContainer.active, newFilters);
+	refreshTasksVisibilityHelper(tasksContainer.active, newFilters, cloneTask);
 
 	// Refresh completed tasks only if showCompleted is active and/or showCompleted changed just now
 	if(newFilters.showCompleted || newFilters.showCompleted !== oldFilters.showCompleted) {
-		refreshTasksVisibilityHelper(tasksContainer.completed, newFilters);
+		refreshTasksVisibilityHelper(tasksContainer.completed, newFilters, cloneTask);
 	}
 };
