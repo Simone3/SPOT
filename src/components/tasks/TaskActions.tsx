@@ -1,5 +1,5 @@
 import 'src/components/tasks/TaskActions.css';
-import { useState, type ReactElement } from 'react';
+import { useState, type ReactElement, type ReactNode } from 'react';
 import { Checkbox } from 'src/components/inputs/Checkbox';
 import { Clickable } from 'src/components/common/Clickable';
 import { DeleteIcon } from 'src/components/icons/DeleteIcon';
@@ -10,9 +10,10 @@ type TaskActionsProps = {
 	task: Task;
 	onChangeState: () => void;
 	onDelete: () => void;
+	dragHandle?: ReactNode;
 };
 
-const TaskActions = ({ task, onChangeState, onDelete }: TaskActionsProps): ReactElement => {
+const TaskActions = ({ task, onChangeState, onDelete, dragHandle }: TaskActionsProps): ReactElement => {
 	const {
 		state
 	} = task;
@@ -29,6 +30,7 @@ const TaskActions = ({ task, onChangeState, onDelete }: TaskActionsProps): React
 			}}>
 				<DeleteIcon/>
 			</Clickable>
+			{dragHandle}
 			{confirmOpen &&
 				<ConfirmModal
 					title='Delete Task?'

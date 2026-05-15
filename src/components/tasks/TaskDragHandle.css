@@ -1,0 +1,65 @@
+
+.task-drag-handle {
+	appearance: none;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	min-width: 28px;
+	padding: 0;
+	border: 1px solid transparent;
+	border-radius: 5px;
+	background: transparent;
+	color: var(--colors-text-secondary);
+	cursor: grab;
+	opacity: 0.75;
+}
+
+.task-drag-handle:hover, .task-drag-handle:focus {
+	outline: none;
+	opacity: 1;
+	background: var(--colors-background-secondary);
+	color: var(--colors-text-primary);
+	border-color: var(--colors-background-secondary);
+}
+
+.task-drag-handle:focus {
+	border-color: var(--colors-accent-primary);
+	box-shadow: 0 0 4px var(--colors-accent-primary);
+}
+
+.task-drag-handle:active {
+	cursor: grabbing;
+}
+
+.task-drag-handle svg {
+	display: block;
+	width: 17px;
+	height: 17px;
+}
+
+.task-drag-handle-leading {
+	align-self: center;
+	margin-left: 10px;
+}
+
+.task-drag-handle-divider {
+	align-self: center;
+	margin: 0 2px 0 10px;
+}
+
+.task-drag-handle-actions {
+	width: 20px;
+	height: 20px;
+	min-width: 20px;
+}
+
+.task-actions .task-drag-handle {
+	margin: 0;
+}
+
+.task-actions .task-drag-handle svg {
+	width: 15px;
+	height: 15px;
+}
