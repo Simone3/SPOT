@@ -152,7 +152,7 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFrom
 				}}
 				onDelete={onDelete}
 			/>
-			<span ref={handleRef}>MOVE P = {internalTask.sortPosition}, I = {index}</span>
+			<span ref={handleRef}>MOVE P = {taskFromProps.sortPosition}, I = {index}</span>
 		</div>
 	);
 };
