@@ -7,7 +7,7 @@ import type { Task as TaskType, TaskChange } from 'src/types/TaskTypes';
 import { TaskPriority } from 'src/components/tasks/TaskPriority';
 import { TaskActions } from 'src/components/tasks/TaskActions';
 import { TaskChips } from 'src/components/tasks/TaskChips';
-import { TaskDragHandle, type TaskDragHandleVariant } from 'src/components/tasks/TaskDragHandle';
+import { TaskDragHandle } from 'src/components/tasks/TaskDragHandle';
 
 type TaskProps = {
 	id: string;
@@ -17,13 +17,12 @@ type TaskProps = {
 	onSave: (changedValues: TaskChange) => void;
 	onDelete: () => void;
 	showDragHandle: boolean;
-	dragHandleVariant?: TaskDragHandleVariant;
 };
 
 type SetTaskValue = <TKey extends keyof TaskType>(key: TKey, valueOrCallback: TaskType[TKey] | ((prevValue: TaskType[TKey]) => TaskType[TKey]), flush: boolean) => void;
 type TaskValueUpdater<TKey extends keyof TaskType> = (prevValue: TaskType[TKey]) => TaskType[TKey];
 
-const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFromProps, onDelete, showDragHandle, dragHandleVariant }: TaskProps): ReactElement => {
+const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFromProps, onDelete, showDragHandle }: TaskProps): ReactElement => {
 	// Internal copy of the task, for delayed changes propagation to the parent component (main state)
 	const [ internalTask, setInternalTask ] = useState(taskFromProps);
 	const internalTaskRef = useRef(taskFromProps);
@@ -117,8 +116,7 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFrom
 		containerClass += ` task-container-${state.toLowerCase()}`;
 	}
 
-	const resolvedDragHandleVariant = dragHandleVariant || 'divider';
-	const dragHandle = showDragHandle ? <TaskDragHandle ref={handleRef} variant={resolvedDragHandleVariant}/> : undefined;
+	const dragHandle = showDragHandle ? <TaskDragHandle ref={handleRef}/> : undefined;
 
 	return (
 		<div ref={ref} className={containerClass}>
@@ -130,7 +128,6 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFrom
 				}}
 				onBlur={flushTaskChanges}
 			/>
-			{resolvedDragHandleVariant === 'leading' && dragHandle}
 			<div className='task-content'>
 				<TextArea
 					placeholder={'Add content...'}
@@ -151,7 +148,6 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFrom
 					setNewTag={setNewTag}
 				/>
 			</div>
-			{resolvedDragHandleVariant === 'divider' && dragHandle}
 			<TaskActions
 				task={internalTask}
 				onChangeState={() => {
@@ -159,11 +155,10 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFrom
 					setTaskValue('state', state === 'ACTIVE' ? 'COMPLETED' : 'ACTIVE', true);
 				}}
 				onDelete={onDelete}
-				dragHandle={resolvedDragHandleVariant === 'actions' ? dragHandle : undefined}
+				dragHandle={dragHandle}
 			/>
 		</div>
 	);
 };
 
 export { Task };
-export type { TaskDragHandleVariant };

@@ -98,7 +98,7 @@ describe('TasksList', () => {
 
 		expect(screen.getByDisplayValue('Visible task')).toBeInTheDocument();
 		expect(screen.queryByDisplayValue('Hidden task')).not.toBeInTheDocument();
-		expect(screen.getByLabelText('Preview A: drag task beside the priority rail')).toBeInTheDocument();
+		expect(screen.getByLabelText('Drag task')).toBeInTheDocument();
 		expect(screen.queryByText(/MOVE P =/)).not.toBeInTheDocument();
 
 		fireEvent.click(screen.getByText('Refresh'));

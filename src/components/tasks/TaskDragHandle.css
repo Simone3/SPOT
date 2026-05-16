@@ -39,16 +39,6 @@
 	height: 17px;
 }
 
-.task-drag-handle-leading {
-	align-self: center;
-	margin-left: 10px;
-}
-
-.task-drag-handle-divider {
-	align-self: center;
-	margin: 0 2px 0 10px;
-}
-
 .task-drag-handle-actions {
 	width: 20px;
 	height: 20px;

@@ -8,7 +8,7 @@ import { SortIcon } from 'src/components/icons/SortIcon';
 import { Header, type HeaderAction } from 'src/components/common/Header';
 import type { FormDomains } from 'src/types/DomainTypes';
 import type { Task as TaskType, TaskChange } from 'src/types/TaskTypes';
-import { Task, type TaskDragHandleVariant } from 'src/components/tasks/Task';
+import { Task } from 'src/components/tasks/Task';
 
 type TasksListProps = {
 	title: string;
@@ -22,8 +22,6 @@ type TasksListProps = {
 	onDeleteTask: (task: TaskType) => void;
 	showActions: boolean;
 };
-
-const DRAG_HANDLE_PREVIEW_VARIANTS: TaskDragHandleVariant[] = [ 'leading', 'divider', 'actions' ];
 
 const TasksList = ({ title, tasks, inputDomains, onRefreshTasks, onMoveTask, onSortTasksByImportance, onAddNewTask, onUpdateTask, onDeleteTask, showActions }: TasksListProps): ReactElement => {
 	const visibleTasks: TaskType[] = [];
@@ -77,8 +75,6 @@ const TasksList = ({ title, tasks, inputDomains, onRefreshTasks, onMoveTask, onS
 			/>
 			<DragDropProvider onDragEnd={onDragEnd}>
 				{visibleTasks.map((task, index) => {
-					const dragHandleVariant = onMoveTask ? DRAG_HANDLE_PREVIEW_VARIANTS[index % DRAG_HANDLE_PREVIEW_VARIANTS.length] : undefined;
-
 					return <Task
 						id={task.id}
 						key={task.id}
@@ -86,7 +82,6 @@ const TasksList = ({ title, tasks, inputDomains, onRefreshTasks, onMoveTask, onS
 						task={task}
 						inputDomains={inputDomains}
 						showDragHandle={Boolean(onMoveTask)}
-						dragHandleVariant={dragHandleVariant}
 						onSave={(changedValues: TaskChange) => {
 							onUpdateTask(task, changedValues);
 						}}

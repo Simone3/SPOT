@@ -202,8 +202,7 @@ Active list actions:
 - buffers changed fields in a ref
 - flushes changes after 5 seconds, on blur, when state changes, or on unmount
 - owns the generic task value setter and passes field-specific setters to task chips
-- renders priority, text, owner, due date, tags, completion checkbox, delete action, and a reorder drag handle for lists that support moving tasks
-- currently previews three reorder handle placements in the active list: beside the priority rail, between content and actions, and inside the action column
+- renders priority, text, owner, due date, tags, completion checkbox, delete action, and an action-column reorder drag handle for lists that support moving tasks
 
 `TaskActions`:
 
