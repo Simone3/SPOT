@@ -4,6 +4,7 @@ import { Checkbox } from 'src/components/inputs/Checkbox';
 import { DeleteIcon } from 'src/components/icons/DeleteIcon';
 import { ConfirmModal } from 'src/components/common/ConfirmModal';
 import type { Task } from 'src/types/TaskTypes';
+import { Clickable } from 'src/components/common/Clickable';
 
 type TaskActionsProps = {
 	task: Task;
@@ -25,16 +26,11 @@ const TaskActions = ({ task, onChangeState, onDelete, dragHandle }: TaskActionsP
 			<Checkbox
 				value={state === 'COMPLETED'}
 				onChange={onChangeState}/>
-			<button
-				type='button'
-				className='task-action-delete-button'
-				aria-label='Delete task'
-				title='Delete task'
-				onClick={() => {
-					setConfirmOpen(true);
-				}}>
+			<Clickable onClick={() => {
+				setConfirmOpen(true);
+			}}>
 				<DeleteIcon/>
-			</button>
+			</Clickable>
 			{confirmOpen &&
 				<ConfirmModal
 					title='Delete Task?'
