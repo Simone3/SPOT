@@ -18,36 +18,3 @@
 	display: block;
 	color: var(--colors-text-secondary);
 }
-
-.task-action-delete-button {
-	appearance: none;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	width: 20px;
-	height: 20px;
-	min-width: 20px;
-	padding: 0;
-	border: 1px solid transparent;
-	border-radius: 5px;
-	background: transparent;
-	color: var(--colors-text-secondary);
-	cursor: pointer;
-	opacity: 0.75;
-}
-
-.task-action-delete-button:hover, .task-action-delete-button:focus {
-	outline: none;
-	opacity: 1;
-	background: var(--colors-background-primary);
-	border-color: var(--colors-background-primary);
-}
-
-.task-action-delete-button:hover svg, .task-action-delete-button:focus svg {
-	color: var(--colors-danger);
-}
-
-.task-action-delete-button:focus {
-	border-color: var(--colors-accent-primary);
-	box-shadow: 0 0 4px var(--colors-accent-primary);
-}

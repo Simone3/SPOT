@@ -12,7 +12,7 @@ const Checkbox = ({ label, value, onChange, accentSelectedColor }: CheckboxProps
 	const id = useId();
 
 	return (
-		<div className={`checkbox-container ${accentSelectedColor && 'checkbox-container-accent-selected'}`}>
+		<div className={`checkbox-container ${accentSelectedColor ? 'checkbox-container-accent-selected' : ''}`}>
 			<input id={id} className='checkbox-input' type='checkbox' checked={value} onChange={() => {
 				return onChange(!value);
 			}}/>
