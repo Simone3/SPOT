@@ -143,12 +143,11 @@ describe('TasksList', () => {
 			});
 		})).toBe(false);
 
-		const deleteAction = container.querySelector('.task-actions .clickable');
-		if(!deleteAction) {
-			throw Error('Delete action not found');
-		}
+		expect(container.querySelector('.task-actions .clickable')).not.toBeInTheDocument();
+		expect(screen.queryByRole('menuitem', { name: 'Delete' })).not.toBeInTheDocument();
 
-		fireEvent.click(deleteAction);
+		fireEvent.click(screen.getByRole('button', { name: 'Task actions' }));
+		fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
 		fireEvent.click(screen.getByRole('button', { name: 'Delete Task' }));
 
 		expect(props.onDeleteTask).toHaveBeenCalledWith(task);

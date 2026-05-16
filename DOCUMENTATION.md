@@ -202,11 +202,12 @@ Active list actions:
 - buffers changed fields in a ref
 - flushes changes after 5 seconds, on blur, when state changes, or on unmount
 - owns the generic task value setter and passes field-specific setters to task chips
-- renders priority, text, owner, due date, tags, completion checkbox, delete action, and an action-column reorder drag handle for lists that support moving tasks
+- renders priority, text, owner, due date, tags, completion checkbox, overflow actions menu, and an action-column reorder drag handle for lists that support moving tasks
 
 `TaskActions`:
 
 - toggles between active and completed state
+- keeps delete behind a three-dot overflow menu
 - opens a confirmation modal before deleting
 
 `TaskChips`:
@@ -401,7 +402,7 @@ The most important remaining work is:
 
 - Add persistence and Electron-shell integration tests once storage exists.
 - Improve accessibility and focus behavior in reusable inputs and clickables.
-- Remove or hide debug drag-handle text in tasks when the drag UI is polished.
+- Continue polishing drag-and-drop feedback as the task interaction model settles.
 - Make `DatesContextProvider` refresh date labels after midnight.
 - Decide and implement persistence in the Electron layer.
 - Replace sample data loading with real data loading.
