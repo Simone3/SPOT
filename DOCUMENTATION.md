@@ -202,12 +202,11 @@ Active list actions:
 - buffers changed fields in a ref
 - flushes changes after 5 seconds, on blur, when state changes, or on unmount
 - owns the generic task value setter and passes field-specific setters to task chips
-- renders priority, text, owner, due date, tags, completion checkbox, overflow actions menu, and an action-column reorder drag handle for lists that support moving tasks
+- renders priority, text, owner, due date, tags, and a vertical action column with drag, completion, and delete controls
 
 `TaskActions`:
 
 - toggles between active and completed state
-- keeps delete behind a three-dot overflow menu
 - opens a confirmation modal before deleting
 
 `TaskChips`:

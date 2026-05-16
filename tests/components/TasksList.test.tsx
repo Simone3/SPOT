@@ -143,11 +143,17 @@ describe('TasksList', () => {
 			});
 		})).toBe(false);
 
-		expect(container.querySelector('.task-actions .clickable')).not.toBeInTheDocument();
-		expect(screen.queryByRole('menuitem', { name: 'Delete' })).not.toBeInTheDocument();
+		const taskActions = container.querySelector('.task-actions');
+		if(!taskActions) {
+			throw Error('Task actions not found');
+		}
 
-		fireEvent.click(screen.getByRole('button', { name: 'Task actions' }));
-		fireEvent.click(screen.getByRole('menuitem', { name: 'Delete' }));
+		expect(taskActions.children.length).toBe(3);
+		expect(taskActions.children[0]).toHaveAttribute('aria-label', 'Drag task');
+		expect(taskActions.children[1].querySelector('input')).toHaveAttribute('type', 'checkbox');
+		expect(taskActions.children[2]).toHaveAttribute('aria-label', 'Delete task');
+
+		fireEvent.click(screen.getByRole('button', { name: 'Delete task' }));
 		fireEvent.click(screen.getByRole('button', { name: 'Delete Task' }));
 
 		expect(props.onDeleteTask).toHaveBeenCalledWith(task);
