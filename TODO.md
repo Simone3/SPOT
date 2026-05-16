@@ -1,9 +1,11 @@
 
+try whole (smaller rounded) border and buttons on right corners
+
 # refactor
 manual sort
 	sort handle ui
 	disable sort for completed
-semi transparent background with task importance color?
+drag and drop in filtered list?
 filters
 	"me" and "none" filters displayed only if there are actually tasks with empty values?
 	default filter with "me" as owner?
