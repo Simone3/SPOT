@@ -151,9 +151,9 @@ describe('TasksList', () => {
 		expect(taskActions.children.length).toBe(3);
 		expect(taskActions.children[0]).toHaveAttribute('aria-label', 'Drag task');
 		expect(taskActions.children[1].querySelector('input')).toHaveAttribute('type', 'checkbox');
-		expect(taskActions.children[2]).toHaveAttribute('aria-label', 'Delete task');
+		expect(taskActions.children[2]).toHaveClass('clickable', 'delete-button');
 
-		fireEvent.click(screen.getByRole('button', { name: 'Delete task' }));
+		fireEvent.click(taskActions.children[2]);
 		fireEvent.click(screen.getByRole('button', { name: 'Delete Task' }));
 
 		expect(props.onDeleteTask).toHaveBeenCalledWith(task);
