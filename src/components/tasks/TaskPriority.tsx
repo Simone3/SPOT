@@ -58,7 +58,6 @@ const TaskPriority = ({ priorityDomain, value, onChange, onBlur }: TaskPriorityP
 
 	return (
 		<div className='task-priority'>
-			<div className='task-priority-bar' style={{ background: `var(--colors-priority-${value.toLowerCase()})` }}></div>
 			<div className='task-priority-picker' id={id} ref={containerRef}>
 				{priorityDomain.map((domain) => {
 					if(!open && domain.value !== value) {

@@ -119,7 +119,7 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFrom
 	const dragHandle = showDragHandle ? <TaskDragHandle ref={handleRef}/> : undefined;
 
 	return (
-		<div ref={ref} className={containerClass}>
+		<div ref={ref} className={containerClass} style={{ borderLeftColor: `var(--colors-priority-${internalTask.priority.toLowerCase()})` }}>
 			<TaskPriority
 				priorityDomain={inputDomains.priorities}
 				value={priority}

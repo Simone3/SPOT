@@ -9,32 +9,23 @@
 	justify-content: center;
 	width: 0;
 }
-
-.task-priority-bar {
-	position: absolute;
-	left: 0;
-	top: 0;
-	bottom: 0;
-	width: 3px;
-	height: auto;
-	border-radius: 3px;
-	transform: translateX(-50%);
-}
-
-.task-priority-picker {
-	position: absolute;
-	left: 0;
-	top: 50%;
-	transform: translate(-50%, -50%);
-	z-index: 200;
-	background-color: var(--colors-background-primary);
-	padding: 2px 0;
-}
-
 .task-priority-picker {
 	display: flex;
 	flex-direction: column;
 	overflow: hidden;
+	position: absolute;
+	left: calc(0px - var(--task-priority-border-offset));
+	top: 50%;
+	transform: translate(-50%, -50%);
+	z-index: 200;
+	background: linear-gradient(
+		to right,
+		transparent,
+		transparent calc(50% - var(--task-priority-border-offset)),
+		var(--colors-background-secondary) calc(50% - var(--task-priority-border-offset)),
+		var(--colors-background-secondary)
+	);
+	padding: 2px 0;
 }
 
 .task-priority-picker-option {
