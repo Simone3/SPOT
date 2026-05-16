@@ -1,20 +1,29 @@
 
 .task-priority {
-	position: relative;
+	position: absolute;
+	left: 0;
+	top: 10px;
+	bottom: 10px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
+	width: 0;
 }
 
 .task-priority-bar {
+	position: absolute;
+	left: 0;
+	top: 0;
+	bottom: 0;
 	width: 3px;
-	height: 100%;
+	height: auto;
 	border-radius: 3px;
+	transform: translateX(-50%);
 }
 
 .task-priority-picker {
 	position: absolute;
-	left: 50%;
+	left: 0;
 	top: 50%;
 	transform: translate(-50%, -50%);
 	z-index: 200;

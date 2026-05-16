@@ -1,8 +1,12 @@
 
 .task-container {
 	display: flex;
-	padding: 0px 20px;
-	margin: 30px 0;
+	padding: 10px 10px;
+	margin: 30px 20px;
+	position: relative;
+	background-color: var(--colors-background-secondary);
+	border: 1px solid var(--colors-background-secondary);
+	border-radius: 10px;
 }
 
 .task-container-completed, .task-container-completed ._placeholder_sects_1101 {
