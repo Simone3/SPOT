@@ -19,7 +19,7 @@
 .task-content {
 	display: flex;
 	flex-direction: column;
-	justify-content: center;
+	justify-content: space-between;
 	width: 100%;
 	min-width: 0;
 	padding-left: 15px;
