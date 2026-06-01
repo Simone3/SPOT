@@ -200,8 +200,8 @@ Active list actions:
 
 - keeps an internal copy of its task while the user edits
 - buffers changed fields in a ref
-- flushes changes after 5 seconds, on blur, when state changes, or on unmount
-- shows a thin bottom-edge progress indicator while a delayed flush is pending, then briefly flashes the completed save
+- flushes content and metadata changes after 5 seconds, on blur, or on unmount
+- fades out for 3 seconds before flushing a state change from the completion checkbox; changing the checkbox back before the fade completes cancels the state flush and restores full opacity
 - owns the generic task value setter and passes field-specific setters to task chips
 - renders priority, text, owner, due date, tags, and a vertical action column with drag, completion, and delete controls
 

@@ -1,5 +1,5 @@
 import type { ChangeEvent, ReactElement, ReactNode } from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { makeFormDomains, makeTask } from '../testUtils';
 import { TasksList } from 'src/components/tasks/TasksList';
 import type { Task } from 'src/types/TaskTypes';
@@ -82,6 +82,7 @@ const renderTasksList = (tasks: Task[]) => {
 
 describe('TasksList', () => {
 	afterEach(() => {
+		jest.useRealTimers();
 		jest.restoreAllMocks();
 	});
 
@@ -110,7 +111,8 @@ describe('TasksList', () => {
 		expect(props.onAddNewTask).toHaveBeenCalledTimes(1);
 	});
 
-	test('saves task edits, completes tasks, and confirms deletion', async() => {
+	test('saves task edits, completes tasks, and confirms deletion', () => {
+		jest.useFakeTimers();
 		const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 		const task = makeTask({
 			text: 'Original task',
@@ -130,22 +132,38 @@ describe('TasksList', () => {
 			throw Error('Task container not found');
 		}
 
-		expect(taskContainer.querySelector('.task-flush-feedback-pending')).toBeInTheDocument();
-		expect(taskContainer.querySelector('.task-flush-progress')).toBeInTheDocument();
 		expect(props.onUpdateTask).not.toHaveBeenCalled();
 
 		fireEvent.blur(taskText);
 
 		expect(props.onUpdateTask).toHaveBeenCalledWith(task, { text: 'Updated task' });
-		expect(taskContainer.querySelector('.task-flush-feedback-flushed')).toBeInTheDocument();
-		expect(taskContainer.querySelector('.task-flush-saved-dot')).toBeInTheDocument();
 		props.onUpdateTask.mockClear();
 
-		fireEvent.click(screen.getByRole('checkbox'));
+		const completionCheckbox = screen.getByRole('checkbox');
+		fireEvent.click(completionCheckbox);
 
-		await waitFor(() => {
-			expect(props.onUpdateTask).toHaveBeenCalledWith(task, { state: 'COMPLETED' });
+		expect(taskContainer).toHaveClass('task-container-state-changing');
+		expect(props.onUpdateTask).not.toHaveBeenCalled();
+
+		fireEvent.click(completionCheckbox);
+
+		expect(taskContainer).not.toHaveClass('task-container-state-changing');
+		act(() => {
+			jest.advanceTimersByTime(3000);
 		});
+		expect(props.onUpdateTask).not.toHaveBeenCalled();
+
+		fireEvent.click(completionCheckbox);
+
+		expect(taskContainer).toHaveClass('task-container-state-changing');
+		act(() => {
+			jest.advanceTimersByTime(2999);
+		});
+		expect(props.onUpdateTask).not.toHaveBeenCalled();
+		act(() => {
+			jest.advanceTimersByTime(1);
+		});
+		expect(props.onUpdateTask).toHaveBeenCalledWith(task, { state: 'COMPLETED' });
 		expect(consoleErrorSpy.mock.calls.some((call) => {
 			return call.some((value) => {
 				return String(value).includes('Cannot update a component');

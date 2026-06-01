@@ -21,13 +21,12 @@ type TaskProps = {
 
 type SetTaskValue = <TKey extends keyof TaskType>(key: TKey, valueOrCallback: TaskType[TKey] | ((prevValue: TaskType[TKey]) => TaskType[TKey]), flush: boolean) => void;
 type TaskValueUpdater<TKey extends keyof TaskType> = (prevValue: TaskType[TKey]) => TaskType[TKey];
-type FlushFeedbackState = 'idle' | 'pending' | 'flushed';
 type TaskContainerStyle = CSSProperties & {
-	'--task-flush-delay': string;
+	'--task-state-change-delay': string;
 };
 
 const FLUSH_DELAY_MS = 5000;
-const FLUSHED_FEEDBACK_MS = 700;
+const STATE_CHANGE_DELAY_MS = 3000;
 
 const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFromProps, onDelete, showDragHandle }: TaskProps): ReactElement => {
 	// Internal copy of the task, for delayed changes propagation to the parent component (main state)
@@ -42,10 +41,6 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFrom
 	// Temporary state for new tags
 	const [ newTag, setNewTag ] = useState('');
 
-	// Ambient save feedback state for buffered changes
-	const [ flushFeedbackState, setFlushFeedbackState ] = useState<FlushFeedbackState>('idle');
-	const [ flushFeedbackAnimationKey, setFlushFeedbackAnimationKey ] = useState(0);
-
 	// Ref with the changed task values (a ref is required for the timer/unmount callbacks because state may not be completely updated)
 	const changedValuesRef = useRef<TaskChange>({});
 
@@ -57,37 +52,10 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFrom
 
 	// Timer that flushes changes back to the parent component with a delay
 	const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-	const flushFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const stateChangeFlushDeadlineRef = useRef<number | null>(null);
 
 	// Sortable hook
 	const { ref, handleRef } = useSortable({ id, index });
-
-	// Helper to stop the flush feedback timer
-	const clearFlushFeedbackTimer = useCallback((): void => {
-		if(flushFeedbackTimerRef.current) {
-			clearTimeout(flushFeedbackTimerRef.current);
-			flushFeedbackTimerRef.current = null;
-		}
-	}, []);
-
-	// Helper to show that a save is pending and restart the progress animation
-	const showPendingFlushFeedback = useCallback((): void => {
-		clearFlushFeedbackTimer();
-		setFlushFeedbackState('pending');
-		setFlushFeedbackAnimationKey((currentKey) => {
-			return currentKey + 1;
-		});
-	}, [ clearFlushFeedbackTimer ]);
-
-	// Helper to briefly show that pending changes were flushed
-	const showFlushedFeedback = useCallback((): void => {
-		clearFlushFeedbackTimer();
-		setFlushFeedbackState('flushed');
-		flushFeedbackTimerRef.current = setTimeout(() => {
-			flushFeedbackTimerRef.current = null;
-			setFlushFeedbackState('idle');
-		}, FLUSHED_FEEDBACK_MS);
-	}, [ clearFlushFeedbackTimer ]);
 
 	// Helper to stop the flush timer
 	const clearFlushTimer = useCallback((): void => {
@@ -98,41 +66,51 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFrom
 	}, []);
 
 	// Helper to flush any change to the parent component (main state)
-	const flushTaskChanges = useCallback((showFeedback = true): void => {
+	const flushTaskChanges = useCallback((): void => {
 		clearFlushTimer();
 		if(Object.keys(changedValuesRef.current).length !== 0) {
 			const changesToFlush = changedValuesRef.current;
 			changedValuesRef.current = {};
+			stateChangeFlushDeadlineRef.current = null;
 			onSaveRef.current(changesToFlush);
-			if(showFeedback) {
-				showFlushedFeedback();
-			}
 		}
-	}, [ clearFlushTimer, showFlushedFeedback ]);
+	}, [ clearFlushTimer ]);
 
 	// Helper to (re)start the flush timer
-	const restartFlushTimer = useCallback((): void => {
+	const restartFlushTimer = useCallback((flushDelayMs = FLUSH_DELAY_MS): void => {
 		clearFlushTimer();
-		showPendingFlushFeedback();
-		flushTimerRef.current = setTimeout(flushTaskChanges, FLUSH_DELAY_MS);
-	}, [ clearFlushTimer, flushTaskChanges, showPendingFlushFeedback ]);
+		flushTimerRef.current = setTimeout(flushTaskChanges, flushDelayMs);
+	}, [ clearFlushTimer, flushTaskChanges ]);
 
-	// Helper to update both state and ref when task values change, (re)set the flush timer and (optionally) flush any pending changes afterwards
+	// Helper to update both state and ref when task values change, reset the flush timer and optionally flush any pending changes afterwards
 	const setTaskValue: SetTaskValue = (key, valueOrCallback, flush) => {
 		const currentTask = internalTaskRef.current;
 		const newValue = typeof valueOrCallback === 'function' ? (valueOrCallback as TaskValueUpdater<typeof key>)(currentTask[key]) : valueOrCallback;
 		const newTask = { ...currentTask, [key]: newValue };
 		internalTaskRef.current = newTask;
-		changedValuesRef.current = {
-			...changedValuesRef.current,
-			[key]: newValue
-		};
+		const changedValues = { ...changedValuesRef.current };
+		if(newValue === taskFromProps[key]) {
+			delete changedValues[key];
+		}
+		else {
+			changedValues[key] = newValue;
+		}
+		changedValuesRef.current = changedValues;
+
+		if(key === 'state') {
+			stateChangeFlushDeadlineRef.current = newValue === taskFromProps.state ? null : Date.now() + STATE_CHANGE_DELAY_MS;
+		}
+
 		setInternalTask(newTask);
 		if(flush) {
 			flushTaskChanges();
 		}
+		else if(Object.keys(changedValuesRef.current).length !== 0) {
+			const flushDelayMs = stateChangeFlushDeadlineRef.current === null ? FLUSH_DELAY_MS : Math.max(0, stateChangeFlushDeadlineRef.current - Date.now());
+			restartFlushTimer(flushDelayMs);
+		}
 		else {
-			restartFlushTimer();
+			clearFlushTimer();
 		}
 	};
 
@@ -150,22 +128,22 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFrom
 
 	// On component unmount, flush any pending changes
 	useEffect(() => {
-		return () => {
-			clearFlushFeedbackTimer();
-			flushTaskChanges(false);
-		};
-	}, [ clearFlushFeedbackTimer, flushTaskChanges ]);
+		return flushTaskChanges;
+	}, [ flushTaskChanges ]);
 
 	// Dynamic container class
 	let containerClass = 'task-container';
 	if(state) {
 		containerClass += ` task-container-${state.toLowerCase()}`;
 	}
+	if(state !== taskFromProps.state) {
+		containerClass += ' task-container-state-changing';
+	}
 
 	const dragHandle = showDragHandle ? <TaskDragHandle ref={handleRef}/> : undefined;
 	const containerStyle: TaskContainerStyle = {
 		borderLeftColor: `var(--colors-priority-${internalTask.priority.toLowerCase()})`,
-		'--task-flush-delay': `${FLUSH_DELAY_MS}ms`
+		'--task-state-change-delay': `${STATE_CHANGE_DELAY_MS}ms`
 	};
 
 	return (
@@ -201,20 +179,12 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFrom
 			<TaskActions
 				task={internalTask}
 				onChangeState={() => {
-					// Change state and immediately flush it to parent component
-					setTaskValue('state', state === 'ACTIVE' ? 'COMPLETED' : 'ACTIVE', true);
+					// Change state and flush it after the exit animation unless it is reverted first
+					setTaskValue('state', state === 'ACTIVE' ? 'COMPLETED' : 'ACTIVE', false);
 				}}
 				onDelete={onDelete}
 				dragHandle={dragHandle}
 			/>
-			{flushFeedbackState !== 'idle' &&
-				<div className={`task-flush-feedback task-flush-feedback-${flushFeedbackState}`} aria-hidden='true'>
-					{flushFeedbackState === 'pending' &&
-						<div key={flushFeedbackAnimationKey} className='task-flush-progress'/>}
-					{flushFeedbackState === 'flushed' &&
-						<div className='task-flush-saved-dot'/>}
-				</div>
-			}
 		</div>
 	);
 };
