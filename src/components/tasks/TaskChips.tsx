@@ -43,9 +43,10 @@ type TaskChipsProps = {
 	flushTaskChanges: () => void;
 	newTag: string;
 	setNewTag: (value: string) => void;
+	disabled?: boolean;
 };
 
-const TaskChips = ({ inputDomains, task, setOwner, setDueDate, setTags, flushTaskChanges, newTag, setNewTag }: TaskChipsProps): ReactElement => {
+const TaskChips = ({ inputDomains, task, setOwner, setDueDate, setTags, flushTaskChanges, newTag, setNewTag, disabled }: TaskChipsProps): ReactElement => {
 	const {
 		state,
 		owner,
@@ -79,6 +80,7 @@ const TaskChips = ({ inputDomains, task, setOwner, setDueDate, setTags, flushTas
 					}
 				}}
 				options={inputDomains.owners}
+				disabled={disabled}
 			/>
 		</Chip>
 	);
@@ -97,6 +99,7 @@ const TaskChips = ({ inputDomains, task, setOwner, setDueDate, setTags, flushTas
 				}}
 				placeholder={'No due date'}
 				onBlur={flushTaskChanges}
+				disabled={disabled}
 			/>
 		</Chip>
 	);
@@ -138,6 +141,7 @@ const TaskChips = ({ inputDomains, task, setOwner, setDueDate, setTags, flushTas
 						}
 					}}
 					options={inputDomains.tags}
+					disabled={disabled}
 				/>
 			</Chip>
 		);
@@ -170,6 +174,7 @@ const TaskChips = ({ inputDomains, task, setOwner, setDueDate, setTags, flushTas
 					}
 				}}
 				options={inputDomains.tags}
+				disabled={disabled}
 			/>
 		</Chip>
 	);

@@ -8,9 +8,10 @@ type DatePickerProps = {
 	value?: string;
 	onChange: (value: Date | null) => void;
 	onBlur: () => void;
+	disabled?: boolean;
 };
 
-const DatePicker = ({ placeholder, value, onChange, onBlur }: DatePickerProps): ReactElement => {
+const DatePicker = ({ placeholder, value, onChange, onBlur, disabled }: DatePickerProps): ReactElement => {
 	const id = useId();
 
 	return (
@@ -27,6 +28,7 @@ const DatePicker = ({ placeholder, value, onChange, onBlur }: DatePickerProps): 
 				className='date-picker-input'
 				calendarClassName='date-picker-calendar'
 				calendarStartDay={1}
+				disabled={disabled}
 			/>
 		</div>
 	);

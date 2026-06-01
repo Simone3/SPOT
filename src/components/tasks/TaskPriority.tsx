@@ -1,5 +1,5 @@
 import 'src/components/tasks/TaskPriority.css';
-import { useState, useId, useRef, type CSSProperties, type FocusEvent, type ReactElement, type ReactNode } from 'react';
+import { useState, useId, useRef, useEffect, type CSSProperties, type FocusEvent, type ReactElement, type ReactNode } from 'react';
 import { PriorityLowIcon } from 'src/components/icons/PriorityLowIcon';
 import { PriorityUrgentIcon } from 'src/components/icons/PriorityUrgentIcon';
 import { PriorityHighIcon } from 'src/components/icons/PriorityHighIcon';
@@ -12,14 +12,21 @@ type TaskPriorityProps = {
 	value: TaskPriorityValue;
 	onChange: (value: TaskPriorityValue) => void;
 	onBlur: () => void;
+	disabled?: boolean;
 };
 
-const TaskPriority = ({ priorityDomain, value, onChange, onBlur }: TaskPriorityProps): ReactElement => {
+const TaskPriority = ({ priorityDomain, value, onChange, onBlur, disabled }: TaskPriorityProps): ReactElement => {
 	const id = useId();
 
 	const [ open, setOpen ] = useState(false);
 
 	const containerRef = useRef<HTMLDivElement>(null);
+
+	useEffect(() => {
+		if(disabled) {
+			setOpen(false);
+		}
+	}, [ disabled ]);
 
 	const getPriorityIcon = (priority: TaskPriorityValue, addColorStyle: boolean): ReactNode => {
 		const style: CSSProperties | undefined = addColorStyle ? { color: `var(--colors-priority-${priority.toLowerCase()})` } : undefined;
@@ -38,10 +45,15 @@ const TaskPriority = ({ priorityDomain, value, onChange, onBlur }: TaskPriorityP
 	};
 
 	const onCurrentValueClick = (): void => {
-		setOpen(true);
+		if(!disabled) {
+			setOpen(true);
+		}
 	};
 
 	const onNewValueClick = (newValue: TaskPriorityValue): void => {
+		if(disabled) {
+			return;
+		}
 		if(value !== newValue) {
 			onChange(newValue);
 		}
@@ -68,7 +80,8 @@ const TaskPriority = ({ priorityDomain, value, onChange, onBlur }: TaskPriorityP
 						<div
 							key={domain.key}
 							className='task-priority-picker-option'
-							tabIndex={0}
+							tabIndex={disabled ? -1 : 0}
+							aria-disabled={disabled}
 							onBlur={onOptionBlur}
 							onClick={open ?
 								() => {

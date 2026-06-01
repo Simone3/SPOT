@@ -10,14 +10,16 @@ jest.mock('src/components/inputs/TextArea', () => {
 		value: string;
 		onChange: (value: string) => void;
 		onBlur: () => void;
+		disabled?: boolean;
 	};
 
-	const MockTextArea = ({ placeholder, value, onChange, onBlur }: MockTextAreaProps): ReactElement => {
+	const MockTextArea = ({ placeholder, value, onChange, onBlur, disabled }: MockTextAreaProps): ReactElement => {
 		const React = jest.requireActual('react') as typeof import('react');
 
 		return React.createElement('textarea', {
 			'aria-label': placeholder || 'Task text',
 			value,
+			readOnly: disabled,
 			onChange: (event: ChangeEvent<HTMLTextAreaElement>) => {
 				onChange(event.target.value);
 			},
@@ -111,7 +113,7 @@ describe('TasksList', () => {
 		expect(props.onAddNewTask).toHaveBeenCalledTimes(1);
 	});
 
-	test('saves task edits, completes tasks, and confirms deletion', () => {
+	test('saves task edits and delays completion while disabling secondary controls', () => {
 		jest.useFakeTimers();
 		const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 		const task = makeTask({
@@ -140,14 +142,38 @@ describe('TasksList', () => {
 		props.onUpdateTask.mockClear();
 
 		const completionCheckbox = screen.getByRole('checkbox');
+		const priorityPicker = taskContainer.querySelector('.task-priority-picker-option');
+		const dragHandle = screen.getByLabelText('Drag task');
+		const deleteButton = taskContainer.querySelector('.delete-button');
+
+		if(!priorityPicker || !deleteButton) {
+			throw Error('Task controls not found');
+		}
+
 		fireEvent.click(completionCheckbox);
 
 		expect(taskContainer).toHaveClass('task-container-state-changing');
+		expect(taskText).toHaveAttribute('readonly');
+		expect(screen.getByPlaceholderText('Me')).toBeDisabled();
+		expect(screen.getByPlaceholderText('No due date')).toBeDisabled();
+		expect(screen.getByPlaceholderText('Add tag...')).toBeDisabled();
+		expect(priorityPicker).toHaveAttribute('aria-disabled', 'true');
+		expect(dragHandle).toBeDisabled();
+		expect(deleteButton).toHaveAttribute('aria-disabled', 'true');
+		fireEvent.click(deleteButton);
+		expect(screen.queryByRole('button', { name: 'Delete Task' })).not.toBeInTheDocument();
 		expect(props.onUpdateTask).not.toHaveBeenCalled();
 
 		fireEvent.click(completionCheckbox);
 
 		expect(taskContainer).not.toHaveClass('task-container-state-changing');
+		expect(taskText).not.toHaveAttribute('readonly');
+		expect(screen.getByPlaceholderText('Me')).not.toBeDisabled();
+		expect(screen.getByPlaceholderText('No due date')).not.toBeDisabled();
+		expect(screen.getByPlaceholderText('Add tag...')).not.toBeDisabled();
+		expect(priorityPicker).toHaveAttribute('aria-disabled', 'false');
+		expect(dragHandle).not.toBeDisabled();
+		expect(deleteButton).toHaveAttribute('aria-disabled', 'false');
 		act(() => {
 			jest.advanceTimersByTime(3000);
 		});
@@ -169,6 +195,14 @@ describe('TasksList', () => {
 				return String(value).includes('Cannot update a component');
 			});
 		})).toBe(false);
+	});
+
+	test('confirms deletion', () => {
+		const task = makeTask({
+			text: 'Original task',
+			visible: true
+		});
+		const { container, props } = renderTasksList([ task ]);
 
 		const taskActions = container.querySelector('.task-actions');
 		if(!taskActions) {

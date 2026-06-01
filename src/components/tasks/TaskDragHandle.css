@@ -33,6 +33,11 @@
 	cursor: grabbing;
 }
 
+.task-drag-handle:disabled {
+	cursor: default;
+	opacity: 0.45;
+}
+
 .task-drag-handle svg {
 	display: block;
 	width: 17px;

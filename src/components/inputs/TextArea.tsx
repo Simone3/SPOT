@@ -8,9 +8,10 @@ type TextAreaProps = {
 	value: string;
 	onChange: (value: string) => void;
 	onBlur: () => void;
+	disabled?: boolean;
 };
 
-const TextArea = ({ placeholder, value, onChange, onBlur }: TextAreaProps): ReactElement => {
+const TextArea = ({ placeholder, value, onChange, onBlur, disabled }: TextAreaProps): ReactElement => {
 	return (
 		<div className={`textarea-container`}>
 			<MDXEditor
@@ -21,6 +22,7 @@ const TextArea = ({ placeholder, value, onChange, onBlur }: TextAreaProps): Reac
 				onBlur={onBlur}
 				plugins={[]}
 				spellCheck={false}
+				readOnly={disabled}
 			/>
 		</div>
 	);

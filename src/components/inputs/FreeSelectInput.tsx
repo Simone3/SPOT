@@ -1,5 +1,5 @@
 import 'src/components/inputs/FreeSelectInput.css';
-import { useState, useId, useRef, type FocusEvent, type ReactElement } from 'react';
+import { useState, useId, useRef, useEffect, type FocusEvent, type ReactElement } from 'react';
 
 type FreeSelectOption = {
 	key: string;
@@ -33,8 +33,15 @@ const FreeSelectInput = (props: FreeSelectInputProps): ReactElement => {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const inputRef = useRef<HTMLInputElement>(null);
 
+	useEffect(() => {
+		if(disabled) {
+			setOpen(false);
+			setChangedAfterOpen(false);
+		}
+	}, [ disabled ]);
+
 	const doOpen = (): void => {
-		if(!open) {
+		if(!disabled && !open) {
 			setOpen(true);
 		}
 	};

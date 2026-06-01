@@ -11,9 +11,10 @@ type TaskActionsProps = {
 	onChangeState: () => void;
 	onDelete: () => void;
 	dragHandle?: ReactNode;
+	disableSecondaryActions?: boolean;
 };
 
-const TaskActions = ({ task, onChangeState, onDelete, dragHandle }: TaskActionsProps): ReactElement => {
+const TaskActions = ({ task, onChangeState, onDelete, dragHandle, disableSecondaryActions }: TaskActionsProps): ReactElement => {
 	const {
 		state
 	} = task;
@@ -26,7 +27,7 @@ const TaskActions = ({ task, onChangeState, onDelete, dragHandle }: TaskActionsP
 			<Checkbox
 				value={state === 'COMPLETED'}
 				onChange={onChangeState}/>
-			<Clickable className='delete-button' onClick={() => {
+			<Clickable className='delete-button' disabled={disableSecondaryActions} onClick={() => {
 				setConfirmOpen(true);
 			}}>
 				<DeleteIcon/>

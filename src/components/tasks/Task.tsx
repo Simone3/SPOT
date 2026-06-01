@@ -52,7 +52,6 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFrom
 
 	// Timer that flushes changes back to the parent component with a delay
 	const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-	const stateChangeFlushDeadlineRef = useRef<number | null>(null);
 
 	// Sortable hook
 	const { ref, handleRef } = useSortable({ id, index });
@@ -71,7 +70,6 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFrom
 		if(Object.keys(changedValuesRef.current).length !== 0) {
 			const changesToFlush = changedValuesRef.current;
 			changedValuesRef.current = {};
-			stateChangeFlushDeadlineRef.current = null;
 			onSaveRef.current(changesToFlush);
 		}
 	}, [ clearFlushTimer ]);
@@ -96,18 +94,14 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFrom
 			changedValues[key] = newValue;
 		}
 		changedValuesRef.current = changedValues;
-
-		if(key === 'state') {
-			stateChangeFlushDeadlineRef.current = newValue === taskFromProps.state ? null : Date.now() + STATE_CHANGE_DELAY_MS;
-		}
+		const isNewStatePending = key === 'state' && newValue !== taskFromProps.state;
 
 		setInternalTask(newTask);
 		if(flush) {
 			flushTaskChanges();
 		}
 		else if(Object.keys(changedValuesRef.current).length !== 0) {
-			const flushDelayMs = stateChangeFlushDeadlineRef.current === null ? FLUSH_DELAY_MS : Math.max(0, stateChangeFlushDeadlineRef.current - Date.now());
-			restartFlushTimer(flushDelayMs);
+			restartFlushTimer(isNewStatePending ? STATE_CHANGE_DELAY_MS : FLUSH_DELAY_MS);
 		}
 		else {
 			clearFlushTimer();
@@ -136,11 +130,12 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFrom
 	if(state) {
 		containerClass += ` task-container-${state.toLowerCase()}`;
 	}
-	if(state !== taskFromProps.state) {
+	const isStateChangePending = state !== taskFromProps.state;
+	if(isStateChangePending) {
 		containerClass += ' task-container-state-changing';
 	}
 
-	const dragHandle = showDragHandle ? <TaskDragHandle ref={handleRef}/> : undefined;
+	const dragHandle = showDragHandle ? <TaskDragHandle ref={handleRef} disabled={isStateChangePending}/> : undefined;
 	const containerStyle: TaskContainerStyle = {
 		borderLeftColor: `var(--colors-priority-${internalTask.priority.toLowerCase()})`,
 		'--task-state-change-delay': `${STATE_CHANGE_DELAY_MS}ms`
@@ -151,6 +146,7 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFrom
 			<TaskPriority
 				priorityDomain={inputDomains.priorities}
 				value={priority}
+				disabled={isStateChangePending}
 				onChange={(value) => {
 					setTaskValue('priority', value, false);
 				}}
@@ -164,6 +160,7 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFrom
 						setTaskValue('text', value, false);
 					}}
 					onBlur={flushTaskChanges}
+					disabled={isStateChangePending}
 				/>
 				<TaskChips
 					inputDomains={inputDomains}
@@ -174,6 +171,7 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFrom
 					flushTaskChanges={flushTaskChanges}
 					newTag={newTag}
 					setNewTag={setNewTag}
+					disabled={isStateChangePending}
 				/>
 			</div>
 			<TaskActions
@@ -184,6 +182,7 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFrom
 				}}
 				onDelete={onDelete}
 				dragHandle={dragHandle}
+				disableSecondaryActions={isStateChangePending}
 			/>
 		</div>
 	);
