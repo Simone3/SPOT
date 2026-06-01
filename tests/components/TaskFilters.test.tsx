@@ -84,7 +84,7 @@ describe('TaskFilters', () => {
 			</DatesContext.Provider>
 		);
 
-		fireEvent.change(screen.getByLabelText('Filter content'), {
+		fireEvent.change(screen.getByLabelText('Content'), {
 			target: {
 				value: 'report'
 			}

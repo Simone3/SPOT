@@ -2,6 +2,7 @@
 .task-container {
 	--task-priority-border-width: 6px;
 	--task-priority-border-offset: 3px;
+	--task-flush-indicator-height: 2px;
 	display: flex;
 	padding: 10px 10px;
 	margin: 30px 20px;
@@ -10,6 +11,50 @@
 	border: 1px solid var(--colors-background-secondary);
 	border-left: var(--task-priority-border-width) solid transparent;
 	border-radius: 10px;
+}
+
+.task-flush-feedback {
+	pointer-events: none;
+	position: absolute;
+	inset: 0;
+	border-radius: inherit;
+}
+
+.task-flush-progress,
+.task-flush-feedback-flushed::after {
+	position: absolute;
+	left: calc(var(--task-priority-border-width) + 4px);
+	right: 10px;
+	bottom: 0;
+	height: var(--task-flush-indicator-height);
+	border-radius: 999px;
+	background-color: var(--colors-accent-primary);
+}
+
+.task-flush-progress {
+	transform: scaleX(0);
+	transform-origin: left center;
+	opacity: 0.75;
+	animation: task-flush-progress var(--task-flush-delay) linear forwards;
+}
+
+.task-flush-feedback-flushed::after {
+	content: '';
+	transform: scaleX(1);
+	opacity: 0.9;
+	animation: task-flush-complete 700ms ease-out forwards;
+}
+
+.task-flush-saved-dot {
+	position: absolute;
+	right: 13px;
+	bottom: 7px;
+	width: 5px;
+	height: 5px;
+	border-radius: 50%;
+	background-color: var(--colors-accent-primary);
+	box-shadow: 0 0 10px var(--colors-accent-primary);
+	animation: task-flush-saved-dot 700ms ease-out forwards;
 }
 
 .task-container-completed, .task-container-completed ._placeholder_sects_1101 {
@@ -24,4 +69,45 @@
 	min-width: 0;
 	padding-left: 15px;
 	padding-top: 5px;
+}
+
+@keyframes task-flush-progress {
+	from {
+		transform: scaleX(0);
+	}
+	to {
+		transform: scaleX(1);
+	}
+}
+
+@keyframes task-flush-complete {
+	0% {
+		opacity: 0.9;
+	}
+	100% {
+		opacity: 0;
+	}
+}
+
+@keyframes task-flush-saved-dot {
+	0% {
+		opacity: 0;
+		transform: scale(0.7);
+	}
+	25% {
+		opacity: 1;
+		transform: scale(1);
+	}
+	100% {
+		opacity: 0;
+		transform: scale(1.35);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.task-flush-progress,
+	.task-flush-feedback-flushed::after,
+	.task-flush-saved-dot {
+		animation-duration: 1ms;
+	}
 }

@@ -125,11 +125,20 @@ describe('TasksList', () => {
 			}
 		});
 
+		const taskContainer = container.querySelector('.task-container');
+		if(!taskContainer) {
+			throw Error('Task container not found');
+		}
+
+		expect(taskContainer.querySelector('.task-flush-feedback-pending')).toBeInTheDocument();
+		expect(taskContainer.querySelector('.task-flush-progress')).toBeInTheDocument();
 		expect(props.onUpdateTask).not.toHaveBeenCalled();
 
 		fireEvent.blur(taskText);
 
 		expect(props.onUpdateTask).toHaveBeenCalledWith(task, { text: 'Updated task' });
+		expect(taskContainer.querySelector('.task-flush-feedback-flushed')).toBeInTheDocument();
+		expect(taskContainer.querySelector('.task-flush-saved-dot')).toBeInTheDocument();
 		props.onUpdateTask.mockClear();
 
 		fireEvent.click(screen.getByRole('checkbox'));
