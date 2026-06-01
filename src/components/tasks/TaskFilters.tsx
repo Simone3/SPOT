@@ -34,7 +34,7 @@ const TaskFilters = ({ domains, filters, onFilterChange, onResetDefaultFilters }
 			/>
 			<div className='task-filters'>
 				<TextInput
-					label='Filter content'
+					label='Content'
 					placeholder='Search...'
 					value={filters.text}
 					onChange={(value) => {
@@ -42,7 +42,7 @@ const TaskFilters = ({ domains, filters, onFilterChange, onResetDefaultFilters }
 					}}/>
 				{domains.priorities.length > 0 &&
 					<ButtonsSelect
-						label='Filter priorities'
+						label='Priorities'
 						allowMultiSelect={true}
 						value={filters.priorities}
 						onChange={(value) => {
@@ -52,7 +52,7 @@ const TaskFilters = ({ domains, filters, onFilterChange, onResetDefaultFilters }
 				}
 				{domains.owners.length > 0 &&
 					<ButtonsSelect
-						label='Filter owners'
+						label='Owners'
 						allowMultiSelect={true}
 						value={filters.owners}
 						onChange={(value) => {
@@ -62,7 +62,7 @@ const TaskFilters = ({ domains, filters, onFilterChange, onResetDefaultFilters }
 				}
 				{domains.dueDates.length > 0 &&
 					<ButtonsSelect
-						label='Filter due dates'
+						label='Due dates'
 						allowMultiSelect={true}
 						value={filters.dueDates}
 						onChange={(value) => {
@@ -75,7 +75,7 @@ const TaskFilters = ({ domains, filters, onFilterChange, onResetDefaultFilters }
 				}
 				{domains.tags.length > 0 &&
 					<ButtonsSelect
-						label='Filter tags'
+						label='Tags'
 						allowMultiSelect={true}
 						value={filters.tags}
 						onChange={(value) => {

@@ -1,15 +1,8 @@
 
-try whole (smaller rounded) border and buttons on right corners
-
-# refactor
-manual sort
-	sort handle ui
-	disable sort for completed
-drag and drop in filtered list?
-filters
-	"me" and "none" filters displayed only if there are actually tasks with empty values?
-	default filter with "me" as owner?
 is it ok that when you complete a task it immediately disappears? flush changes when exit hovering task? or timed?
+
+delete confirm popup ui
+
 
 # wire in electron main process: save to disk
 careful with sort positions, especially when they change in more than one task at a time (manual sort recompute + re-sort by urgency)

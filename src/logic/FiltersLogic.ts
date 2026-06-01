@@ -9,7 +9,7 @@ import type { TaskFilters } from 'src/types/FilterTypes';
 export const getInitialFilters = (): TaskFilters => {
 	return {
 		text: '',
-		owners: [],
+		owners: [ '' ],
 		dueDates: [],
 		priorities: [],
 		tags: [],
