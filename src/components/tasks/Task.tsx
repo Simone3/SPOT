@@ -53,8 +53,14 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFrom
 	// Timer that flushes changes back to the parent component with a delay
 	const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+	const isStateChangePending = state !== taskFromProps.state;
+
 	// Sortable hook
-	const { ref, handleRef } = useSortable({ id, index });
+	const { ref, handleRef } = useSortable({
+		id,
+		index,
+		disabled: isStateChangePending
+	});
 
 	// Helper to stop the flush timer
 	const clearFlushTimer = useCallback((): void => {
@@ -130,7 +136,6 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFrom
 	if(state) {
 		containerClass += ` task-container-${state.toLowerCase()}`;
 	}
-	const isStateChangePending = state !== taskFromProps.state;
 	if(isStateChangePending) {
 		containerClass += ' task-container-state-changing';
 	}

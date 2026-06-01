@@ -51,14 +51,18 @@ jest.mock('@dnd-kit/react/sortable', () => {
 		isSortable: () => {
 			return false;
 		},
-		useSortable: () => {
+		useSortable: jest.fn(() => {
 			return {
 				ref: () => {},
 				handleRef: () => {}
 			};
-		}
+		})
 	};
 });
+
+const getUseSortableMock = (): jest.Mock => {
+	return jest.requireMock('@dnd-kit/react/sortable').useSortable as jest.Mock;
+};
 
 const renderTasksList = (tasks: Task[]) => {
 	const props = {
@@ -83,8 +87,18 @@ const renderTasksList = (tasks: Task[]) => {
 };
 
 describe('TasksList', () => {
+	beforeEach(() => {
+		getUseSortableMock().mockImplementation(() => {
+			return {
+				ref: () => {},
+				handleRef: () => {}
+			};
+		});
+	});
+
 	afterEach(() => {
 		jest.useRealTimers();
+		getUseSortableMock().mockClear();
 		jest.restoreAllMocks();
 	});
 
@@ -153,6 +167,9 @@ describe('TasksList', () => {
 		fireEvent.click(completionCheckbox);
 
 		expect(taskContainer).toHaveClass('task-container-state-changing');
+		expect(getUseSortableMock()).toHaveBeenLastCalledWith(expect.objectContaining({
+			disabled: true
+		}));
 		expect(taskText).toHaveAttribute('readonly');
 		expect(screen.getByPlaceholderText('Me')).toBeDisabled();
 		expect(screen.getByPlaceholderText('No due date')).toBeDisabled();
@@ -167,6 +184,9 @@ describe('TasksList', () => {
 		fireEvent.click(completionCheckbox);
 
 		expect(taskContainer).not.toHaveClass('task-container-state-changing');
+		expect(getUseSortableMock()).toHaveBeenLastCalledWith(expect.objectContaining({
+			disabled: false
+		}));
 		expect(taskText).not.toHaveAttribute('readonly');
 		expect(screen.getByPlaceholderText('Me')).not.toBeDisabled();
 		expect(screen.getByPlaceholderText('No due date')).not.toBeDisabled();
