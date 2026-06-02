@@ -1,14 +1,15 @@
 # SPOT Documentation
 
-SPOT is the Simple Planner & Organizer Tool: a small Electron + React task manager intended to run on macOS, Windows, and Linux. The project is still in progress. The current development focus is the React web application; Electron exists as a shell but persistence and database integration are not wired yet.
+SPOT is the Simple Planner & Organizer Tool: a small Electron + React task manager intended to run on macOS, Windows, and Linux. The project is still in progress. The React web application is the current working surface, and the next major focus is wiring the Electron shell to persistent task storage.
 
 ## Current Status
 
-- The React app is the primary working surface.
+- The React app is the primary working surface and is considered done for now.
 - Task data is currently loaded from in-memory sample data in `src/logic/TaskStateLogic.ts`.
 - Task changes are held in React state only. They are not persisted to disk or a database.
 - The Electron main process opens `http://localhost:3000`, so the React dev server must be running when using the Electron shell.
 - The Notes, Tags, and Settings routes exist as placeholder pages.
+- The planned persistence architecture is one SQLite database as the source of truth plus one append-only `changes.ndjson` audit log.
 
 ## How To Run
 
@@ -107,8 +108,345 @@ Known Electron work still pending:
 
 - Load the built React app in packaged mode.
 - Replace in-memory sample data with persistent storage.
-- Decide on file or database storage.
+- Implement the planned SQLite database and `changes.ndjson` audit log.
 - Add robust save, reload, error handling, and shutdown behavior.
+
+## Persistence Plan
+
+The planned persistence architecture uses a single SQLite database as the source of truth and an append-only `changes.ndjson` file as an external audit trail. SQLite owns normal application reads and writes. The audit log is a black-box recorder for debugging, recovery inspection, and external traceability; it is not part of the normal startup read path.
+
+Reasoning:
+
+- A single SQLite database keeps task mutations transactionally simple. Splitting active and completed tasks across different database files would reduce some file churn, but completing or restoring a task would become a cross-file mutation.
+- SQLite can attach multiple database files, but cross-file atomicity depends on journaling mode. In WAL mode, changes remain atomic inside each database file, not necessarily across all attached files as a set.
+- Google Drive or similar filesystem sync should be treated as backup or cross-device handoff, not live collaborative database replication.
+- The audit log should be append-only so each user command produces a small external record, while SQLite remains the durable canonical state.
+- SQLite and a filesystem append cannot be made one perfectly atomic operation without extra machinery. To bridge that gap, the database should include a `change_events` outbox table. Task changes and audit metadata commit together in SQLite, then unflushed outbox rows are appended to `changes.ndjson` in sequence.
+
+Storage files:
+
+- `spot.sqlite`: the canonical task database.
+- `changes.ndjson`: write-only audit log with one JSON event per line.
+- Optional future files may include SQLite journal/WAL sidecar files, depending on the selected SQLite journal mode.
+
+Initial storage location:
+
+- Use Electron's app data location through the main process, with files kept in an app-owned subdirectory.
+- A later settings feature can allow the user to choose a Google Drive, OneDrive, Dropbox, or other synced folder.
+
+Core invariants:
+
+- React keeps an in-memory task copy for responsiveness, but persistence owns task durability.
+- Every task mutation goes through the Electron main process.
+- The renderer never gets broad filesystem or SQLite access.
+- Each user command maps to exactly one SQLite transaction.
+- Bulk operations, such as sorting active tasks by importance, are one command and one transaction.
+- Normal startup reads tasks from SQLite, not from `changes.ndjson`.
+- `changes.ndjson` lines are appended in `change_events.sequence` order.
+- If the SQLite transaction fails, React must not treat the task change as saved.
+- If the SQLite transaction succeeds but audit-log flushing fails, the task change remains valid and the unflushed event remains queued in SQLite.
+
+Failure model:
+
+- Database write failure: reject the command, do not update React state as persisted, and show a user-facing storage error.
+- Audit-log flush failure: keep the app usable, mark audit logging as unhealthy, and retry pending events on startup and after later successful mutations.
+- Startup audit-log flush failure: load tasks from SQLite, but show a warning that external audit logging is behind.
+- Storage folder unavailable: fail startup or enter a clear read-only/error state, depending on the final UI decision.
+
+Audit log format:
+
+```json
+{"sequence":1,"eventId":"...","createdAt":"2026-06-02T12:00:00.000Z","kind":"task.updated","payload":{"taskId":"...","changedFields":["text"],"before":{"text":"Old"},"after":{"text":"New"}}}
+```
+
+Audit event kinds:
+
+- `task.created`
+- `task.updated`
+- `task.deleted`
+- `task.completed`
+- `task.restored`
+- `tasks.reordered`
+- `tasks.imported`
+
+### Persistence Implementation Steps
+
+Each step below is intended to be self-contained, committed separately, and manually reviewable before the next step starts.
+
+1. Document and freeze the persistence contract.
+
+   Scope:
+
+   - Keep this persistence plan current.
+   - Define the high-level command names and expected failure behavior.
+   - Do not change runtime behavior yet.
+
+   Validation:
+
+   - Read `DOCUMENTATION.md` and `AGENTS.md` for consistency.
+   - No code validation is required unless source files change.
+
+   Commit boundary:
+
+   - Documentation-only commit.
+
+2. Add main-process storage module skeleton.
+
+   Scope:
+
+   - Add an Electron main-process storage module with placeholder methods for loading tasks, mutating tasks, flushing audit events, and reporting storage status.
+   - Keep methods unimplemented or backed by temporary no-op behavior that is not wired to React yet.
+   - Define local command/result types in the owning files where practical.
+   - Do not add new dependencies in this step.
+
+   Validation:
+
+   - `npm run lint`
+   - `npm run typecheck`
+   - `npm test`
+
+   Commit boundary:
+
+   - New module structure compiles and tests still pass, but app behavior is unchanged.
+
+3. Add SQLite open, schema migration, and task row mapping.
+
+   Scope:
+
+   - Open or create `spot.sqlite` from the main process.
+   - Create migration support from version `1`.
+   - Create `tasks`, `change_events`, and `schema_migrations` tables.
+   - Add mapping between SQLite rows and `Task`.
+   - Add focused tests for serialization of tags, dates, booleans, and completion dates.
+
+   Schema:
+
+   - `tasks.id TEXT PRIMARY KEY`
+   - `tasks.text TEXT NOT NULL`
+   - `tasks.state TEXT NOT NULL`
+   - `tasks.priority TEXT NOT NULL`
+   - `tasks.owner TEXT`
+   - `tasks.due_date TEXT`
+   - `tasks.tags_json TEXT NOT NULL`
+   - `tasks.sort_position INTEGER NOT NULL`
+   - `tasks.visible INTEGER NOT NULL`
+   - `tasks.completion_date TEXT`
+   - `tasks.created_at TEXT NOT NULL`
+   - `tasks.updated_at TEXT NOT NULL`
+   - `change_events.sequence INTEGER PRIMARY KEY AUTOINCREMENT`
+   - `change_events.event_id TEXT NOT NULL UNIQUE`
+   - `change_events.created_at TEXT NOT NULL`
+   - `change_events.kind TEXT NOT NULL`
+   - `change_events.payload_json TEXT NOT NULL`
+   - `change_events.flushed_to_log INTEGER NOT NULL DEFAULT 0`
+   - `schema_migrations.version INTEGER PRIMARY KEY`
+   - `schema_migrations.applied_at TEXT NOT NULL`
+
+   Validation:
+
+   - `npm run lint`
+   - `npm run typecheck`
+   - `npm test`
+
+   Commit boundary:
+
+   - The database can be initialized and task rows can be mapped, but React still uses sample data.
+
+4. Implement task load and read-only storage status.
+
+   Scope:
+
+   - Implement `loadTasks()` against SQLite.
+   - Return tasks plus storage status.
+   - Do not wire React startup yet.
+   - Add tests for empty database loading and stored task loading.
+
+   Validation:
+
+   - `npm run lint`
+   - `npm run typecheck`
+   - `npm test`
+
+   Commit boundary:
+
+   - Main-process storage can read persisted tasks, but app behavior is still unchanged.
+
+5. Implement write commands and SQLite transactions.
+
+   Scope:
+
+   - Implement task create, update, delete, complete, restore, and reorder commands.
+   - Each command runs in one SQLite transaction.
+   - Each command inserts exactly one `change_events` row inside the same transaction.
+   - Add tests for successful writes, multi-task reorder, and rollback on failure.
+
+   Validation:
+
+   - `npm run lint`
+   - `npm run typecheck`
+   - `npm test`
+
+   Commit boundary:
+
+   - Storage commands mutate SQLite correctly and queue audit events, but no audit file is written yet and React is still unwired.
+
+6. Implement `changes.ndjson` audit flushing.
+
+   Scope:
+
+   - Append unflushed `change_events` rows to `changes.ndjson` in sequence order.
+   - Mark events as flushed only after the append succeeds.
+   - Retry pending events on startup and after successful write commands.
+   - Keep audit-log failure separate from database write failure.
+   - Add tests for successful flush, failed flush, retained pending events, and retry behavior.
+
+   Validation:
+
+   - `npm run lint`
+   - `npm run typecheck`
+   - `npm test`
+
+   Commit boundary:
+
+   - SQLite remains canonical and audit logging is recoverable, but React is still unwired.
+
+7. Add preload and IPC API.
+
+   Scope:
+
+   - Register main-process IPC handlers for storage commands.
+   - Expose a narrow `window.spotStorage` API through `preload.js`.
+   - Add renderer-side TypeScript declarations for the exposed API.
+   - Do not expose raw `ipcRenderer`, filesystem, or SQLite objects.
+
+   Validation:
+
+   - `npm run lint`
+   - `npm run typecheck`
+   - `npm test`
+
+   Commit boundary:
+
+   - React can call the storage API, but existing React data flow is not migrated yet.
+
+8. Wire React startup loading.
+
+   Scope:
+
+   - Replace sample task initialization with `window.spotStorage.loadTasks()` when running under Electron.
+   - Keep a development fallback for the browser-only React dev server if needed.
+   - Represent loading, loaded, and startup-error states in the task page.
+   - Do not migrate all mutations yet.
+
+   Validation:
+
+   - `npm run lint`
+   - `npm run typecheck`
+   - `npm test`
+   - Manual smoke check in React-only mode.
+   - Manual smoke check in Electron mode.
+
+   Commit boundary:
+
+   - Startup reads persisted data, while mutations may still use the existing in-memory flow until later steps.
+
+9. Wire React task mutations one group at a time.
+
+   Scope:
+
+   - Migrate add, edit, delete, complete, restore, manual reorder, and importance sort to storage commands.
+   - Prefer updating React state after persistence success for the first implementation.
+   - Keep existing task/domain/filter logic as the local state update mechanism after a successful command.
+   - Add or adjust smoke tests for critical task flows.
+
+   Validation:
+
+   - `npm run lint`
+   - `npm run typecheck`
+   - `npm test`
+   - Manual smoke check in Electron mode.
+
+   Commit boundary:
+
+   - All task mutations persist before React treats them as saved.
+
+10. Add user-facing storage health feedback.
+
+   Scope:
+
+   - Show database write failures as blocking task-save errors.
+   - Show audit-log failures as non-blocking warnings.
+   - Expose enough storage status for the UI to tell the difference.
+   - Avoid noisy UI when storage is healthy.
+
+   Validation:
+
+   - `npm run lint`
+   - `npm run typecheck`
+   - `npm test`
+   - Manual smoke check for simulated database and audit-log failures.
+
+   Commit boundary:
+
+   - Users can tell whether tasks are saved and whether the external audit log is healthy.
+
+11. Add shutdown and pending-write handling.
+
+   Scope:
+
+   - Ensure in-flight commands settle or fail clearly before app shutdown.
+   - Flush pending audit events when practical during shutdown.
+   - Do not rely on delayed batching for task durability.
+   - If future batching is introduced, this step must be revisited before batching ships.
+
+   Validation:
+
+   - `npm run lint`
+   - `npm run typecheck`
+   - `npm test`
+   - Manual quit/reopen smoke check.
+
+   Commit boundary:
+
+   - Quitting and reopening the app preserves all committed task mutations.
+
+12. Update packaging and production loading.
+
+   Scope:
+
+   - Load the built React app in packaged mode.
+   - Keep development loading from `http://localhost:3000` convenient.
+   - Verify storage paths work in development and packaged layouts.
+
+   Validation:
+
+   - `npm run lint`
+   - `npm run typecheck`
+   - `npm test`
+   - `npm run build-react`
+   - Package or make smoke check when practical.
+
+   Commit boundary:
+
+   - Electron can run the persisted task app outside the React dev server.
+
+13. Final persistence documentation pass.
+
+   Scope:
+
+   - Update this document with the implemented storage paths, schema, IPC API, failure behavior, and test coverage.
+   - Update `AGENTS.md` only if contributor instructions changed.
+   - Keep `README.md` and `TODO.md` untouched.
+
+   Validation:
+
+   - `npm run lint`
+   - `npm run typecheck`
+   - `npm test`
+
+   Commit boundary:
+
+   - Documentation matches the implemented persistence layer.
 
 ## Task Data Model
 
@@ -382,7 +720,7 @@ npm test
 Future testing priorities:
 
 - broader interaction coverage as task editing and drag-and-drop behavior are polished
-- integration coverage for persistence once the Electron/storage layer exists
+- integration coverage for the planned SQLite and `changes.ndjson` persistence layer once it exists
 
 ## Development Rules
 
@@ -402,11 +740,11 @@ Future testing priorities:
 
 The most important remaining work is:
 
+- Implement the planned SQLite database and `changes.ndjson` audit log.
 - Add persistence and Electron-shell integration tests once storage exists.
 - Improve accessibility and focus behavior in reusable inputs and clickables.
 - Continue polishing drag-and-drop feedback as the task interaction model settles.
 - Make `DatesContextProvider` refresh date labels after midnight.
-- Decide and implement persistence in the Electron layer.
 - Replace sample data loading with real data loading.
 - Add error handling and user-facing save/reload feedback.
 - Finish Notes, Tags, and Settings pages when their scope is clear.
