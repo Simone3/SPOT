@@ -159,6 +159,7 @@ Operational log format:
 
 ```json
 {"createdAt":"2026-06-02T12:00:00.000Z","type":"react.command","command":"task.update","payload":{"taskId":"...","change":{"text":"New"}}}
+{"createdAt":"2026-06-02T12:00:00.001Z","type":"react.command","command":"tasks.updateMany","payload":{"reason":"manual-reorder","updates":[{"taskId":"...","change":{"sortPosition":1000}},{"taskId":"...","change":{"sortPosition":2000}}]}}
 {"createdAt":"2026-06-02T12:00:00.003Z","type":"sql.query","query":"UPDATE tasks SET text = ? WHERE id = ?","durationMs":2.4,"result":"success"}
 ```
 
@@ -167,11 +168,11 @@ React command names:
 - `task.create`
 - `task.update`
 - `task.delete`
-- `tasks.reorder`
+- `tasks.updateMany`
 
 Completing and restoring tasks are represented as `task.update` commands because they update `state` and `completionDate`.
 
-Reordering is represented as `tasks.reorder` because one user action can update the `sortPosition` of multiple tasks in one transaction and one log command.
+Bulk task updates are represented as `tasks.updateMany` because one user action can update multiple tasks in one transaction and one log command. Manual reorder and sort by importance use `tasks.updateMany` with a `reason`, such as `manual-reorder` or `importance-sort`.
 
 SQL log entries:
 
@@ -289,10 +290,11 @@ Each step below is intended to be self-contained, committed separately, and manu
 
    Scope:
 
-   - Implement task create, update, delete, and reorder commands.
+   - Implement task create, update, delete, and bulk update commands.
    - Represent complete and restore as task update commands.
+   - Represent manual reorder and sort by importance as `tasks.updateMany` commands.
    - Each command runs in one SQLite transaction.
-   - Add tests for successful writes, multi-task reorder, and rollback on failure.
+   - Add tests for successful writes, multi-task updates, and rollback on failure.
 
    Validation:
 
@@ -372,6 +374,7 @@ Each step below is intended to be self-contained, committed separately, and manu
    Scope:
 
    - Migrate add, edit, delete, complete, restore, manual reorder, and importance sort to storage commands.
+   - Send manual reorder and importance sort through `tasks.updateMany`.
    - Update React state optimistically for normal task changes instead of waiting for a database acknowledgment.
    - Keep existing task/domain/filter logic as the local state update mechanism.
    - Reconcile optimistic local state and show a warning if the main process reports a database write failure.
