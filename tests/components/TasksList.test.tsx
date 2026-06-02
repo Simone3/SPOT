@@ -236,12 +236,9 @@ describe('TasksList', () => {
 
 		fireEvent.click(taskActions.children[2]);
 		const dialog = screen.getByRole('dialog', { name: 'Delete task?' });
-		const modalTaskText = dialog.querySelector('.confirm-modal-task-text');
-		if(!modalTaskText) {
-			throw Error('Modal task text not found');
-		}
 		expect(dialog).toBeInTheDocument();
-		expect(modalTaskText).toHaveTextContent('Original task');
+		expect(screen.getByText('This will permanently delete this task.')).toBeInTheDocument();
+		expect(dialog).not.toHaveTextContent('Original task');
 		expect(screen.getByText('This action cannot be undone.')).toBeInTheDocument();
 
 		fireEvent.click(screen.getByRole('button', { name: 'Keep Task' }));

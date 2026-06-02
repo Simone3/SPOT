@@ -8,6 +8,10 @@ body {
 	--colors-text-secondary: #BFBFBF;
 	--colors-accent-primary: #0099FF;
 	--colors-accent-secondary: #FFFFFF;
+	--colors-border-subtle: rgba(255, 255, 255, 0.08);
+	--colors-border-strong: rgba(255, 255, 255, 0.16);
+	--colors-modal-overlay: rgba(0, 0, 0, 0.65);
+	--colors-modal-shadow: rgba(0, 0, 0, 0.45);
 
 	/* Priorities */
 	--colors-priority-urgent: #FF0000;
@@ -16,7 +20,12 @@ body {
 	--colors-priority-low: #E5AE00;
 
 	/* States */
-	--colors-danger: #FF0000;
+	--colors-danger: #D92D3A;
+	--colors-danger-hover: #F0444F;
+	--colors-danger-text: #FF6B75;
+	--colors-danger-border: rgba(255, 107, 117, 0.35);
+	--colors-danger-background-muted: rgba(255, 107, 117, 0.12);
+	--colors-text-on-danger: #FFFFFF;
 	--colors-warn: #FFA500;
 	--colors-disabled: #808080;
 
@@ -38,4 +47,3 @@ body {
 	display: flex;
 	height: 100vh;
 }
-

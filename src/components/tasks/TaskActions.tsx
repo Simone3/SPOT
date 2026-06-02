@@ -16,10 +16,8 @@ type TaskActionsProps = {
 
 const TaskActions = ({ task, onChangeState, onDelete, dragHandle, disableSecondaryActions }: TaskActionsProps): ReactElement => {
 	const {
-		state,
-		text
+		state
 	} = task;
-	const taskText = text.trim();
 
 	const [ confirmOpen, setConfirmOpen ] = useState(false);
 
@@ -39,9 +37,7 @@ const TaskActions = ({ task, onChangeState, onDelete, dragHandle, disableSeconda
 					title='Delete task?'
 					content={
 						<>
-							<p>
-								This will permanently delete {taskText ? <>the task <span className='confirm-modal-task-text'>{taskText}</span></> : 'this task'}.
-							</p>
+							<p>This will permanently delete this task.</p>
 							<p>This action cannot be undone.</p>
 						</>
 					}

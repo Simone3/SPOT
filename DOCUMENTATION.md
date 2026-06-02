@@ -349,10 +349,11 @@ The app uses plain CSS files next to components. Global variables live in `src/i
 Theme variables include:
 
 - background colors
+- border, overlay, and shadow colors
 - text colors
 - accent colors
 - priority colors
-- danger, warning, and disabled colors
+- danger variants, warning, and disabled colors
 - the Inter font family
 
 The current visual direction is dark, direct, and utilitarian.
