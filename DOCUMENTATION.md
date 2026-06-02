@@ -120,6 +120,7 @@ Reasoning:
 - A single SQLite database keeps task loading and mutations simple.
 - Google Drive or similar filesystem sync should be treated as backup or cross-device handoff, not live collaborative database replication.
 - The log should be append-only so each meaningful main-process action leaves an external trace.
+- The log should use a standard Electron/Node logging library with built-in log rolling instead of custom append-and-rotate filesystem code.
 - The log is best-effort. If writing a log line fails, the app should retry for a bounded time and then continue running. A logging failure must not make a successful database write invalid.
 - React should update optimistically for normal task changes. The main process reports the extreme case where a database write fails, and the UI must warn the user and reconcile state.
 
@@ -127,6 +128,7 @@ Storage files:
 
 - `spot.sqlite`: the canonical task database.
 - `spot-logs.ndjson`: append-only operational log with one JSON object per line.
+- Rolled log files managed by the logging library, using the same base name and a bounded retention policy.
 
 Initial storage location:
 
@@ -176,6 +178,16 @@ SQL log entries:
 - Include the query text, duration in milliseconds, and success or failure.
 - Do not log sensitive values beyond the task data the user already stores in SPOT.
 - Log query parameters only when they are useful for debugging and safe to write to disk.
+
+Logging library decision:
+
+- Use `electron-log` for the first implementation unless a later spike shows it cannot produce stable newline-delimited JSON with the desired rolling behavior.
+- The dependency is justified because it provides Electron-oriented file logging, configurable log paths, formatting, and built-in size-based rolling.
+- Configure the file transport to write only JSON lines to `spot-logs.ndjson`.
+- Configure a bounded maximum file size and retention policy so logs cannot grow without limit.
+- Keep logging in the Electron main process. React sends storage commands through IPC; it does not write logs directly.
+- If `electron-log` is not enough for retention needs, reassess with a standard rolling logger such as `winston` plus a rotate-file transport before writing custom log rolling code.
+- Any logging dependency added to `package.json` must use an exact version.
 
 ### Persistence Implementation Steps
 
@@ -291,16 +303,18 @@ Each step below is intended to be self-contained, committed separately, and manu
 
    - Storage commands mutate SQLite correctly, but no operational log file is written yet and React is still unwired.
 
-6. Implement `spot-logs.ndjson` operational logging.
+6. Implement rolled `spot-logs.ndjson` operational logging.
 
    Scope:
 
+   - Add a standard logging dependency with an exact version.
+   - Configure size-based log rolling with bounded retention.
    - Append every incoming React storage command to `spot-logs.ndjson`.
    - Append every storage-layer SQL query to `spot-logs.ndjson`, including `SELECT` queries.
    - Include query duration, success or failure, and safe diagnostic details.
    - Retry failed log writes for a bounded time.
    - Keep operational-log failure separate from database write failure.
-   - Add tests for successful logging, failed logging, retry behavior, and continued app operation after repeated logging failures.
+   - Add tests for successful logging, failed logging, rolling/retention configuration, retry behavior, and continued app operation after repeated logging failures.
 
    Validation:
 
