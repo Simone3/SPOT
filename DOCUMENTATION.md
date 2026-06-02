@@ -168,9 +168,10 @@ React command names:
 - `task.update`
 - `task.delete`
 - `tasks.reorder`
-- `tasks.import`
 
 Completing and restoring tasks are represented as `task.update` commands because they update `state` and `completionDate`.
+
+Reordering is represented as `tasks.reorder` because one user action can update the `sortPosition` of multiple tasks in one transaction and one log command.
 
 SQL log entries:
 
