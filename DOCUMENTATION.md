@@ -350,6 +350,7 @@ Theme variables include:
 
 - background colors
 - border, overlay, and shadow colors
+- interaction hover and active colors
 - text colors
 - accent colors
 - priority colors

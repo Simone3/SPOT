@@ -18,3 +18,36 @@
 	display: block;
 	color: var(--colors-text-secondary);
 }
+
+.task-actions .clickable {
+	width: 24px;
+	height: 24px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border: 1px solid transparent;
+	border-radius: 5px;
+	box-sizing: border-box;
+}
+
+.task-actions .clickable:hover:not(.clickable-disabled) {
+	background-color: var(--colors-interactive-hover-background);
+	border-color: var(--colors-border-subtle);
+}
+
+.task-actions .clickable:hover:not(.clickable-disabled) svg {
+	color: var(--colors-text-primary);
+}
+
+.task-actions .clickable:active:not(.clickable-disabled) {
+	background-color: var(--colors-interactive-active-background);
+}
+
+.task-actions .delete-button:hover:not(.clickable-disabled) {
+	background-color: var(--colors-danger-background-muted);
+	border-color: var(--colors-danger-border);
+}
+
+.task-actions .delete-button:hover:not(.clickable-disabled) svg {
+	color: var(--colors-danger-text);
+}

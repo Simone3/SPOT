@@ -82,31 +82,31 @@
 	margin-top: 2px;
 }
 
-.button.confirm-modal-button-cancel,
-.button.confirm-modal-button-confirm {
+.confirm-modal-buttons .button.confirm-modal-button-cancel,
+.confirm-modal-buttons .button.confirm-modal-button-confirm {
 	padding: 8px 12px;
 	line-height: 1.2;
 }
 
-.button.confirm-modal-button-cancel {
+.confirm-modal-buttons .button.confirm-modal-button-cancel {
 	background-color: transparent;
 	border-color: var(--colors-border-strong);
 	color: var(--colors-text-secondary);
 }
 
-.button.confirm-modal-button-cancel:hover {
+.confirm-modal-buttons .button.confirm-modal-button-cancel:hover {
 	background-color: var(--colors-background-secondary);
 	color: var(--colors-text-primary);
 }
 
-.button.confirm-modal-button-confirm {
+.confirm-modal-buttons .button.confirm-modal-button-confirm {
 	background-color: var(--colors-danger);
 	border-color: var(--colors-danger);
 	color: var(--colors-text-on-danger);
 	font-weight: 700;
 }
 
-.button.confirm-modal-button-confirm:hover {
+.confirm-modal-buttons .button.confirm-modal-button-confirm:hover {
 	background-color: var(--colors-danger-hover);
 	border-color: var(--colors-danger-hover);
 }

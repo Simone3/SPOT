@@ -13,8 +13,31 @@
 	gap: 5px;
 }
 
+.buttons-select-options .buttons-select-option {
+	align-items: center;
+	min-height: 30px;
+}
+
+.buttons-select-options .buttons-select-option-unselected:hover {
+	background-color: var(--colors-interactive-hover-background);
+	border-color: var(--colors-border-strong);
+	color: var(--colors-text-primary);
+}
+
+.buttons-select-options .buttons-select-option-unselected:active {
+	background-color: var(--colors-interactive-active-background);
+}
+
 .buttons-select-options .buttons-select-option-selected {
 	background-color: var(--colors-accent-primary);
 	color: var(--colors-text-primary);
 }
 
+.buttons-select-options .buttons-select-option-selected:hover {
+	border-color: var(--colors-border-strong);
+	filter: brightness(1.08);
+}
+
+.buttons-select-options .buttons-select-option-selected:active {
+	filter: brightness(1.14);
+}

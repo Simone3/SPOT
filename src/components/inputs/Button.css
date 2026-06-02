@@ -9,10 +9,25 @@
 	border: 1px solid var(--colors-background-secondary);
 	color: var(--colors-text-secondary);
 	border-radius: 5px;
+	transition:
+		background-color 120ms ease,
+		border-color 120ms ease,
+		color 120ms ease,
+		filter 120ms ease,
+		box-shadow 120ms ease;
+}
+
+.button:hover {
+	background-color: var(--colors-interactive-hover-background);
+	border-color: var(--colors-border-strong);
+	color: var(--colors-text-primary);
+}
+
+.button:active {
+	background-color: var(--colors-interactive-active-background);
 }
 
 .button:focus {
 	border-color: var(--colors-accent-primary);
 	box-shadow: 0 0 4px var(--colors-accent-primary);
 }
-

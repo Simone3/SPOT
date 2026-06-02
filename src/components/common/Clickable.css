@@ -1,6 +1,16 @@
 
 .clickable {
 	cursor: pointer;
+	transition:
+		background-color 120ms ease,
+		border-color 120ms ease,
+		color 120ms ease,
+		opacity 120ms ease,
+		box-shadow 120ms ease;
+}
+
+.clickable:not(.clickable-disabled):hover {
+	color: var(--colors-text-primary);
 }
 
 .clickable-disabled {

@@ -36,6 +36,23 @@
 	width: 15px;
 	height: 15px;
 	padding: 2px;
+	border-radius: 5px;
+	transition:
+		background-color 120ms ease,
+		box-shadow 120ms ease;
+}
+
+.task-priority-picker-option:hover:not([aria-disabled=true]) {
+	background-color: var(--colors-interactive-hover-background);
+}
+
+.task-priority-picker-option:active:not([aria-disabled=true]) {
+	background-color: var(--colors-interactive-active-background);
+}
+
+.task-priority-picker-option:focus:not([aria-disabled=true]) {
+	background-color: var(--colors-interactive-hover-background);
+	box-shadow: 0 0 4px var(--colors-accent-primary);
 }
 
 .task-priority-picker-option svg {

@@ -3,6 +3,7 @@
 .header-line {
 	display: flex;
 	justify-content: space-between;
+	align-items: flex-start;
 }
 
 .header-title {
@@ -11,27 +12,40 @@
 
 .header-actions {
 	display: flex;
-    justify-content: center;
-    flex-direction: row;
+	justify-content: center;
+	flex-direction: row;
 	color: var(--colors-text-secondary);
-	margin: 20px 20px 0 0;
-	gap: 30px;
+	margin: 14px 14px 0 0;
+	gap: 10px;
 }
 
 .header-actions .clickable {
 	display: flex;
-    justify-content: center;
-    flex-direction: row;
+	justify-content: center;
+	flex-direction: row;
+	align-items: center;
+	padding: 6px 8px;
+	border: 1px solid transparent;
+	border-radius: 5px;
 	color: var(--colors-text-secondary);
+}
+
+.header-actions .clickable:hover:not(.clickable-disabled) {
+	background-color: var(--colors-interactive-hover-background);
+	border-color: var(--colors-border-subtle);
+	color: var(--colors-text-primary);
+}
+
+.header-actions .clickable:active:not(.clickable-disabled) {
+	background-color: var(--colors-interactive-active-background);
 }
 
 .header-actions .clickable svg {
 	display: block;
 	height: 18px;
 	margin-right: 3px;
-	align-self: center;
 }
 
 .header-action-label {
-	align-self: center;
+	line-height: 1;
 }
