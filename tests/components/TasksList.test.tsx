@@ -235,6 +235,19 @@ describe('TasksList', () => {
 		expect(taskActions.children[2]).toHaveClass('clickable', 'delete-button');
 
 		fireEvent.click(taskActions.children[2]);
+		const dialog = screen.getByRole('dialog', { name: 'Delete task?' });
+		const modalTaskText = dialog.querySelector('.confirm-modal-task-text');
+		if(!modalTaskText) {
+			throw Error('Modal task text not found');
+		}
+		expect(dialog).toBeInTheDocument();
+		expect(modalTaskText).toHaveTextContent('Original task');
+		expect(screen.getByText('This action cannot be undone.')).toBeInTheDocument();
+
+		fireEvent.click(screen.getByRole('button', { name: 'Keep Task' }));
+		expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+		fireEvent.click(taskActions.children[2]);
 		fireEvent.click(screen.getByRole('button', { name: 'Delete Task' }));
 
 		expect(props.onDeleteTask).toHaveBeenCalledWith(task);
