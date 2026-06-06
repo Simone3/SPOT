@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { DATABASE_FILE_NAME, openTaskDatabase } from 'src/main/storage/TaskDatabase';
-import { taskToTaskRow } from 'src/main/storage/TaskRowMapping';
+import { taskToTaskRow, type TaskRow } from 'src/main/storage/TaskRowMapping';
 import { createTaskStorage, OPERATIONAL_LOG_FILE_NAME, OPERATIONAL_LOG_NOT_IMPLEMENTED_MESSAGE, STORAGE_NOT_IMPLEMENTED_MESSAGE, type OperationalLogEntry, type PersistedTask, type TaskStorageCommand } from 'src/main/storage/TaskStorage';
 
 const makeTempStorageDirectory = (): string => {
@@ -50,6 +50,37 @@ const insertPersistedTask = (storageDirectory: string, task: PersistedTask): voi
 			row.created_at,
 			row.updated_at
 		);
+	}
+	finally {
+		taskDatabase.close();
+	}
+};
+
+const readPersistedTaskRows = (storageDirectory: string): TaskRow[] => {
+	const taskDatabase = openTaskDatabase({
+		storageDirectory,
+		now: () => {
+			return new Date('2026-06-06T09:00:00.000Z');
+		}
+	});
+
+	try {
+		return taskDatabase.connection.prepare(`
+			SELECT
+				id,
+				text,
+				state,
+				priority,
+				owner,
+				due_date,
+				tags_json,
+				sort_position,
+				completion_date,
+				created_at,
+				updated_at
+			FROM tasks
+			ORDER BY id ASC
+		`).all() as unknown as TaskRow[];
 	}
 	finally {
 		taskDatabase.close();
@@ -143,7 +174,7 @@ describe('TaskStorage', () => {
 		expect(existsSync(path.join(storageDirectory, DATABASE_FILE_NAME))).toBe(true);
 	});
 
-	test('reports configured read-only storage status', async() => {
+	test('reports configured storage status', async() => {
 		const storageDirectory = makeTempStorageDirectory();
 		tempStorageDirectories.push(storageDirectory);
 		const taskStorage = createTaskStorage({ storageDirectory });
@@ -222,5 +253,321 @@ describe('TaskStorage', () => {
 				operationalLogPath: path.join(storageDirectory, OPERATIONAL_LOG_FILE_NAME)
 			}
 		});
+	});
+
+	test('executes task create, update, and delete commands against SQLite', async() => {
+		const storageDirectory = makeTempStorageDirectory();
+		tempStorageDirectories.push(storageDirectory);
+		const createdAt = new Date('2026-06-06T12:00:00.000Z');
+		const updatedAt = new Date('2026-06-06T13:00:00.000Z');
+		const completionDate = new Date('2026-06-06T14:00:00.000Z');
+		const restoredAt = new Date('2026-06-06T15:00:00.000Z');
+		const createdTask: PersistedTask = {
+			id: 'created-task',
+			text: 'Create persisted task',
+			state: 'ACTIVE',
+			priority: 'HIGH',
+			owner: 'Simone',
+			dueDate: '2026-06-10',
+			tags: [ 'storage' ],
+			sortPosition: 100,
+			completionDate: undefined
+		};
+		const createTaskStorageInstance = createTaskStorage({
+			storageDirectory,
+			now: () => {
+				return createdAt;
+			}
+		});
+
+		await expect(createTaskStorageInstance.executeTaskCommand({
+			command: 'task.create',
+			payload: {
+				task: createdTask
+			}
+		})).resolves.toMatchObject({
+			ok: true,
+			status: {
+				database: {
+					state: 'healthy'
+				},
+				operationalLog: {
+					state: 'not-configured'
+				}
+			}
+		});
+
+		expect(readPersistedTaskRows(storageDirectory)).toEqual([
+			{
+				id: 'created-task',
+				text: 'Create persisted task',
+				state: 'ACTIVE',
+				priority: 'HIGH',
+				owner: 'Simone',
+				due_date: '2026-06-10',
+				tags_json: '["storage"]',
+				sort_position: 100,
+				completion_date: null,
+				created_at: createdAt.toISOString(),
+				updated_at: createdAt.toISOString()
+			}
+		]);
+
+		const updateTaskStorageInstance = createTaskStorage({
+			storageDirectory,
+			now: () => {
+				return updatedAt;
+			}
+		});
+		await expect(updateTaskStorageInstance.executeTaskCommand({
+			command: 'task.update',
+			payload: {
+				taskId: 'created-task',
+				change: {
+					text: 'Updated persisted task',
+					state: 'COMPLETED',
+					priority: 'LOW',
+					owner: undefined,
+					dueDate: undefined,
+					tags: [ 'storage', 'updated' ],
+					sortPosition: 200,
+					completionDate
+				}
+			}
+		})).resolves.toMatchObject({
+			ok: true
+		});
+
+		expect(readPersistedTaskRows(storageDirectory)).toEqual([
+			{
+				id: 'created-task',
+				text: 'Updated persisted task',
+				state: 'COMPLETED',
+				priority: 'LOW',
+				owner: null,
+				due_date: null,
+				tags_json: '["storage","updated"]',
+				sort_position: 200,
+				completion_date: completionDate.toISOString(),
+				created_at: createdAt.toISOString(),
+				updated_at: updatedAt.toISOString()
+			}
+		]);
+
+		await expect(updateTaskStorageInstance.loadTasks()).resolves.toEqual({
+			ok: true,
+			tasks: [
+				{
+					id: 'created-task',
+					text: 'Updated persisted task',
+					state: 'COMPLETED',
+					priority: 'LOW',
+					owner: undefined,
+					dueDate: undefined,
+					tags: [ 'storage', 'updated' ],
+					sortPosition: 200,
+					visible: false,
+					completionDate
+				}
+			],
+			status: {
+				database: {
+					state: 'healthy'
+				},
+				operationalLog: {
+					state: 'not-configured',
+					message: OPERATIONAL_LOG_NOT_IMPLEMENTED_MESSAGE
+				},
+				storageDirectory,
+				databasePath: path.join(storageDirectory, DATABASE_FILE_NAME),
+				operationalLogPath: path.join(storageDirectory, OPERATIONAL_LOG_FILE_NAME)
+			}
+		});
+
+		const restoreTaskStorageInstance = createTaskStorage({
+			storageDirectory,
+			now: () => {
+				return restoredAt;
+			}
+		});
+		await expect(restoreTaskStorageInstance.executeTaskCommand({
+			command: 'task.update',
+			payload: {
+				taskId: 'created-task',
+				change: {
+					state: 'ACTIVE',
+					sortPosition: 300,
+					completionDate: undefined
+				}
+			}
+		})).resolves.toMatchObject({
+			ok: true
+		});
+
+		expect(readPersistedTaskRows(storageDirectory)).toEqual([
+			{
+				id: 'created-task',
+				text: 'Updated persisted task',
+				state: 'ACTIVE',
+				priority: 'LOW',
+				owner: null,
+				due_date: null,
+				tags_json: '["storage","updated"]',
+				sort_position: 300,
+				completion_date: null,
+				created_at: createdAt.toISOString(),
+				updated_at: restoredAt.toISOString()
+			}
+		]);
+
+		await expect(restoreTaskStorageInstance.executeTaskCommand({
+			command: 'task.delete',
+			payload: {
+				taskId: 'created-task'
+			}
+		})).resolves.toMatchObject({
+			ok: true
+		});
+
+		expect(readPersistedTaskRows(storageDirectory)).toEqual([]);
+	});
+
+	test('executes bulk task updates in one SQLite transaction', async() => {
+		const storageDirectory = makeTempStorageDirectory();
+		tempStorageDirectories.push(storageDirectory);
+		const firstTask: PersistedTask = {
+			id: 'bulk-task-a',
+			text: 'Bulk task A',
+			state: 'ACTIVE',
+			priority: 'NORMAL',
+			owner: undefined,
+			dueDate: undefined,
+			tags: [],
+			sortPosition: 100,
+			completionDate: undefined
+		};
+		const secondTask: PersistedTask = {
+			id: 'bulk-task-b',
+			text: 'Bulk task B',
+			state: 'ACTIVE',
+			priority: 'NORMAL',
+			owner: undefined,
+			dueDate: undefined,
+			tags: [],
+			sortPosition: 200,
+			completionDate: undefined
+		};
+		insertPersistedTask(storageDirectory, firstTask);
+		insertPersistedTask(storageDirectory, secondTask);
+		const taskStorage = createTaskStorage({
+			storageDirectory,
+			now: () => {
+				return new Date('2026-06-06T12:00:00.000Z');
+			}
+		});
+
+		const result = await taskStorage.executeTaskCommand({
+			command: 'tasks.updateMany',
+			payload: {
+				reason: 'manual-reorder',
+				updates: [
+					{
+						taskId: 'bulk-task-a',
+						change: {
+							sortPosition: 300
+						}
+					},
+					{
+						taskId: 'bulk-task-b',
+						change: {
+							sortPosition: 400
+						}
+					}
+				]
+			}
+		});
+
+		expect(result).toMatchObject({
+			ok: true
+		});
+		await expect(taskStorage.loadTasks()).resolves.toMatchObject({
+			ok: true,
+			tasks: [
+				{
+					id: 'bulk-task-a',
+					sortPosition: 300
+				},
+				{
+					id: 'bulk-task-b',
+					sortPosition: 400
+				}
+			]
+		});
+	});
+
+	test('rolls back a bulk update when one task update fails', async() => {
+		const storageDirectory = makeTempStorageDirectory();
+		tempStorageDirectories.push(storageDirectory);
+		const task: PersistedTask = {
+			id: 'rollback-task',
+			text: 'Rollback task',
+			state: 'ACTIVE',
+			priority: 'NORMAL',
+			owner: undefined,
+			dueDate: undefined,
+			tags: [],
+			sortPosition: 100,
+			completionDate: undefined
+		};
+		insertPersistedTask(storageDirectory, task);
+		const taskStorage = createTaskStorage({
+			storageDirectory,
+			now: () => {
+				return new Date('2026-06-06T12:00:00.000Z');
+			}
+		});
+
+		const result = await taskStorage.executeTaskCommand({
+			command: 'tasks.updateMany',
+			payload: {
+				reason: 'manual-reorder',
+				updates: [
+					{
+						taskId: 'rollback-task',
+						change: {
+							text: 'Should roll back',
+							sortPosition: 200
+						}
+					},
+					{
+						taskId: 'missing-task',
+						change: {
+							sortPosition: 300
+						}
+					}
+				]
+			}
+		});
+
+		expect(result).toMatchObject({
+			ok: false,
+			reason: 'database-error',
+			message: 'Cannot update missing task "missing-task".'
+		});
+		expect(readPersistedTaskRows(storageDirectory)).toEqual([
+			{
+				id: 'rollback-task',
+				text: 'Rollback task',
+				state: 'ACTIVE',
+				priority: 'NORMAL',
+				owner: null,
+				due_date: null,
+				tags_json: '[]',
+				sort_position: 100,
+				completion_date: null,
+				created_at: '2026-06-06T10:00:00.000Z',
+				updated_at: '2026-06-06T11:00:00.000Z'
+			}
+		]);
 	});
 });
