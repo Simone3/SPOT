@@ -11,9 +11,11 @@ export const OPERATIONAL_LOG_FILE_NAME = 'spot-logs.ndjson';
 
 export type PersistedTask = Omit<Task, 'visible'>;
 
-export type PersistedTaskChange = Partial<PersistedTask>;
+export type PersistedTaskChange = Partial<Omit<PersistedTask, 'id'>>;
 
 export type TaskStorageCommandName = 'task.create' | 'task.update' | 'task.delete' | 'tasks.updateMany';
+
+export const TASK_ID_CHANGE_NOT_SUPPORTED_MESSAGE = 'Task ID changes are not supported.';
 
 interface TaskCreateCommand {
 	command: 'task.create';
@@ -80,7 +82,7 @@ export interface StorageStatus {
 	operationalLogPath?: string;
 }
 
-type StorageFailureReason = 'not-implemented' | 'database-error';
+type StorageFailureReason = 'not-implemented' | 'database-error' | 'invalid-command';
 
 interface StorageFailure {
 	ok: false;
@@ -125,6 +127,10 @@ interface ConfiguredTaskStorageOptions {
 interface TaskUpdateColumn {
 	columnName: string;
 	value: string | number | null;
+}
+
+interface InvalidTaskStorageCommandError extends Error {
+	invalidTaskStorageCommand: true;
 }
 
 const SELECT_TASKS_QUERY = `
@@ -204,7 +210,29 @@ const getErrorMessage = (error: unknown): string => {
 		return error.message;
 	}
 
+	if(error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
+		return error.message;
+	}
+
 	return String(error);
+};
+
+const createInvalidTaskStorageCommandError = (message: string): InvalidTaskStorageCommandError => {
+	const error = new Error(message) as InvalidTaskStorageCommandError;
+	error.invalidTaskStorageCommand = true;
+	return error;
+};
+
+const isInvalidTaskStorageCommandError = (error: unknown): error is InvalidTaskStorageCommandError => {
+	if(getErrorMessage(error) === TASK_ID_CHANGE_NOT_SUPPORTED_MESSAGE) {
+		return true;
+	}
+
+	return Boolean(
+		error &&
+		typeof error === 'object' &&
+		(error as Partial<InvalidTaskStorageCommandError>).invalidTaskStorageCommand
+	);
 };
 
 const createDatabaseFailure = (storageDirectory: string, error: unknown): StorageFailure => {
@@ -218,6 +246,15 @@ const createDatabaseFailure = (storageDirectory: string, error: unknown): Storag
 			state: 'unavailable',
 			message
 		})
+	};
+};
+
+const createInvalidCommandFailure = (storageDirectory: string, error: unknown): StorageFailure => {
+	return {
+		ok: false,
+		reason: 'invalid-command',
+		message: getErrorMessage(error),
+		status: createConfiguredStorageStatus(storageDirectory)
 	};
 };
 
@@ -288,31 +325,32 @@ const insertTask = (taskDatabase: TaskDatabase, task: PersistedTask, writtenAt: 
 	assertSingleTaskChanged(result.changes, 'create', task.id);
 };
 
-const hasTaskChange = <TKey extends keyof PersistedTask>(change: PersistedTaskChange, key: TKey): boolean => {
+const hasUnsupportedTaskIdChange = (change: PersistedTaskChange): boolean => {
+	return Object.prototype.hasOwnProperty.call(change, 'id');
+};
+
+const hasTaskChange = <TKey extends keyof PersistedTaskChange>(change: PersistedTaskChange, key: TKey): boolean => {
 	return Object.prototype.hasOwnProperty.call(change, key);
 };
 
-const getRequiredTaskChangeValue = <TKey extends keyof PersistedTask>(
+const getRequiredTaskChangeValue = <TKey extends keyof PersistedTaskChange>(
 	change: PersistedTaskChange,
 	key: TKey
-): PersistedTask[TKey] => {
+): Exclude<PersistedTaskChange[TKey], undefined> => {
 	const value = change[key];
 
 	if(value === undefined) {
 		throw new Error(`Task change field "${String(key)}" cannot be undefined.`);
 	}
 
-	return value;
+	return value as Exclude<PersistedTaskChange[TKey], undefined>;
 };
 
 const getTaskUpdateColumns = (change: PersistedTaskChange, updatedAt: Date): TaskUpdateColumn[] => {
 	const columns: TaskUpdateColumn[] = [];
 
-	if(hasTaskChange(change, 'id')) {
-		columns.push({
-			columnName: 'id',
-			value: getRequiredTaskChangeValue(change, 'id')
-		});
+	if(hasUnsupportedTaskIdChange(change)) {
+		throw createInvalidTaskStorageCommandError(TASK_ID_CHANGE_NOT_SUPPORTED_MESSAGE);
 	}
 
 	if(hasTaskChange(change, 'text')) {
@@ -470,6 +508,10 @@ const executeConfiguredTaskCommand = (
 		};
 	}
 	catch(error) {
+		if(isInvalidTaskStorageCommandError(error)) {
+			return createInvalidCommandFailure(options.storageDirectory, error);
+		}
+
 		return createDatabaseFailure(options.storageDirectory, error);
 	}
 };
