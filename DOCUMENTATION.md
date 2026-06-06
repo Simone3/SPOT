@@ -7,7 +7,7 @@ SPOT is the Simple Planner & Organizer Tool: a small Electron + React task manag
 - The React app is the primary working surface and is considered done for now.
 - Task data is currently loaded from in-memory sample data in `src/logic/TaskStateLogic.ts`.
 - Task changes are held in React state only. They are not persisted to disk or a database.
-- A main-process storage skeleton exists in `src/main/storage/TaskStorage.ts`, but it is not wired to Electron or React yet.
+- Main-process storage modules exist under `src/main/storage`, including SQLite database initialization and task row mapping, but they are not wired to Electron or React yet.
 - The Electron main process opens `http://localhost:3000`, so the React dev server must be running when using the Electron shell.
 - The Notes, Tags, and Settings routes exist as placeholder pages.
 - The planned persistence architecture is one SQLite database as the source of truth plus one append-only `spot-logs.ndjson` operational log.
@@ -60,6 +60,8 @@ npm run make
 - `src/index.tsx` mounts the React app and defines routes.
 - `src/index.css` defines global layout and theme variables.
 - `src/main/storage/TaskStorage.ts` defines the unwired Electron main-process storage contract and placeholder implementation.
+- `src/main/storage/TaskDatabase.ts` opens `spot.sqlite`, applies schema migrations, and currently creates schema version `1`.
+- `src/main/storage/TaskRowMapping.ts` maps between SQLite task rows and React `Task` objects.
 - `src/types` contains shared TypeScript types split into semantic files for tasks, domains, filters, and dates. Types that have one clear owner stay in the owning `.ts` or `.tsx` file instead.
 - `src/react-app-env.d.ts` contains the React Scripts TypeScript reference.
 - `src/components/common` contains layout and shared UI primitives.
@@ -114,9 +116,9 @@ Known Electron work still pending:
 - Implement the planned SQLite database and `spot-logs.ndjson` operational log.
 - Add robust save, reload, error handling, and shutdown behavior.
 
-## Main-Process Storage Skeleton
+## Main-Process Storage
 
-`src/main/storage/TaskStorage.ts` defines the first unwired storage boundary. It exports:
+`src/main/storage/TaskStorage.ts` defines the unwired storage boundary. It exports:
 
 - `createTaskStorage()`
 - `TaskStorage`
@@ -125,6 +127,10 @@ Known Electron work still pending:
 - storage status and result types
 
 The skeleton currently reports both the database and operational log as `not-configured`. `loadTasks()`, `executeTaskCommand()`, and `writeOperationalLogLine()` return explicit `not-implemented` failures. Nothing calls these methods yet, so application behavior is unchanged.
+
+`src/main/storage/TaskDatabase.ts` opens or creates `spot.sqlite` in a caller-provided storage directory using Electron's bundled Node `node:sqlite` support. No external SQLite dependency is used. Opening the database creates `schema_migrations` when needed and applies migration version `1`, which creates the `tasks` table.
+
+`src/main/storage/TaskRowMapping.ts` serializes task rows for SQLite. `tags` are stored as `tags_json`, `completionDate` is stored as an ISO string in `completion_date`, optional string fields are stored as `NULL`, and the runtime-only `visible` flag is not stored.
 
 ## Persistence Plan
 
@@ -289,7 +295,7 @@ Each step below is intended to be self-contained, committed separately, and manu
 
    - New module structure compiles and tests still pass, but app behavior is unchanged.
 
-3. Add SQLite open, schema migration, and task row mapping.
+3. Add SQLite open, schema migration, and task row mapping. Status: complete.
 
    Scope:
 
