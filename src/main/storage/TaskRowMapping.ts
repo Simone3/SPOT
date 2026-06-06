@@ -1,8 +1,6 @@
 import type { PersistedTask, PersistedTaskChange } from 'src/main/storage/TaskStorage';
 import type { Task, TaskPriorityValue, TaskStatus } from 'src/types/TaskTypes';
 
-export const TASK_ID_CHANGE_NOT_SUPPORTED_MESSAGE = 'Task ID changes are not supported.';
-
 export interface TaskRow {
 	id: string;
 	text: string;
@@ -53,6 +51,10 @@ interface AnyTaskFieldColumnMapping {
 	fromRow: (row: TaskRow) => PersistedTask[PersistedTaskFieldName];
 }
 
+interface InvalidTaskChangeError extends Error {
+	invalidTaskChange: true;
+}
+
 const TASK_STATUSES = new Set<TaskStatus>([ 'ACTIVE', 'COMPLETED' ]);
 
 const TASK_PRIORITIES = new Set<TaskPriorityValue>([ 'URGENT', 'HIGH', 'NORMAL', 'LOW' ]);
@@ -87,6 +89,24 @@ const createTaskFieldColumnMapping = <TField extends PersistedTaskFieldName>(
 	mapping: TaskFieldColumnMapping<TField>
 ): AnyTaskFieldColumnMapping => {
 	return mapping as unknown as AnyTaskFieldColumnMapping;
+};
+
+export const createImmutableTaskFieldChangeMessage = (taskField: string, columnName: string): string => {
+	return `Task field "${taskField}" maps to immutable column "${columnName}" and cannot be changed.`;
+};
+
+const createInvalidTaskChangeError = (message: string): InvalidTaskChangeError => {
+	const error = new Error(message) as InvalidTaskChangeError;
+	error.invalidTaskChange = true;
+	return error;
+};
+
+export const isInvalidTaskChangeError = (error: unknown): error is InvalidTaskChangeError => {
+	return Boolean(
+		error &&
+		typeof error === 'object' &&
+		(error as Partial<InvalidTaskChangeError>).invalidTaskChange
+	);
 };
 
 const getTaskStatusFromRow = (row: TaskRow): TaskStatus => {
@@ -317,7 +337,7 @@ export const taskChangeToTaskUpdateColumns = (
 		}
 
 		if(!mapping.mutable) {
-			throw new Error(TASK_ID_CHANGE_NOT_SUPPORTED_MESSAGE);
+			throw createInvalidTaskChangeError(createImmutableTaskFieldChangeMessage(mapping.taskField, mapping.columnName));
 		}
 
 		columns.push({

@@ -2,8 +2,8 @@ import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { DATABASE_FILE_NAME, openTaskDatabase } from 'src/main/storage/TaskDatabase';
-import { TASK_INSERT_COLUMN_NAMES, TASK_SELECT_COLUMN_NAMES, taskRowToColumnValues, taskToTaskRow, type TaskRow } from 'src/main/storage/TaskRowMapping';
-import { createTaskStorage, OPERATIONAL_LOG_FILE_NAME, OPERATIONAL_LOG_NOT_IMPLEMENTED_MESSAGE, STORAGE_NOT_IMPLEMENTED_MESSAGE, TASK_ID_CHANGE_NOT_SUPPORTED_MESSAGE, type OperationalLogEntry, type PersistedTask, type TaskStorageCommand } from 'src/main/storage/TaskStorage';
+import { TASK_INSERT_COLUMN_NAMES, TASK_SELECT_COLUMN_NAMES, createImmutableTaskFieldChangeMessage, taskRowToColumnValues, taskToTaskRow, type TaskRow } from 'src/main/storage/TaskRowMapping';
+import { createTaskStorage, OPERATIONAL_LOG_FILE_NAME, OPERATIONAL_LOG_NOT_IMPLEMENTED_MESSAGE, STORAGE_NOT_IMPLEMENTED_MESSAGE, type OperationalLogEntry, type PersistedTask, type TaskStorageCommand } from 'src/main/storage/TaskStorage';
 
 const makeTempStorageDirectory = (): string => {
 	return mkdtempSync(path.join(tmpdir(), 'spot-storage-'));
@@ -414,7 +414,7 @@ describe('TaskStorage', () => {
 		expect(readPersistedTaskRows(storageDirectory)).toEqual([]);
 	});
 
-	test('rejects task update commands that try to change the task ID', async() => {
+	test('rejects task update commands that try to change an immutable task field', async() => {
 		const storageDirectory = makeTempStorageDirectory();
 		tempStorageDirectories.push(storageDirectory);
 		const task: PersistedTask = {
@@ -451,7 +451,7 @@ describe('TaskStorage', () => {
 		expect(result).toMatchObject({
 			ok: false,
 			reason: 'invalid-command',
-			message: TASK_ID_CHANGE_NOT_SUPPORTED_MESSAGE,
+			message: createImmutableTaskFieldChangeMessage('id', 'id'),
 			status: {
 				database: {
 					state: 'healthy'

@@ -128,7 +128,7 @@ Known Electron work still pending:
 
 Without a storage directory, the storage boundary reports both the database and operational log as `not-configured`. With a storage directory, `loadTasks()` opens `spot.sqlite`, applies migrations, reads task rows, maps them to React `Task` objects, and returns storage status. `executeTaskCommand()` applies `task.create`, `task.update`, `task.delete`, and `tasks.updateMany` commands to SQLite. Nothing calls these methods yet, so application behavior is unchanged.
 
-Each configured task write command runs in one SQLite transaction. Completing and restoring tasks are represented as `task.update`; manual reorder and sort by importance are represented as `tasks.updateMany`. Task IDs are immutable after creation, so update changes cannot include `id`. If an update or delete references a missing task row, the command fails and the transaction rolls back. Operational-log writes are still placeholders: `writeOperationalLogLine()` returns an explicit `not-implemented` failure until later persistence steps implement logging.
+Each configured task write command runs in one SQLite transaction. Completing and restoring tasks are represented as `task.update`; manual reorder and sort by importance are represented as `tasks.updateMany`. Fields marked immutable in `TASK_FIELD_COLUMN_MAPPINGS` cannot be included in update changes; currently, that means task IDs are immutable after creation. If an update or delete references a missing task row, the command fails and the transaction rolls back. Operational-log writes are still placeholders: `writeOperationalLogLine()` returns an explicit `not-implemented` failure until later persistence steps implement logging.
 
 `src/main/storage/TaskDatabase.ts` opens or creates `spot.sqlite` in a caller-provided storage directory using Electron's bundled Node `node:sqlite` support. No external SQLite dependency is used. Opening the database creates `schema_migrations` when needed and applies migration version `1`, which creates the `tasks` table.
 
@@ -218,7 +218,7 @@ Read contract:
 Write command contract:
 
 - `task.create` creates one task.
-- `task.update` applies a change to one task. Completing and restoring a task are both `task.update` commands. Task IDs are immutable and must not be included in update changes.
+- `task.update` applies a change to one task. Completing and restoring a task are both `task.update` commands. Fields marked immutable in `TASK_FIELD_COLUMN_MAPPINGS`, currently `id`, must not be included in update changes.
 - `task.delete` deletes one task.
 - `tasks.updateMany` applies multiple task changes caused by one user action. It must include a reason such as `manual-reorder` or `importance-sort`.
 - Each write command maps to exactly one SQLite transaction.

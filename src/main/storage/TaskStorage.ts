@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { DATABASE_FILE_NAME, openTaskDatabase, type TaskDatabase } from 'src/main/storage/TaskDatabase';
-import { TASK_ID_CHANGE_NOT_SUPPORTED_MESSAGE, TASK_INSERT_COLUMN_NAMES, TASK_SELECT_COLUMN_NAMES, taskChangeToTaskUpdateColumns, taskRowToColumnValues, taskRowToTask, taskToTaskRow, type TaskRow } from 'src/main/storage/TaskRowMapping';
+import { TASK_INSERT_COLUMN_NAMES, TASK_SELECT_COLUMN_NAMES, isInvalidTaskChangeError, taskChangeToTaskUpdateColumns, taskRowToColumnValues, taskRowToTask, taskToTaskRow, type TaskRow } from 'src/main/storage/TaskRowMapping';
 import type { Task } from 'src/types/TaskTypes';
 
 export const STORAGE_NOT_IMPLEMENTED_MESSAGE = 'Persistent task storage is not implemented yet.';
@@ -122,12 +122,6 @@ interface ConfiguredTaskStorageOptions {
 	now?: () => Date;
 }
 
-interface InvalidTaskStorageCommandError extends Error {
-	invalidTaskStorageCommand: true;
-}
-
-export { TASK_ID_CHANGE_NOT_SUPPORTED_MESSAGE };
-
 const formatColumnList = (columnNames: readonly string[]): string => {
 	return columnNames.join(', ');
 };
@@ -197,18 +191,6 @@ const getErrorMessage = (error: unknown): string => {
 	}
 
 	return String(error);
-};
-
-const isInvalidTaskStorageCommandError = (error: unknown): error is InvalidTaskStorageCommandError => {
-	if(getErrorMessage(error) === TASK_ID_CHANGE_NOT_SUPPORTED_MESSAGE) {
-		return true;
-	}
-
-	return Boolean(
-		error &&
-		typeof error === 'object' &&
-		(error as Partial<InvalidTaskStorageCommandError>).invalidTaskStorageCommand
-	);
 };
 
 const createDatabaseFailure = (storageDirectory: string, error: unknown): StorageFailure => {
@@ -382,7 +364,7 @@ const executeConfiguredTaskCommand = (
 		};
 	}
 	catch(error) {
-		if(isInvalidTaskStorageCommandError(error)) {
+		if(isInvalidTaskChangeError(error)) {
 			return createInvalidCommandFailure(options.storageDirectory, error);
 		}
 
