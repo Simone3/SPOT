@@ -7,10 +7,11 @@ SPOT is the Simple Planner & Organizer Tool: a small Electron + React task manag
 - The React app is the primary working surface and is considered done for now.
 - Task data is currently loaded from in-memory sample data in `src/logic/TaskStateLogic.ts`.
 - Task changes are held in React state only. They are not persisted to disk or a database.
+- A main-process storage skeleton exists in `src/main/storage/TaskStorage.ts`, but it is not wired to Electron or React yet.
 - The Electron main process opens `http://localhost:3000`, so the React dev server must be running when using the Electron shell.
 - The Notes, Tags, and Settings routes exist as placeholder pages.
 - The planned persistence architecture is one SQLite database as the source of truth plus one append-only `spot-logs.ndjson` operational log.
-- The initial persistence contract is documented and frozen below. Runtime behavior is unchanged: React still uses in-memory sample state until later persistence steps are implemented.
+- The initial persistence contract is documented and frozen below. Runtime behavior is unchanged: React still uses in-memory sample state until later persistence steps are wired.
 
 ## How To Run
 
@@ -58,6 +59,7 @@ npm run make
 - `index.html` and `public/index.html` are HTML entry points.
 - `src/index.tsx` mounts the React app and defines routes.
 - `src/index.css` defines global layout and theme variables.
+- `src/main/storage/TaskStorage.ts` defines the unwired Electron main-process storage contract and placeholder implementation.
 - `src/types` contains shared TypeScript types split into semantic files for tasks, domains, filters, and dates. Types that have one clear owner stay in the owning `.ts` or `.tsx` file instead.
 - `src/react-app-env.d.ts` contains the React Scripts TypeScript reference.
 - `src/components/common` contains layout and shared UI primitives.
@@ -108,9 +110,21 @@ The page layout is a fixed-height flex app:
 Known Electron work still pending:
 
 - Load the built React app in packaged mode.
-- Replace in-memory sample data with persistent storage.
+- Wire the existing main-process storage skeleton into Electron and React.
 - Implement the planned SQLite database and `spot-logs.ndjson` operational log.
 - Add robust save, reload, error handling, and shutdown behavior.
+
+## Main-Process Storage Skeleton
+
+`src/main/storage/TaskStorage.ts` defines the first unwired storage boundary. It exports:
+
+- `createTaskStorage()`
+- `TaskStorage`
+- `TaskStorageCommand`
+- `OperationalLogEntry`
+- storage status and result types
+
+The skeleton currently reports both the database and operational log as `not-configured`. `loadTasks()`, `executeTaskCommand()`, and `writeOperationalLogLine()` return explicit `not-implemented` failures. Nothing calls these methods yet, so application behavior is unchanged.
 
 ## Persistence Plan
 
@@ -256,7 +270,7 @@ Each step below is intended to be self-contained, committed separately, and manu
 
    - Documentation-only commit.
 
-2. Add main-process storage module skeleton.
+2. Add main-process storage module skeleton. Status: complete.
 
    Scope:
 
