@@ -129,9 +129,7 @@ interface InvalidTaskStorageCommandError extends Error {
 export { TASK_ID_CHANGE_NOT_SUPPORTED_MESSAGE };
 
 const formatColumnList = (columnNames: readonly string[]): string => {
-	return columnNames.map((columnName) => {
-		return `\t\t${columnName}`;
-	}).join(',\n');
+	return columnNames.join(', ');
 };
 
 const createParameterList = (parameterCount: number): string => {
@@ -141,16 +139,13 @@ const createParameterList = (parameterCount: number): string => {
 };
 
 const SELECT_TASKS_QUERY = `
-	SELECT
-${formatColumnList(TASK_SELECT_COLUMN_NAMES)}
+	SELECT ${formatColumnList(TASK_SELECT_COLUMN_NAMES)}
 	FROM tasks
 	ORDER BY id ASC
 `;
 
 const INSERT_TASK_QUERY = `
-	INSERT INTO tasks (
-${formatColumnList(TASK_INSERT_COLUMN_NAMES)}
-	)
+	INSERT INTO tasks (${formatColumnList(TASK_INSERT_COLUMN_NAMES)})
 	VALUES (${createParameterList(TASK_INSERT_COLUMN_NAMES.length)})
 `;
 
