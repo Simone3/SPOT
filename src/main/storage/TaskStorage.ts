@@ -1,6 +1,8 @@
 import path from 'node:path';
-import { DATABASE_FILE_NAME, openTaskDatabase, type TaskDatabase } from 'src/main/storage/TaskDatabase';
-import { TASK_INSERT_COLUMN_NAMES, TASK_SELECT_COLUMN_NAMES, isInvalidTaskChangeError, taskChangeToTaskUpdateColumns, taskRowToColumnValues, taskRowToTask, taskToTaskRow, type TaskRow } from 'src/main/storage/TaskRowMapping';
+import { executeTaskCommandInStorage } from 'src/main/storage/TaskCommandExecutor';
+import { DATABASE_FILE_NAME } from 'src/main/storage/TaskDatabase';
+import { isInvalidTaskChangeError } from 'src/main/storage/TaskRowMapping';
+import { readTasks, withTaskDatabase, type TaskSqlRepositoryOptions } from 'src/main/storage/TaskSqlRepository';
 import type { Task } from 'src/types/TaskTypes';
 
 export const STORAGE_NOT_IMPLEMENTED_MESSAGE = 'Persistent task storage is not implemented yet.';
@@ -117,32 +119,6 @@ export interface CreateTaskStorageOptions {
 	now?: () => Date;
 }
 
-interface ConfiguredTaskStorageOptions {
-	storageDirectory: string;
-	now?: () => Date;
-}
-
-const formatColumnList = (columnNames: readonly string[]): string => {
-	return columnNames.join(', ');
-};
-
-const createParameterList = (parameterCount: number): string => {
-	return Array.from({ length: parameterCount }).map(() => {
-		return '?';
-	}).join(', ');
-};
-
-const SELECT_TASKS_QUERY = `
-	SELECT ${formatColumnList(TASK_SELECT_COLUMN_NAMES)}
-	FROM tasks
-	ORDER BY id ASC
-`;
-
-const INSERT_TASK_QUERY = `
-	INSERT INTO tasks (${formatColumnList(TASK_INSERT_COLUMN_NAMES)})
-	VALUES (${createParameterList(TASK_INSERT_COLUMN_NAMES.length)})
-`;
-
 const createUnwiredStorageStatus = (): StorageStatus => {
 	return {
 		database: {
@@ -216,123 +192,9 @@ const createInvalidCommandFailure = (storageDirectory: string, error: unknown): 
 	};
 };
 
-const withTaskDatabase = <T>(options: ConfiguredTaskStorageOptions, callback: (taskDatabase: TaskDatabase) => T): T => {
-	const taskDatabase = openTaskDatabase({
-		storageDirectory: options.storageDirectory,
-		now: options.now
-	});
-
+const loadConfiguredTasks = (options: TaskSqlRepositoryOptions): LoadTasksResult => {
 	try {
-		return callback(taskDatabase);
-	}
-	finally {
-		taskDatabase.close();
-	}
-};
-
-const readTaskRows = (taskDatabase: TaskDatabase): TaskRow[] => {
-	return taskDatabase.connection.prepare(SELECT_TASKS_QUERY).all() as unknown as TaskRow[];
-};
-
-const runTransaction = (taskDatabase: TaskDatabase, callback: () => void): void => {
-	taskDatabase.connection.exec('BEGIN');
-
-	try {
-		callback();
-		taskDatabase.connection.exec('COMMIT');
-	}
-	catch(error) {
-		taskDatabase.connection.exec('ROLLBACK');
-		throw error;
-	}
-};
-
-const getCurrentDate = (options: ConfiguredTaskStorageOptions): Date => {
-	if(options.now) {
-		return options.now();
-	}
-
-	return new Date();
-};
-
-const assertSingleTaskChanged = (changes: number | bigint, action: string, taskId: string): void => {
-	if(Number(changes) !== 1) {
-		throw new Error(`Cannot ${action} missing task "${taskId}".`);
-	}
-};
-
-const insertTask = (taskDatabase: TaskDatabase, task: PersistedTask, writtenAt: Date): void => {
-	const row = taskToTaskRow(task, {
-		createdAt: writtenAt,
-		updatedAt: writtenAt
-	});
-	const result = taskDatabase.connection.prepare(INSERT_TASK_QUERY).run(
-		...taskRowToColumnValues(row, TASK_INSERT_COLUMN_NAMES)
-	);
-
-	assertSingleTaskChanged(result.changes, 'create', task.id);
-};
-
-const updateTask = (taskDatabase: TaskDatabase, taskId: string, change: PersistedTaskChange, writtenAt: Date): void => {
-	const columns = taskChangeToTaskUpdateColumns(change, writtenAt);
-	const assignments = columns.map((column) => {
-		return `${column.columnName} = ?`;
-	}).join(', ');
-	const result = taskDatabase.connection.prepare(`
-		UPDATE tasks
-		SET ${assignments}
-		WHERE id = ?
-	`).run(
-		...columns.map((column) => {
-			return column.value;
-		}),
-		taskId
-	);
-
-	assertSingleTaskChanged(result.changes, 'update', taskId);
-};
-
-const deleteTask = (taskDatabase: TaskDatabase, taskId: string): void => {
-	const result = taskDatabase.connection.prepare(`
-		DELETE FROM tasks
-		WHERE id = ?
-	`).run(taskId);
-
-	assertSingleTaskChanged(result.changes, 'delete', taskId);
-};
-
-const applyTaskCommand = (taskDatabase: TaskDatabase, command: TaskStorageCommand, writtenAt: Date): void => {
-	switch(command.command) {
-		case 'task.create':
-			insertTask(taskDatabase, command.payload.task, writtenAt);
-			break;
-
-		case 'task.update':
-			updateTask(taskDatabase, command.payload.taskId, command.payload.change, writtenAt);
-			break;
-
-		case 'task.delete':
-			deleteTask(taskDatabase, command.payload.taskId);
-			break;
-
-		case 'tasks.updateMany':
-			command.payload.updates.forEach((update) => {
-				updateTask(taskDatabase, update.taskId, update.change, writtenAt);
-			});
-			break;
-
-		default:
-			throw new Error(`Unsupported task storage command "${(command as TaskStorageCommand).command}".`);
-	}
-};
-
-const loadConfiguredTasks = (options: ConfiguredTaskStorageOptions): LoadTasksResult => {
-	try {
-		const tasks = withTaskDatabase(options, (taskDatabase) => {
-			return readTaskRows(taskDatabase).map((taskRow) => {
-				return taskRowToTask(taskRow);
-			});
-		});
+		const tasks = readTasks(options);
 
 		return {
 			ok: true,
@@ -346,17 +208,11 @@ const loadConfiguredTasks = (options: ConfiguredTaskStorageOptions): LoadTasksRe
 };
 
 const executeConfiguredTaskCommand = (
-	options: ConfiguredTaskStorageOptions,
+	options: TaskSqlRepositoryOptions,
 	command: TaskStorageCommand
 ): TaskStorageCommandResult => {
 	try {
-		withTaskDatabase(options, (taskDatabase) => {
-			const writtenAt = getCurrentDate(options);
-
-			runTransaction(taskDatabase, () => {
-				applyTaskCommand(taskDatabase, command, writtenAt);
-			});
-		});
+		executeTaskCommandInStorage(options, command);
 
 		return {
 			ok: true,
@@ -372,7 +228,7 @@ const executeConfiguredTaskCommand = (
 	}
 };
 
-const getConfiguredStorageStatus = (options: ConfiguredTaskStorageOptions): StorageStatus => {
+const getConfiguredStorageStatus = (options: TaskSqlRepositoryOptions): StorageStatus => {
 	try {
 		withTaskDatabase(options, () => {
 			return undefined;

@@ -60,8 +60,10 @@ npm run make
 - `src/index.tsx` mounts the React app and defines routes.
 - `src/index.css` defines global layout and theme variables.
 - `src/main/storage/TaskStorage.ts` defines the unwired Electron main-process storage contract, configured SQLite task loading, and configured SQLite task write commands.
+- `src/main/storage/TaskCommandExecutor.ts` maps task storage commands to the task repository operations and keeps each command inside one transaction.
 - `src/main/storage/TaskDatabase.ts` opens `spot.sqlite`, applies schema migrations, and currently creates schema version `1`.
 - `src/main/storage/TaskRowMapping.ts` maps between SQLite task rows and React `Task` objects and owns the shared task field to SQLite column mapping used by storage queries.
+- `src/main/storage/TaskSqlRepository.ts` owns SQLite task queries, database sessions, and transaction helpers.
 - `src/types` contains shared TypeScript types split into semantic files for tasks, domains, filters, and dates. Types that have one clear owner stay in the owning `.ts` or `.tsx` file instead.
 - `src/react-app-env.d.ts` contains the React Scripts TypeScript reference.
 - `src/components/common` contains layout and shared UI primitives.
@@ -126,7 +128,7 @@ Known Electron work still pending:
 - `OperationalLogEntry`
 - storage status and result types
 
-Without a storage directory, the storage boundary reports both the database and operational log as `not-configured`. With a storage directory, `loadTasks()` opens `spot.sqlite`, applies migrations, reads task rows, maps them to React `Task` objects, and returns storage status. `executeTaskCommand()` applies `task.create`, `task.update`, `task.delete`, and `tasks.updateMany` commands to SQLite. Nothing calls these methods yet, so application behavior is unchanged.
+Without a storage directory, the storage boundary reports both the database and operational log as `not-configured`. With a storage directory, `loadTasks()` opens `spot.sqlite`, applies migrations, reads task rows, maps them to React `Task` objects, and returns storage status. `executeTaskCommand()` applies `task.create`, `task.update`, `task.delete`, and `tasks.updateMany` commands to SQLite through `TaskCommandExecutor.ts` and `TaskSqlRepository.ts`. Nothing calls these methods yet, so application behavior is unchanged.
 
 Each configured task write command runs in one SQLite transaction. Completing and restoring tasks are represented as `task.update`; manual reorder and sort by importance are represented as `tasks.updateMany`. Fields marked immutable in `TASK_FIELD_COLUMN_MAPPINGS` cannot be included in update changes; currently, that means task IDs are immutable after creation. If an update or delete references a missing task row, the command fails and the transaction rolls back. Operational-log writes are still placeholders: `writeOperationalLogLine()` returns an explicit `not-implemented` failure until later persistence steps implement logging.
 
