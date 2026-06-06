@@ -31,6 +31,7 @@
 - Keep database health and operational-log health separate. Database failures are user-facing and require state reconciliation; operational-log failures are non-blocking warnings when SQLite succeeds.
 - Runtime persistence is not wired yet. The storage skeleton under `src/main/storage` is intentionally unwired, and React still uses in-memory sample state until later steps explicitly change that behavior.
 - The first SQLite implementation uses Electron's bundled Node `node:sqlite` support. Do not add an external SQLite dependency unless the reason is documented in `DOCUMENTATION.md`.
+- `createTaskStorage({ storageDirectory })` can load persisted task rows for tests and future IPC wiring, but React startup and mutations are not wired to it yet.
 
 ## Delivery Rules
 - You MUST commit the code when you complete any task.

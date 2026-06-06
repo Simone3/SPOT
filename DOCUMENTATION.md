@@ -7,7 +7,7 @@ SPOT is the Simple Planner & Organizer Tool: a small Electron + React task manag
 - The React app is the primary working surface and is considered done for now.
 - Task data is currently loaded from in-memory sample data in `src/logic/TaskStateLogic.ts`.
 - Task changes are held in React state only. They are not persisted to disk or a database.
-- Main-process storage modules exist under `src/main/storage`, including SQLite database initialization and task row mapping, but they are not wired to Electron or React yet.
+- Main-process storage modules exist under `src/main/storage`. Configured storage can initialize SQLite and load task rows, but it is not wired to Electron or React yet.
 - The Electron main process opens `http://localhost:3000`, so the React dev server must be running when using the Electron shell.
 - The Notes, Tags, and Settings routes exist as placeholder pages.
 - The planned persistence architecture is one SQLite database as the source of truth plus one append-only `spot-logs.ndjson` operational log.
@@ -126,7 +126,9 @@ Known Electron work still pending:
 - `OperationalLogEntry`
 - storage status and result types
 
-The skeleton currently reports both the database and operational log as `not-configured`. `loadTasks()`, `executeTaskCommand()`, and `writeOperationalLogLine()` return explicit `not-implemented` failures. Nothing calls these methods yet, so application behavior is unchanged.
+Without a storage directory, the storage boundary reports both the database and operational log as `not-configured`. With a storage directory, `loadTasks()` opens `spot.sqlite`, applies migrations, reads task rows, maps them to React `Task` objects, and returns storage status. Nothing calls these methods yet, so application behavior is unchanged.
+
+Task mutations and operational-log writes are still placeholders. `executeTaskCommand()` and `writeOperationalLogLine()` return explicit `not-implemented` failures until later persistence steps implement writes and logging.
 
 `src/main/storage/TaskDatabase.ts` opens or creates `spot.sqlite` in a caller-provided storage directory using Electron's bundled Node `node:sqlite` support. No external SQLite dependency is used. Opening the database creates `schema_migrations` when needed and applies migration version `1`, which creates the `tasks` table.
 
@@ -331,7 +333,7 @@ Each step below is intended to be self-contained, committed separately, and manu
 
    - The database can be initialized and task rows can be mapped, but React still uses sample data.
 
-4. Implement task load and read-only storage status.
+4. Implement task load and read-only storage status. Status: complete.
 
    Scope:
 
