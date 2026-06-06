@@ -25,6 +25,12 @@
   - `npm run typecheck`
   - `npm test`
 
+## Persistence Work Rules
+- The persistence contract in `DOCUMENTATION.md` is the source of truth for the initial storage implementation.
+- Preserve the initial command names: `task.create`, `task.update`, `task.delete`, and `tasks.updateMany`.
+- Keep database health and operational-log health separate. Database failures are user-facing and require state reconciliation; operational-log failures are non-blocking warnings when SQLite succeeds.
+- Runtime persistence is not wired yet. After persistence step 1, React still uses in-memory sample state until later steps explicitly change that behavior.
+
 ## Delivery Rules
 - You MUST commit the code when you complete any task.
 - Every commit message must start with `Codex: `.

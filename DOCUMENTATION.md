@@ -10,6 +10,7 @@ SPOT is the Simple Planner & Organizer Tool: a small Electron + React task manag
 - The Electron main process opens `http://localhost:3000`, so the React dev server must be running when using the Electron shell.
 - The Notes, Tags, and Settings routes exist as placeholder pages.
 - The planned persistence architecture is one SQLite database as the source of truth plus one append-only `spot-logs.ndjson` operational log.
+- The initial persistence contract is documented and frozen below. Runtime behavior is unchanged: React still uses in-memory sample state until later persistence steps are implemented.
 
 ## How To Run
 
@@ -174,6 +175,49 @@ Completing and restoring tasks are represented as `task.update` commands because
 
 Bulk task updates are represented as `tasks.updateMany` because one user action can update multiple tasks in one transaction and one log command. Manual reorder and sort by importance use `tasks.updateMany` with a `reason`, such as `manual-reorder` or `importance-sort`.
 
+### Persistence Contract
+
+This contract is frozen for the first persistence implementation. Later persistence steps can refine implementation details, but changes to these command names, ownership boundaries, or failure semantics must be documented in the same commit that changes them.
+
+Runtime boundary:
+
+- React owns responsive in-memory UI state.
+- The Electron main process owns durable storage, operational logging, and storage health.
+- The preload layer exposes only a narrow storage API. It must not expose raw filesystem, SQLite, or unrestricted IPC access.
+- Until React startup is explicitly wired to storage in a later step, browser-only React mode continues to use sample in-memory data.
+
+Read contract:
+
+- Normal task loading reads from `spot.sqlite`.
+- Startup never rebuilds task state from `spot-logs.ndjson`.
+- Loading returns task data plus storage health so the renderer can distinguish database availability from operational-log availability.
+- The runtime-only `visible` task field is derived by React filters and is not stored in SQLite.
+
+Write command contract:
+
+- `task.create` creates one task.
+- `task.update` applies a change to one task. Completing and restoring a task are both `task.update` commands.
+- `task.delete` deletes one task.
+- `tasks.updateMany` applies multiple task changes caused by one user action. It must include a reason such as `manual-reorder` or `importance-sort`.
+- Each write command maps to exactly one SQLite transaction.
+- Bulk changes must not be split into per-task transactions.
+
+Operational-log contract:
+
+- The main process logs every incoming React storage command.
+- The main process logs every SQL query run by the storage layer, including `SELECT` queries.
+- Operational log entries are newline-delimited JSON objects in `spot-logs.ndjson`.
+- Operational logging is best-effort and retried for a bounded time.
+- A failed operational-log write must not invalidate a successful SQLite transaction.
+
+Failure contract:
+
+- Database write failure: the transaction must not partially commit. The main process reports the failure to React, React shows a clear storage error, and React reconciles the optimistic local state.
+- Database read or startup failure: React receives a storage error state instead of silently falling back to stale persisted data.
+- Operational-log failure: SQLite remains authoritative. React receives a non-blocking storage health warning if the failure persists after bounded retries.
+- Storage folder unavailable: startup must enter a clear storage error state or a future explicit read-only mode. The app must not pretend persistence is healthy.
+- Logging health and database health are separate; one can fail without implying the other has failed.
+
 SQL log entries:
 
 - Log all `SELECT`, `INSERT`, `UPDATE`, and `DELETE` queries run by the storage layer.
@@ -195,7 +239,7 @@ Logging library decision:
 
 Each step below is intended to be self-contained, committed separately, and manually reviewable before the next step starts.
 
-1. Document and freeze the persistence contract.
+1. Document and freeze the persistence contract. Status: complete.
 
    Scope:
 
