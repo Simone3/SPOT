@@ -61,7 +61,7 @@ npm run make
 - `src/index.css` defines global layout and theme variables.
 - `src/main/storage/TaskStorage.ts` defines the unwired Electron main-process storage contract, configured SQLite task loading, and configured SQLite task write commands.
 - `src/main/storage/TaskDatabase.ts` opens `spot.sqlite`, applies schema migrations, and currently creates schema version `1`.
-- `src/main/storage/TaskRowMapping.ts` maps between SQLite task rows and React `Task` objects.
+- `src/main/storage/TaskRowMapping.ts` maps between SQLite task rows and React `Task` objects and owns the shared task field to SQLite column mapping used by storage queries.
 - `src/types` contains shared TypeScript types split into semantic files for tasks, domains, filters, and dates. Types that have one clear owner stay in the owning `.ts` or `.tsx` file instead.
 - `src/react-app-env.d.ts` contains the React Scripts TypeScript reference.
 - `src/components/common` contains layout and shared UI primitives.
@@ -132,7 +132,7 @@ Each configured task write command runs in one SQLite transaction. Completing an
 
 `src/main/storage/TaskDatabase.ts` opens or creates `spot.sqlite` in a caller-provided storage directory using Electron's bundled Node `node:sqlite` support. No external SQLite dependency is used. Opening the database creates `schema_migrations` when needed and applies migration version `1`, which creates the `tasks` table.
 
-`src/main/storage/TaskRowMapping.ts` serializes task rows for SQLite. `tags` are stored as `tags_json`, `completionDate` is stored as an ISO string in `completion_date`, optional string fields are stored as `NULL`, and the runtime-only `visible` flag is not stored.
+`src/main/storage/TaskRowMapping.ts` serializes task rows for SQLite. `tags` are stored as `tags_json`, `completionDate` is stored as an ISO string in `completion_date`, optional string fields are stored as `NULL`, and the runtime-only `visible` flag is not stored. The `TASK_FIELD_COLUMN_MAPPINGS` list is the shared source for task field names, SQLite column names, mutability, and serialization/parsing behavior. `TaskStorage.ts` builds its task `SELECT`, `INSERT`, and `UPDATE` column lists from those mapping exports. Versioned schema migrations in `TaskDatabase.ts` remain explicit.
 
 ## Persistence Plan
 

@@ -1,5 +1,7 @@
-import type { PersistedTask } from 'src/main/storage/TaskStorage';
+import type { PersistedTask, PersistedTaskChange } from 'src/main/storage/TaskStorage';
 import type { Task, TaskPriorityValue, TaskStatus } from 'src/types/TaskTypes';
+
+export const TASK_ID_CHANGE_NOT_SUPPORTED_MESSAGE = 'Task ID changes are not supported.';
 
 export interface TaskRow {
 	id: string;
@@ -18,6 +20,37 @@ export interface TaskRow {
 interface TaskRowTimestamps {
 	createdAt: Date;
 	updatedAt: Date;
+}
+
+export type TaskRowColumnName = keyof TaskRow;
+
+export type TaskColumnValue = string | number | null;
+
+export interface TaskUpdateColumn {
+	columnName: TaskRowColumnName;
+	value: TaskColumnValue;
+}
+
+type PersistedTaskFieldName = keyof PersistedTask;
+
+type TaskDataColumnName = Exclude<TaskRowColumnName, 'created_at' | 'updated_at'>;
+
+interface TaskFieldColumnMapping<TField extends PersistedTaskFieldName> {
+	taskField: TField;
+	columnName: TaskDataColumnName;
+	mutable: boolean;
+	required: boolean;
+	toColumnValue: (value: PersistedTask[TField]) => TaskColumnValue;
+	fromRow: (row: TaskRow) => PersistedTask[TField];
+}
+
+interface AnyTaskFieldColumnMapping {
+	taskField: PersistedTaskFieldName;
+	columnName: TaskDataColumnName;
+	mutable: boolean;
+	required: boolean;
+	toColumnValue: (value: PersistedTask[PersistedTaskFieldName]) => TaskColumnValue;
+	fromRow: (row: TaskRow) => PersistedTask[PersistedTaskFieldName];
 }
 
 const TASK_STATUSES = new Set<TaskStatus>([ 'ACTIVE', 'COMPLETED' ]);
@@ -50,41 +83,252 @@ const parseTags = (tagsJson: string): string[] => {
 	return tags;
 };
 
-export const taskToTaskRow = (task: PersistedTask, timestamps: TaskRowTimestamps): TaskRow => {
-	return {
-		id: task.id,
-		text: task.text,
-		state: task.state,
-		priority: task.priority,
-		owner: task.owner || null,
-		due_date: task.dueDate || null,
-		tags_json: JSON.stringify(task.tags),
-		sort_position: task.sortPosition,
-		completion_date: task.completionDate ? task.completionDate.toISOString() : null,
-		created_at: timestamps.createdAt.toISOString(),
-		updated_at: timestamps.updatedAt.toISOString()
-	};
+const createTaskFieldColumnMapping = <TField extends PersistedTaskFieldName>(
+	mapping: TaskFieldColumnMapping<TField>
+): AnyTaskFieldColumnMapping => {
+	return mapping as unknown as AnyTaskFieldColumnMapping;
 };
 
-export const taskRowToTask = (row: TaskRow): Task => {
+const getTaskStatusFromRow = (row: TaskRow): TaskStatus => {
 	if(!isTaskStatus(row.state)) {
 		throw new Error(`Unsupported task state "${row.state}".`);
 	}
 
+	return row.state;
+};
+
+const getTaskPriorityFromRow = (row: TaskRow): TaskPriorityValue => {
 	if(!isTaskPriority(row.priority)) {
 		throw new Error(`Unsupported task priority "${row.priority}".`);
 	}
 
+	return row.priority;
+};
+
+export const TASK_FIELD_COLUMN_MAPPINGS: readonly AnyTaskFieldColumnMapping[] = [
+	createTaskFieldColumnMapping({
+		taskField: 'id',
+		columnName: 'id',
+		mutable: false,
+		required: true,
+		toColumnValue: (value) => {
+			return value;
+		},
+		fromRow: (row) => {
+			return row.id;
+		}
+	}),
+	createTaskFieldColumnMapping({
+		taskField: 'text',
+		columnName: 'text',
+		mutable: true,
+		required: true,
+		toColumnValue: (value) => {
+			return value;
+		},
+		fromRow: (row) => {
+			return row.text;
+		}
+	}),
+	createTaskFieldColumnMapping({
+		taskField: 'state',
+		columnName: 'state',
+		mutable: true,
+		required: true,
+		toColumnValue: (value) => {
+			return value;
+		},
+		fromRow: getTaskStatusFromRow
+	}),
+	createTaskFieldColumnMapping({
+		taskField: 'priority',
+		columnName: 'priority',
+		mutable: true,
+		required: true,
+		toColumnValue: (value) => {
+			return value;
+		},
+		fromRow: getTaskPriorityFromRow
+	}),
+	createTaskFieldColumnMapping({
+		taskField: 'owner',
+		columnName: 'owner',
+		mutable: true,
+		required: false,
+		toColumnValue: (value) => {
+			return value || null;
+		},
+		fromRow: (row) => {
+			return row.owner || undefined;
+		}
+	}),
+	createTaskFieldColumnMapping({
+		taskField: 'dueDate',
+		columnName: 'due_date',
+		mutable: true,
+		required: false,
+		toColumnValue: (value) => {
+			return value || null;
+		},
+		fromRow: (row) => {
+			return row.due_date || undefined;
+		}
+	}),
+	createTaskFieldColumnMapping({
+		taskField: 'tags',
+		columnName: 'tags_json',
+		mutable: true,
+		required: true,
+		toColumnValue: (value) => {
+			return JSON.stringify(value);
+		},
+		fromRow: (row) => {
+			return parseTags(row.tags_json);
+		}
+	}),
+	createTaskFieldColumnMapping({
+		taskField: 'sortPosition',
+		columnName: 'sort_position',
+		mutable: true,
+		required: true,
+		toColumnValue: (value) => {
+			return value;
+		},
+		fromRow: (row) => {
+			return row.sort_position;
+		}
+	}),
+	createTaskFieldColumnMapping({
+		taskField: 'completionDate',
+		columnName: 'completion_date',
+		mutable: true,
+		required: false,
+		toColumnValue: (value) => {
+			return value ? value.toISOString() : null;
+		},
+		fromRow: (row) => {
+			return row.completion_date ? new Date(row.completion_date) : undefined;
+		}
+	})
+];
+
+const TASK_ROW_TIMESTAMP_COLUMN_NAMES: readonly TaskRowColumnName[] = [ 'created_at', 'updated_at' ];
+
+export const TASK_ROW_COLUMN_NAMES: readonly TaskRowColumnName[] = [
+	...TASK_FIELD_COLUMN_MAPPINGS.map((mapping) => {
+		return mapping.columnName;
+	}),
+	...TASK_ROW_TIMESTAMP_COLUMN_NAMES
+];
+
+export const TASK_SELECT_COLUMN_NAMES = TASK_ROW_COLUMN_NAMES;
+
+export const TASK_INSERT_COLUMN_NAMES = TASK_ROW_COLUMN_NAMES;
+
+const taskFieldValueToColumnValue = (
+	mapping: AnyTaskFieldColumnMapping,
+	task: PersistedTask
+): TaskColumnValue => {
+	return mapping.toColumnValue(task[mapping.taskField]);
+};
+
+const setTaskRowValue = (
+	row: Partial<Record<TaskRowColumnName, TaskColumnValue>>,
+	columnName: TaskRowColumnName,
+	value: TaskColumnValue
+): void => {
+	row[columnName] = value;
+};
+
+export const taskToTaskRow = (task: PersistedTask, timestamps: TaskRowTimestamps): TaskRow => {
+	const row: Partial<Record<TaskRowColumnName, TaskColumnValue>> = {};
+
+	TASK_FIELD_COLUMN_MAPPINGS.forEach((mapping) => {
+		setTaskRowValue(row, mapping.columnName, taskFieldValueToColumnValue(mapping, task));
+	});
+	setTaskRowValue(row, 'created_at', timestamps.createdAt.toISOString());
+	setTaskRowValue(row, 'updated_at', timestamps.updatedAt.toISOString());
+
+	return row as unknown as TaskRow;
+};
+
+const setTaskFieldValue = (
+	task: Partial<PersistedTask>,
+	mapping: AnyTaskFieldColumnMapping,
+	value: PersistedTask[PersistedTaskFieldName]
+): void => {
+	(task as Partial<Record<PersistedTaskFieldName, PersistedTask[PersistedTaskFieldName]>>)[mapping.taskField] = value;
+};
+
+export const taskRowToTask = (row: TaskRow): Task => {
+	const task: Partial<PersistedTask> = {};
+
 	return {
-		id: row.id,
-		text: row.text,
-		state: row.state,
-		priority: row.priority,
-		owner: row.owner || undefined,
-		dueDate: row.due_date || undefined,
-		tags: parseTags(row.tags_json),
-		sortPosition: row.sort_position,
-		visible: false,
-		completionDate: row.completion_date ? new Date(row.completion_date) : undefined
+		...TASK_FIELD_COLUMN_MAPPINGS.reduce((mappedTask, mapping) => {
+			setTaskFieldValue(mappedTask, mapping, mapping.fromRow(row));
+			return mappedTask;
+		}, task) as PersistedTask,
+		visible: false
 	};
+};
+
+export const taskRowToColumnValues = (
+	row: TaskRow,
+	columnNames: readonly TaskRowColumnName[]
+): TaskColumnValue[] => {
+	return columnNames.map((columnName) => {
+		return row[columnName];
+	});
+};
+
+const hasTaskChange = (change: PersistedTaskChange, taskField: PersistedTaskFieldName): boolean => {
+	return Object.prototype.hasOwnProperty.call(change, taskField);
+};
+
+const getTaskChangeFieldValue = (
+	change: PersistedTaskChange,
+	mapping: AnyTaskFieldColumnMapping
+): PersistedTask[PersistedTaskFieldName] => {
+	const value = (change as Partial<PersistedTask>)[mapping.taskField];
+
+	if(value === undefined && mapping.required) {
+		throw new Error(`Task change field "${String(mapping.taskField)}" cannot be undefined.`);
+	}
+
+	return value;
+};
+
+const taskChangeFieldToColumnValue = (
+	change: PersistedTaskChange,
+	mapping: AnyTaskFieldColumnMapping
+): TaskColumnValue => {
+	return mapping.toColumnValue(getTaskChangeFieldValue(change, mapping));
+};
+
+export const taskChangeToTaskUpdateColumns = (
+	change: PersistedTaskChange,
+	updatedAt: Date
+): TaskUpdateColumn[] => {
+	const columns: TaskUpdateColumn[] = [];
+
+	TASK_FIELD_COLUMN_MAPPINGS.forEach((mapping) => {
+		if(!hasTaskChange(change, mapping.taskField)) {
+			return;
+		}
+
+		if(!mapping.mutable) {
+			throw new Error(TASK_ID_CHANGE_NOT_SUPPORTED_MESSAGE);
+		}
+
+		columns.push({
+			columnName: mapping.columnName,
+			value: taskChangeFieldToColumnValue(change, mapping)
+		});
+	});
+	columns.push({
+		columnName: 'updated_at',
+		value: updatedAt.toISOString()
+	});
+
+	return columns;
 };

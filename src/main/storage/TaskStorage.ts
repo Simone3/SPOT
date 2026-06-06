@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { DATABASE_FILE_NAME, openTaskDatabase, type TaskDatabase } from 'src/main/storage/TaskDatabase';
-import { taskRowToTask, taskToTaskRow, type TaskRow } from 'src/main/storage/TaskRowMapping';
+import { TASK_ID_CHANGE_NOT_SUPPORTED_MESSAGE, TASK_INSERT_COLUMN_NAMES, TASK_SELECT_COLUMN_NAMES, taskChangeToTaskUpdateColumns, taskRowToColumnValues, taskRowToTask, taskToTaskRow, type TaskRow } from 'src/main/storage/TaskRowMapping';
 import type { Task } from 'src/types/TaskTypes';
 
 export const STORAGE_NOT_IMPLEMENTED_MESSAGE = 'Persistent task storage is not implemented yet.';
@@ -14,8 +14,6 @@ export type PersistedTask = Omit<Task, 'visible'>;
 export type PersistedTaskChange = Partial<Omit<PersistedTask, 'id'>>;
 
 export type TaskStorageCommandName = 'task.create' | 'task.update' | 'task.delete' | 'tasks.updateMany';
-
-export const TASK_ID_CHANGE_NOT_SUPPORTED_MESSAGE = 'Task ID changes are not supported.';
 
 interface TaskCreateCommand {
 	command: 'task.create';
@@ -124,47 +122,36 @@ interface ConfiguredTaskStorageOptions {
 	now?: () => Date;
 }
 
-interface TaskUpdateColumn {
-	columnName: string;
-	value: string | number | null;
-}
-
 interface InvalidTaskStorageCommandError extends Error {
 	invalidTaskStorageCommand: true;
 }
 
+export { TASK_ID_CHANGE_NOT_SUPPORTED_MESSAGE };
+
+const formatColumnList = (columnNames: readonly string[]): string => {
+	return columnNames.map((columnName) => {
+		return `\t\t${columnName}`;
+	}).join(',\n');
+};
+
+const createParameterList = (parameterCount: number): string => {
+	return Array.from({ length: parameterCount }).map(() => {
+		return '?';
+	}).join(', ');
+};
+
 const SELECT_TASKS_QUERY = `
 	SELECT
-		id,
-		text,
-		state,
-		priority,
-		owner,
-		due_date,
-		tags_json,
-		sort_position,
-		completion_date,
-		created_at,
-		updated_at
+${formatColumnList(TASK_SELECT_COLUMN_NAMES)}
 	FROM tasks
 	ORDER BY id ASC
 `;
 
 const INSERT_TASK_QUERY = `
 	INSERT INTO tasks (
-		id,
-		text,
-		state,
-		priority,
-		owner,
-		due_date,
-		tags_json,
-		sort_position,
-		completion_date,
-		created_at,
-		updated_at
+${formatColumnList(TASK_INSERT_COLUMN_NAMES)}
 	)
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	VALUES (${createParameterList(TASK_INSERT_COLUMN_NAMES.length)})
 `;
 
 const createUnwiredStorageStatus = (): StorageStatus => {
@@ -215,12 +202,6 @@ const getErrorMessage = (error: unknown): string => {
 	}
 
 	return String(error);
-};
-
-const createInvalidTaskStorageCommandError = (message: string): InvalidTaskStorageCommandError => {
-	const error = new Error(message) as InvalidTaskStorageCommandError;
-	error.invalidTaskStorageCommand = true;
-	return error;
 };
 
 const isInvalidTaskStorageCommandError = (error: unknown): error is InvalidTaskStorageCommandError => {
@@ -309,116 +290,14 @@ const insertTask = (taskDatabase: TaskDatabase, task: PersistedTask, writtenAt: 
 		updatedAt: writtenAt
 	});
 	const result = taskDatabase.connection.prepare(INSERT_TASK_QUERY).run(
-		row.id,
-		row.text,
-		row.state,
-		row.priority,
-		row.owner,
-		row.due_date,
-		row.tags_json,
-		row.sort_position,
-		row.completion_date,
-		row.created_at,
-		row.updated_at
+		...taskRowToColumnValues(row, TASK_INSERT_COLUMN_NAMES)
 	);
 
 	assertSingleTaskChanged(result.changes, 'create', task.id);
 };
 
-const hasUnsupportedTaskIdChange = (change: PersistedTaskChange): boolean => {
-	return Object.prototype.hasOwnProperty.call(change, 'id');
-};
-
-const hasTaskChange = <TKey extends keyof PersistedTaskChange>(change: PersistedTaskChange, key: TKey): boolean => {
-	return Object.prototype.hasOwnProperty.call(change, key);
-};
-
-const getRequiredTaskChangeValue = <TKey extends keyof PersistedTaskChange>(
-	change: PersistedTaskChange,
-	key: TKey
-): Exclude<PersistedTaskChange[TKey], undefined> => {
-	const value = change[key];
-
-	if(value === undefined) {
-		throw new Error(`Task change field "${String(key)}" cannot be undefined.`);
-	}
-
-	return value as Exclude<PersistedTaskChange[TKey], undefined>;
-};
-
-const getTaskUpdateColumns = (change: PersistedTaskChange, updatedAt: Date): TaskUpdateColumn[] => {
-	const columns: TaskUpdateColumn[] = [];
-
-	if(hasUnsupportedTaskIdChange(change)) {
-		throw createInvalidTaskStorageCommandError(TASK_ID_CHANGE_NOT_SUPPORTED_MESSAGE);
-	}
-
-	if(hasTaskChange(change, 'text')) {
-		columns.push({
-			columnName: 'text',
-			value: getRequiredTaskChangeValue(change, 'text')
-		});
-	}
-
-	if(hasTaskChange(change, 'state')) {
-		columns.push({
-			columnName: 'state',
-			value: getRequiredTaskChangeValue(change, 'state')
-		});
-	}
-
-	if(hasTaskChange(change, 'priority')) {
-		columns.push({
-			columnName: 'priority',
-			value: getRequiredTaskChangeValue(change, 'priority')
-		});
-	}
-
-	if(hasTaskChange(change, 'owner')) {
-		columns.push({
-			columnName: 'owner',
-			value: change.owner || null
-		});
-	}
-
-	if(hasTaskChange(change, 'dueDate')) {
-		columns.push({
-			columnName: 'due_date',
-			value: change.dueDate || null
-		});
-	}
-
-	if(hasTaskChange(change, 'tags')) {
-		columns.push({
-			columnName: 'tags_json',
-			value: JSON.stringify(getRequiredTaskChangeValue(change, 'tags'))
-		});
-	}
-
-	if(hasTaskChange(change, 'sortPosition')) {
-		columns.push({
-			columnName: 'sort_position',
-			value: getRequiredTaskChangeValue(change, 'sortPosition')
-		});
-	}
-
-	if(hasTaskChange(change, 'completionDate')) {
-		columns.push({
-			columnName: 'completion_date',
-			value: change.completionDate ? change.completionDate.toISOString() : null
-		});
-	}
-
-	columns.push({
-		columnName: 'updated_at',
-		value: updatedAt.toISOString()
-	});
-
-	return columns;
-};
-
 const updateTask = (taskDatabase: TaskDatabase, taskId: string, change: PersistedTaskChange, writtenAt: Date): void => {
-	const columns = getTaskUpdateColumns(change, writtenAt);
+	const columns = taskChangeToTaskUpdateColumns(change, writtenAt);
 	const assignments = columns.map((column) => {
 		return `${column.columnName} = ?`;
 	}).join(', ');
