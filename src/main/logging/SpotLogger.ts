@@ -66,10 +66,16 @@ export interface SpotLoggerConfiguration {
 	retryDelayMs: number;
 }
 
-export interface SpotLoggerStatus {
-	state: 'healthy' | 'unavailable';
-	message?: string;
+export interface SpotLoggerHealthyStatus {
+	state: 'healthy';
 }
+
+export interface SpotLoggerUnavailableStatus {
+	state: 'unavailable';
+	message: string;
+}
+
+export type SpotLoggerStatus = SpotLoggerHealthyStatus | SpotLoggerUnavailableStatus;
 
 export type SpotLoggerWriteOutcome = {
 	ok: true;
@@ -77,7 +83,7 @@ export type SpotLoggerWriteOutcome = {
 } | {
 	ok: false;
 	message: string;
-	status: SpotLoggerStatus;
+	status: SpotLoggerUnavailableStatus;
 };
 
 export interface CreateSpotLoggerOptions {
@@ -253,10 +259,15 @@ export const createSpotLogger = ({
 		}
 
 		lastFailureMessage = createFailureMessage(maximumWriteAttempts, lastError);
+		const status: SpotLoggerUnavailableStatus = {
+			state: 'unavailable',
+			message: lastFailureMessage
+		};
+
 		return {
 			ok: false,
 			message: lastFailureMessage,
-			status: getStatus()
+			status
 		};
 	};
 

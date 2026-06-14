@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { createSpotLogger, SPOT_LOG_FILE_NAME, SPOT_LOG_WRITE_FAILED_MESSAGE, type CreateSpotLoggerOptions, type SpotLogFields, type SpotLogLevel, type SpotLogger, type SpotLoggerStatus } from 'src/main/logging/SpotLogger';
+import { createSpotLogger, type CreateSpotLoggerOptions, type SpotLogFields, type SpotLogLevel, type SpotLogger, type SpotLoggerStatus, type SpotLoggerUnavailableStatus } from 'src/main/logging/SpotLogger';
 import { executeTaskCommandInStorage } from 'src/main/storage/TaskCommandExecutor';
 import { DATABASE_FILE_NAME, type SqlQueryLogger, type SqlQueryLogRecord } from 'src/main/storage/TaskDatabase';
 import { isInvalidTaskChangeError } from 'src/main/storage/TaskRowMapping';
@@ -7,10 +7,6 @@ import { readTasks, withTaskDatabase, type TaskSqlRepositoryOptions } from 'src/
 import type { Task } from 'src/types/TaskTypes';
 
 export const STORAGE_NOT_IMPLEMENTED_MESSAGE = 'Persistent task storage is not implemented yet.';
-
-export const OPERATIONAL_LOG_FILE_NAME = SPOT_LOG_FILE_NAME;
-
-export const OPERATIONAL_LOG_WRITE_FAILED_MESSAGE = SPOT_LOG_WRITE_FAILED_MESSAGE;
 
 export type PersistedTask = Omit<Task, 'visible'>;
 
@@ -136,15 +132,16 @@ const createUnwiredStorageStatus = (): StorageStatus => {
 
 const createConfiguredStorageStatus = (
 	storageDirectory: string,
+	logger: SpotLogger,
 	database: StorageSubsystemStatus = { state: 'healthy' },
-	operationalLog: StorageSubsystemStatus = { state: 'healthy' }
+	operationalLog: StorageSubsystemStatus = logger.getStatus()
 ): StorageStatus => {
 	return {
 		database,
 		operationalLog,
 		storageDirectory,
 		databasePath: path.join(storageDirectory, DATABASE_FILE_NAME),
-		operationalLogPath: path.join(storageDirectory, OPERATIONAL_LOG_FILE_NAME)
+		operationalLogPath: logger.getConfiguration().filePath
 	};
 };
 
@@ -159,13 +156,14 @@ const createNotImplementedFailure = (status: StorageStatus): StorageFailure => {
 
 const createOperationalLoggingFailure = (
 	storageDirectory: string,
-	operationalLog: SpotLoggerStatus
+	logger: SpotLogger,
+	operationalLog: SpotLoggerUnavailableStatus
 ): StorageFailure => {
 	return {
 		ok: false,
 		reason: 'operational-log-error',
-		message: operationalLog.message ?? OPERATIONAL_LOG_WRITE_FAILED_MESSAGE,
-		status: createConfiguredStorageStatus(storageDirectory, { state: 'healthy' }, operationalLog)
+		message: operationalLog.message,
+		status: createConfiguredStorageStatus(storageDirectory, logger, { state: 'healthy' }, operationalLog)
 	};
 };
 
@@ -183,8 +181,9 @@ const getErrorMessage = (error: unknown): string => {
 
 const createDatabaseFailure = (
 	storageDirectory: string,
+	logger: SpotLogger,
 	error: unknown,
-	operationalLog: StorageSubsystemStatus = { state: 'healthy' }
+	operationalLog: StorageSubsystemStatus = logger.getStatus()
 ): StorageFailure => {
 	const message = getErrorMessage(error);
 
@@ -192,7 +191,7 @@ const createDatabaseFailure = (
 		ok: false,
 		reason: 'database-error',
 		message,
-		status: createConfiguredStorageStatus(storageDirectory, {
+		status: createConfiguredStorageStatus(storageDirectory, logger, {
 			state: 'unavailable',
 			message
 		}, operationalLog)
@@ -201,14 +200,15 @@ const createDatabaseFailure = (
 
 const createInvalidCommandFailure = (
 	storageDirectory: string,
+	logger: SpotLogger,
 	error: unknown,
-	operationalLog: StorageSubsystemStatus = { state: 'healthy' }
+	operationalLog: StorageSubsystemStatus = logger.getStatus()
 ): StorageFailure => {
 	return {
 		ok: false,
 		reason: 'invalid-command',
 		message: getErrorMessage(error),
-		status: createConfiguredStorageStatus(storageDirectory, { state: 'healthy' }, operationalLog)
+		status: createConfiguredStorageStatus(storageDirectory, logger, { state: 'healthy' }, operationalLog)
 	};
 };
 
@@ -276,12 +276,12 @@ const loadConfiguredTasks = async(
 		return {
 			ok: true,
 			tasks,
-			status: createConfiguredStorageStatus(options.storageDirectory, { state: 'healthy' }, operationalLogStatus)
+			status: createConfiguredStorageStatus(options.storageDirectory, logger, { state: 'healthy' }, operationalLogStatus)
 		};
 	}
 	catch(error) {
 		const operationalLogStatus = await flushSpotLogEntries(logger, sqlLogEntries);
-		return createDatabaseFailure(options.storageDirectory, error, operationalLogStatus);
+		return createDatabaseFailure(options.storageDirectory, logger, error, operationalLogStatus);
 	}
 };
 
@@ -303,17 +303,17 @@ const executeConfiguredTaskCommand = async(
 
 		return {
 			ok: true,
-			status: createConfiguredStorageStatus(options.storageDirectory, { state: 'healthy' }, operationalLogStatus)
+			status: createConfiguredStorageStatus(options.storageDirectory, logger, { state: 'healthy' }, operationalLogStatus)
 		};
 	}
 	catch(error) {
 		const operationalLogStatus = await flushSpotLogEntries(logger, sqlLogEntries);
 
 		if(isInvalidTaskChangeError(error)) {
-			return createInvalidCommandFailure(options.storageDirectory, error, operationalLogStatus);
+			return createInvalidCommandFailure(options.storageDirectory, logger, error, operationalLogStatus);
 		}
 
-		return createDatabaseFailure(options.storageDirectory, error, operationalLogStatus);
+		return createDatabaseFailure(options.storageDirectory, logger, error, operationalLogStatus);
 	}
 };
 
@@ -332,11 +332,11 @@ const getConfiguredStorageStatus = async(
 		});
 		const operationalLogStatus = await flushSpotLogEntries(logger, sqlLogEntries);
 
-		return createConfiguredStorageStatus(options.storageDirectory, { state: 'healthy' }, operationalLogStatus);
+		return createConfiguredStorageStatus(options.storageDirectory, logger, { state: 'healthy' }, operationalLogStatus);
 	}
 	catch(error) {
 		const operationalLogStatus = await flushSpotLogEntries(logger, sqlLogEntries);
-		return createDatabaseFailure(options.storageDirectory, error, operationalLogStatus).status;
+		return createDatabaseFailure(options.storageDirectory, logger, error, operationalLogStatus).status;
 	}
 };
 
@@ -393,12 +393,12 @@ export const createTaskStorage = (options: CreateTaskStorageOptions = {}): TaskS
 		const result = await logger!.info(message, fields);
 
 		if(!result.ok) {
-			return createOperationalLoggingFailure(options.storageDirectory, result.status);
+			return createOperationalLoggingFailure(options.storageDirectory, logger!, result.status);
 		}
 
 		return {
 			ok: true,
-			status: createConfiguredStorageStatus(options.storageDirectory, { state: 'healthy' }, result.status)
+			status: createConfiguredStorageStatus(options.storageDirectory, logger!, { state: 'healthy' }, result.status)
 		};
 	};
 

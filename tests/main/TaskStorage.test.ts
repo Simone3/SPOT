@@ -1,10 +1,10 @@
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { SPOT_LOG_WRITE_FAILED_MESSAGE, type CreateSpotLoggerBackend } from 'src/main/logging/SpotLogger';
+import { SPOT_LOG_FILE_NAME, SPOT_LOG_WRITE_FAILED_MESSAGE, type CreateSpotLoggerBackend } from 'src/main/logging/SpotLogger';
 import { DATABASE_FILE_NAME, openTaskDatabase } from 'src/main/storage/TaskDatabase';
 import { TASK_INSERT_COLUMN_NAMES, TASK_SELECT_COLUMN_NAMES, createImmutableTaskFieldChangeMessage, taskRowToColumnValues, taskToTaskRow, type TaskRow } from 'src/main/storage/TaskRowMapping';
-import { createTaskStorage, OPERATIONAL_LOG_FILE_NAME, STORAGE_NOT_IMPLEMENTED_MESSAGE, type OperationalLogEntry, type PersistedTask, type TaskStorageCommand } from 'src/main/storage/TaskStorage';
+import { createTaskStorage, STORAGE_NOT_IMPLEMENTED_MESSAGE, type OperationalLogEntry, type PersistedTask, type TaskStorageCommand } from 'src/main/storage/TaskStorage';
 
 const makeTempStorageDirectory = (): string => {
 	return mkdtempSync(path.join(tmpdir(), 'spot-storage-'));
@@ -71,7 +71,7 @@ ${formatColumnList(TASK_SELECT_COLUMN_NAMES)}
 };
 
 const readOperationalLogEntries = (storageDirectory: string): OperationalLogEntry[] => {
-	const content = readFileSync(path.join(storageDirectory, OPERATIONAL_LOG_FILE_NAME), 'utf8').trim();
+	const content = readFileSync(path.join(storageDirectory, SPOT_LOG_FILE_NAME), 'utf8').trim();
 
 	if(!content) {
 		return [];
@@ -205,7 +205,7 @@ describe('TaskStorage', () => {
 				},
 				storageDirectory,
 				databasePath: path.join(storageDirectory, DATABASE_FILE_NAME),
-				operationalLogPath: path.join(storageDirectory, OPERATIONAL_LOG_FILE_NAME)
+				operationalLogPath: path.join(storageDirectory, SPOT_LOG_FILE_NAME)
 			}
 		});
 		expect(existsSync(path.join(storageDirectory, DATABASE_FILE_NAME))).toBe(true);
@@ -227,7 +227,7 @@ describe('TaskStorage', () => {
 			},
 			storageDirectory,
 			databasePath: path.join(storageDirectory, DATABASE_FILE_NAME),
-			operationalLogPath: path.join(storageDirectory, OPERATIONAL_LOG_FILE_NAME)
+			operationalLogPath: path.join(storageDirectory, SPOT_LOG_FILE_NAME)
 		});
 		expect(existsSync(path.join(storageDirectory, DATABASE_FILE_NAME))).toBe(true);
 	});
@@ -285,7 +285,7 @@ describe('TaskStorage', () => {
 				},
 				storageDirectory,
 				databasePath: path.join(storageDirectory, DATABASE_FILE_NAME),
-				operationalLogPath: path.join(storageDirectory, OPERATIONAL_LOG_FILE_NAME)
+				operationalLogPath: path.join(storageDirectory, SPOT_LOG_FILE_NAME)
 			}
 		});
 	});
@@ -414,7 +414,7 @@ describe('TaskStorage', () => {
 				},
 				storageDirectory,
 				databasePath: path.join(storageDirectory, DATABASE_FILE_NAME),
-				operationalLogPath: path.join(storageDirectory, OPERATIONAL_LOG_FILE_NAME)
+				operationalLogPath: path.join(storageDirectory, SPOT_LOG_FILE_NAME)
 			}
 		});
 
