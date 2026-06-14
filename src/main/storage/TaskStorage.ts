@@ -2,15 +2,11 @@ import path from 'node:path';
 import { createSpotLogger, type CreateSpotLoggerOptions, type SpotLogFields, type SpotLogLevel, type SpotLogger, type SpotLoggerStatus, type SpotLoggerUnavailableStatus } from 'src/main/logging/SpotLogger';
 import { executeTaskCommandInStorage } from 'src/main/storage/TaskCommandExecutor';
 import { DATABASE_FILE_NAME, type SqlQueryLogger, type SqlQueryLogRecord } from 'src/main/storage/TaskDatabase';
+import { readTasks, withTaskDatabase, type TaskRepositoryOptions } from 'src/main/storage/TaskRepository';
 import { isInvalidTaskChangeError } from 'src/main/storage/TaskRowMapping';
-import { readTasks, withTaskDatabase, type TaskSqlRepositoryOptions } from 'src/main/storage/TaskSqlRepository';
-import type { Task } from 'src/types/TaskTypes';
+import type { PersistedTask, PersistedTaskChange, Task } from 'src/types/TaskTypes';
 
 export const STORAGE_NOT_IMPLEMENTED_MESSAGE = 'Persistent task storage is not implemented yet.';
-
-export type PersistedTask = Omit<Task, 'visible'>;
-
-export type PersistedTaskChange = Partial<Omit<PersistedTask, 'id'>>;
 
 export type TaskStorageCommandName = 'task.create' | 'task.update' | 'task.delete' | 'tasks.updateMany';
 
@@ -261,7 +257,7 @@ const flushSpotLogEntries = async(
 };
 
 const loadConfiguredTasks = async(
-	options: TaskSqlRepositoryOptions,
+	options: TaskRepositoryOptions,
 	logger: SpotLogger
 ): Promise<LoadTasksResult> => {
 	const sqlLogEntries: PendingSpotLogEntry[] = [];
@@ -286,7 +282,7 @@ const loadConfiguredTasks = async(
 };
 
 const executeConfiguredTaskCommand = async(
-	options: TaskSqlRepositoryOptions,
+	options: TaskRepositoryOptions,
 	command: TaskStorageCommand,
 	logger: SpotLogger
 ): Promise<TaskStorageCommandResult> => {
@@ -318,7 +314,7 @@ const executeConfiguredTaskCommand = async(
 };
 
 const getConfiguredStorageStatus = async(
-	options: TaskSqlRepositoryOptions,
+	options: TaskRepositoryOptions,
 	logger: SpotLogger
 ): Promise<StorageStatus> => {
 	const sqlLogEntries: PendingSpotLogEntry[] = [];

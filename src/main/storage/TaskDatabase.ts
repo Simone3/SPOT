@@ -64,7 +64,7 @@ const getErrorMessage = (error: unknown): string => {
 	return String(error);
 };
 
-export const runObservedSqlQuery = <T>(
+export const runQuery = <T>(
 	sqlLogger: SqlQueryLogger | undefined,
 	query: string,
 	callback: () => T
@@ -102,7 +102,7 @@ const createSchemaMigrationsTable = (connection: DatabaseSync, sqlLogger?: SqlQu
 		)
 	`;
 
-	runObservedSqlQuery(sqlLogger, query, () => {
+	runQuery(sqlLogger, query, () => {
 		connection.exec(query);
 	});
 };
@@ -114,7 +114,7 @@ const getAppliedMigrationVersions = (connection: DatabaseSync, sqlLogger?: SqlQu
 		ORDER BY version ASC
 	`;
 
-	return runObservedSqlQuery(sqlLogger, query, () => {
+	return runQuery(sqlLogger, query, () => {
 		return connection.prepare(query).all().map((row) => {
 			return (row as unknown as MigrationRow).version;
 		});
@@ -122,18 +122,18 @@ const getAppliedMigrationVersions = (connection: DatabaseSync, sqlLogger?: SqlQu
 };
 
 const runTransaction = (connection: DatabaseSync, sqlLogger: SqlQueryLogger | undefined, callback: () => void): void => {
-	runObservedSqlQuery(sqlLogger, 'BEGIN', () => {
+	runQuery(sqlLogger, 'BEGIN', () => {
 		connection.exec('BEGIN');
 	});
 
 	try {
 		callback();
-		runObservedSqlQuery(sqlLogger, 'COMMIT', () => {
+		runQuery(sqlLogger, 'COMMIT', () => {
 			connection.exec('COMMIT');
 		});
 	}
 	catch(error) {
-		runObservedSqlQuery(sqlLogger, 'ROLLBACK', () => {
+		runQuery(sqlLogger, 'ROLLBACK', () => {
 			connection.exec('ROLLBACK');
 		});
 		throw error;
@@ -162,11 +162,11 @@ const applyVersionOneMigration = (connection: DatabaseSync, appliedAt: Date, sql
 			VALUES (?, ?)
 		`;
 
-		runObservedSqlQuery(sqlLogger, createTasksQuery, () => {
+		runQuery(sqlLogger, createTasksQuery, () => {
 			connection.exec(createTasksQuery);
 		});
 
-		runObservedSqlQuery(sqlLogger, insertMigrationQuery, () => {
+		runQuery(sqlLogger, insertMigrationQuery, () => {
 			connection.prepare(insertMigrationQuery).run(CURRENT_SCHEMA_VERSION, appliedAt.toISOString());
 		});
 	});

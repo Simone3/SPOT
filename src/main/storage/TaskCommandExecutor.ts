@@ -1,8 +1,8 @@
 import type { TaskDatabase } from 'src/main/storage/TaskDatabase';
-import { deleteTaskRecord, insertTaskRecord, runTaskTransaction, updateTaskRecord, withTaskDatabase, type TaskSqlRepositoryOptions } from 'src/main/storage/TaskSqlRepository';
+import { deleteTaskRecord, insertTaskRecord, runTaskTransaction, updateTaskRecord, withTaskDatabase, type TaskRepositoryOptions } from 'src/main/storage/TaskRepository';
 import type { TaskStorageCommand } from 'src/main/storage/TaskStorage';
 
-const getCurrentDate = (options: TaskSqlRepositoryOptions): Date => {
+const getCurrentDate = (options: TaskRepositoryOptions): Date => {
 	if(options.now) {
 		return options.now();
 	}
@@ -36,7 +36,7 @@ const applyTaskCommand = (taskDatabase: TaskDatabase, command: TaskStorageComman
 };
 
 export const executeTaskCommandInStorage = (
-	options: TaskSqlRepositoryOptions,
+	options: TaskRepositoryOptions,
 	command: TaskStorageCommand
 ): void => {
 	withTaskDatabase(options, (taskDatabase) => {

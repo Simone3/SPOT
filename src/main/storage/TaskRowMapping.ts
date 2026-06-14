@@ -1,5 +1,4 @@
-import type { PersistedTask, PersistedTaskChange } from 'src/main/storage/TaskStorage';
-import type { Task, TaskPriorityValue, TaskStatus } from 'src/types/TaskTypes';
+import type { PersistedTask, PersistedTaskChange, Task, TaskPriorityValue, TaskStatus } from 'src/types/TaskTypes';
 
 export interface TaskRow {
 	id: string;

@@ -1,9 +1,8 @@
-import { openTaskDatabase, runObservedSqlQuery, type SqlQueryLogger, type TaskDatabase } from 'src/main/storage/TaskDatabase';
+import { openTaskDatabase, runQuery, type SqlQueryLogger, type TaskDatabase } from 'src/main/storage/TaskDatabase';
 import { TASK_INSERT_COLUMN_NAMES, TASK_SELECT_COLUMN_NAMES, taskChangeToTaskUpdateColumns, taskRowToColumnValues, taskRowToTask, taskToTaskRow, type TaskRow } from 'src/main/storage/TaskRowMapping';
-import type { PersistedTask, PersistedTaskChange } from 'src/main/storage/TaskStorage';
-import type { Task } from 'src/types/TaskTypes';
+import type { PersistedTask, PersistedTaskChange, Task } from 'src/types/TaskTypes';
 
-export interface TaskSqlRepositoryOptions {
+export interface TaskRepositoryOptions {
 	storageDirectory: string;
 	now?: () => Date;
 	sqlLogger?: SqlQueryLogger;
@@ -37,7 +36,7 @@ const assertSingleTaskChanged = (changes: number | bigint, action: string, taskI
 };
 
 export const withTaskDatabase = <T>(
-	options: TaskSqlRepositoryOptions,
+	options: TaskRepositoryOptions,
 	callback: (taskDatabase: TaskDatabase) => T
 ): T => {
 	const taskDatabase = openTaskDatabase({
@@ -55,18 +54,18 @@ export const withTaskDatabase = <T>(
 };
 
 export const runTaskTransaction = (taskDatabase: TaskDatabase, callback: () => void): void => {
-	runObservedSqlQuery(taskDatabase.sqlLogger, 'BEGIN', () => {
+	runQuery(taskDatabase.sqlLogger, 'BEGIN', () => {
 		taskDatabase.connection.exec('BEGIN');
 	});
 
 	try {
 		callback();
-		runObservedSqlQuery(taskDatabase.sqlLogger, 'COMMIT', () => {
+		runQuery(taskDatabase.sqlLogger, 'COMMIT', () => {
 			taskDatabase.connection.exec('COMMIT');
 		});
 	}
 	catch(error) {
-		runObservedSqlQuery(taskDatabase.sqlLogger, 'ROLLBACK', () => {
+		runQuery(taskDatabase.sqlLogger, 'ROLLBACK', () => {
 			taskDatabase.connection.exec('ROLLBACK');
 		});
 		throw error;
@@ -74,12 +73,12 @@ export const runTaskTransaction = (taskDatabase: TaskDatabase, callback: () => v
 };
 
 export const readTaskRows = (taskDatabase: TaskDatabase): TaskRow[] => {
-	return runObservedSqlQuery(taskDatabase.sqlLogger, SELECT_TASKS_QUERY, () => {
+	return runQuery(taskDatabase.sqlLogger, SELECT_TASKS_QUERY, () => {
 		return taskDatabase.connection.prepare(SELECT_TASKS_QUERY).all() as unknown as TaskRow[];
 	});
 };
 
-export const readTasks = (options: TaskSqlRepositoryOptions): Task[] => {
+export const readTasks = (options: TaskRepositoryOptions): Task[] => {
 	return withTaskDatabase(options, (taskDatabase) => {
 		return readTaskRows(taskDatabase).map((taskRow) => {
 			return taskRowToTask(taskRow);
@@ -92,7 +91,7 @@ export const insertTaskRecord = (taskDatabase: TaskDatabase, task: PersistedTask
 		createdAt: writtenAt,
 		updatedAt: writtenAt
 	});
-	const result = runObservedSqlQuery(taskDatabase.sqlLogger, INSERT_TASK_QUERY, () => {
+	const result = runQuery(taskDatabase.sqlLogger, INSERT_TASK_QUERY, () => {
 		return taskDatabase.connection.prepare(INSERT_TASK_QUERY).run(
 			...taskRowToColumnValues(row, TASK_INSERT_COLUMN_NAMES)
 		);
@@ -116,7 +115,7 @@ export const updateTaskRecord = (
 		SET ${assignments}
 		WHERE id = ?
 	`;
-	const result = runObservedSqlQuery(taskDatabase.sqlLogger, query, () => {
+	const result = runQuery(taskDatabase.sqlLogger, query, () => {
 		return taskDatabase.connection.prepare(query).run(
 			...columns.map((column) => {
 				return column.value;
@@ -133,7 +132,7 @@ export const deleteTaskRecord = (taskDatabase: TaskDatabase, taskId: string): vo
 		DELETE FROM tasks
 		WHERE id = ?
 	`;
-	const result = runObservedSqlQuery(taskDatabase.sqlLogger, query, () => {
+	const result = runQuery(taskDatabase.sqlLogger, query, () => {
 		return taskDatabase.connection.prepare(query).run(taskId);
 	});
 

@@ -1,5 +1,5 @@
 import { taskRowToTask, taskToTaskRow, type TaskRow } from 'src/main/storage/TaskRowMapping';
-import type { PersistedTask } from 'src/main/storage/TaskStorage';
+import type { PersistedTask } from 'src/types/TaskTypes';
 
 describe('TaskRowMapping', () => {
 	test('serializes tags, dates, visibility, and completion dates for SQLite rows', () => {

@@ -15,6 +15,10 @@ export interface Task {
 	completionDate?: Date;
 }
 
+export type PersistedTask = Omit<Task, 'visible'>;
+
+export type PersistedTaskChange = Partial<Omit<PersistedTask, 'id'>>;
+
 export type TaskChange = Partial<Task>;
 
 export interface TasksContainer {
