@@ -1,14 +1,16 @@
 import path from 'node:path';
+import { createSpotLogger, SPOT_LOG_FILE_NAME, SPOT_LOG_WRITE_FAILED_MESSAGE, type CreateSpotLoggerOptions, type SpotLogFields, type SpotLogLevel, type SpotLogger, type SpotLoggerStatus } from 'src/main/logging/SpotLogger';
 import { executeTaskCommandInStorage } from 'src/main/storage/TaskCommandExecutor';
 import { DATABASE_FILE_NAME, type SqlQueryLogger, type SqlQueryLogRecord } from 'src/main/storage/TaskDatabase';
-import { createOperationalLog, OPERATIONAL_LOG_FILE_NAME, OPERATIONAL_LOG_WRITE_FAILED_MESSAGE, type CreateOperationalLogOptions, type OperationalLog, type OperationalLogStatus } from 'src/main/storage/OperationalLog';
 import { isInvalidTaskChangeError } from 'src/main/storage/TaskRowMapping';
 import { readTasks, withTaskDatabase, type TaskSqlRepositoryOptions } from 'src/main/storage/TaskSqlRepository';
 import type { Task } from 'src/types/TaskTypes';
 
 export const STORAGE_NOT_IMPLEMENTED_MESSAGE = 'Persistent task storage is not implemented yet.';
 
-export { OPERATIONAL_LOG_FILE_NAME };
+export const OPERATIONAL_LOG_FILE_NAME = SPOT_LOG_FILE_NAME;
+
+export const OPERATIONAL_LOG_WRITE_FAILED_MESSAGE = SPOT_LOG_WRITE_FAILED_MESSAGE;
 
 export type PersistedTask = Omit<Task, 'visible'>;
 
@@ -49,17 +51,17 @@ interface TaskUpdateManyCommand {
 export type TaskStorageCommand = TaskCreateCommand | TaskUpdateCommand | TaskDeleteCommand | TaskUpdateManyCommand;
 
 interface ReactCommandOperationalLogEntry {
-	createdAt: string;
+	message: string;
 	type: 'react.command';
 	command: TaskStorageCommandName;
 	payload: unknown;
 }
 
 interface SqlQueryOperationalLogEntry {
-	createdAt: string;
+	message: string;
 	type: 'sql.query';
 	query: string;
-	durationMs: number;
+	elapsedMillis: number;
 	result: 'success' | 'failure';
 	error?: string;
 }
@@ -116,7 +118,7 @@ export interface TaskStorage {
 export interface CreateTaskStorageOptions {
 	storageDirectory?: string;
 	now?: () => Date;
-	operationalLog?: Omit<CreateOperationalLogOptions, 'storageDirectory'>;
+	logger?: Omit<CreateSpotLoggerOptions, 'storageDirectory'>;
 }
 
 const createUnwiredStorageStatus = (): StorageStatus => {
@@ -155,9 +157,9 @@ const createNotImplementedFailure = (status: StorageStatus): StorageFailure => {
 	};
 };
 
-const createOperationalLogFailure = (
+const createOperationalLoggingFailure = (
 	storageDirectory: string,
-	operationalLog: OperationalLogStatus
+	operationalLog: SpotLoggerStatus
 ): StorageFailure => {
 	return {
 		ok: false,
@@ -210,44 +212,48 @@ const createInvalidCommandFailure = (
 	};
 };
 
-const getTimestamp = (now?: () => Date): string => {
-	if(now) {
-		return now().toISOString();
-	}
+interface PendingSpotLogEntry {
+	level: SpotLogLevel;
+	message: string;
+	fields?: SpotLogFields;
+}
 
-	return new Date().toISOString();
-};
-
-const createReactCommandLogEntry = (command: TaskStorageCommand, now?: () => Date): OperationalLogEntry => {
+const createReactCommandLogEntry = (command: TaskStorageCommand): PendingSpotLogEntry => {
 	return {
-		createdAt: getTimestamp(now),
-		type: 'react.command',
-		command: command.command,
-		payload: command.payload
+		level: 'info',
+		message: 'React storage command received',
+		fields: {
+			type: 'react.command',
+			command: command.command,
+			payload: command.payload
+		}
 	};
 };
 
-const createSqlLogCollector = (entries: OperationalLogEntry[], now?: () => Date): SqlQueryLogger => {
+const createSqlLogCollector = (entries: PendingSpotLogEntry[]): SqlQueryLogger => {
 	return (record: SqlQueryLogRecord) => {
 		entries.push({
-			createdAt: getTimestamp(now),
-			type: 'sql.query',
-			query: record.query,
-			durationMs: record.durationMs,
-			result: record.result,
-			error: record.error
+			level: record.result === 'failure' ? 'error' : 'info',
+			message: 'Storage SQL query completed',
+			fields: {
+				type: 'sql.query',
+				query: record.query,
+				elapsedMillis: record.durationMs,
+				result: record.result,
+				error: record.error
+			}
 		});
 	};
 };
 
-const flushOperationalLogEntries = async(
-	operationalLog: OperationalLog,
-	entries: OperationalLogEntry[]
-): Promise<OperationalLogStatus> => {
-	let operationalLogStatus = operationalLog.getStatus();
+const flushSpotLogEntries = async(
+	logger: SpotLogger,
+	entries: PendingSpotLogEntry[]
+): Promise<SpotLoggerStatus> => {
+	let operationalLogStatus = logger.getStatus();
 
 	for(const entry of entries) {
-		const result = await operationalLog.writeEntry(entry);
+		const result = await logger[entry.level](entry.message, entry.fields);
 		operationalLogStatus = result.status;
 	}
 
@@ -256,16 +262,16 @@ const flushOperationalLogEntries = async(
 
 const loadConfiguredTasks = async(
 	options: TaskSqlRepositoryOptions,
-	operationalLog: OperationalLog
+	logger: SpotLogger
 ): Promise<LoadTasksResult> => {
-	const sqlLogEntries: OperationalLogEntry[] = [];
+	const sqlLogEntries: PendingSpotLogEntry[] = [];
 
 	try {
 		const tasks = readTasks({
 			...options,
-			sqlLogger: createSqlLogCollector(sqlLogEntries, options.now)
+			sqlLogger: createSqlLogCollector(sqlLogEntries)
 		});
-		const operationalLogStatus = await flushOperationalLogEntries(operationalLog, sqlLogEntries);
+		const operationalLogStatus = await flushSpotLogEntries(logger, sqlLogEntries);
 
 		return {
 			ok: true,
@@ -274,7 +280,7 @@ const loadConfiguredTasks = async(
 		};
 	}
 	catch(error) {
-		const operationalLogStatus = await flushOperationalLogEntries(operationalLog, sqlLogEntries);
+		const operationalLogStatus = await flushSpotLogEntries(logger, sqlLogEntries);
 		return createDatabaseFailure(options.storageDirectory, error, operationalLogStatus);
 	}
 };
@@ -282,17 +288,18 @@ const loadConfiguredTasks = async(
 const executeConfiguredTaskCommand = async(
 	options: TaskSqlRepositoryOptions,
 	command: TaskStorageCommand,
-	operationalLog: OperationalLog
+	logger: SpotLogger
 ): Promise<TaskStorageCommandResult> => {
-	await operationalLog.writeEntry(createReactCommandLogEntry(command, options.now));
-	const sqlLogEntries: OperationalLogEntry[] = [];
+	const reactCommandLogEntry = createReactCommandLogEntry(command);
+	await logger[reactCommandLogEntry.level](reactCommandLogEntry.message, reactCommandLogEntry.fields);
+	const sqlLogEntries: PendingSpotLogEntry[] = [];
 
 	try {
 		executeTaskCommandInStorage({
 			...options,
-			sqlLogger: createSqlLogCollector(sqlLogEntries, options.now)
+			sqlLogger: createSqlLogCollector(sqlLogEntries)
 		}, command);
-		const operationalLogStatus = await flushOperationalLogEntries(operationalLog, sqlLogEntries);
+		const operationalLogStatus = await flushSpotLogEntries(logger, sqlLogEntries);
 
 		return {
 			ok: true,
@@ -300,7 +307,7 @@ const executeConfiguredTaskCommand = async(
 		};
 	}
 	catch(error) {
-		const operationalLogStatus = await flushOperationalLogEntries(operationalLog, sqlLogEntries);
+		const operationalLogStatus = await flushSpotLogEntries(logger, sqlLogEntries);
 
 		if(isInvalidTaskChangeError(error)) {
 			return createInvalidCommandFailure(options.storageDirectory, error, operationalLogStatus);
@@ -312,34 +319,35 @@ const executeConfiguredTaskCommand = async(
 
 const getConfiguredStorageStatus = async(
 	options: TaskSqlRepositoryOptions,
-	operationalLog: OperationalLog
+	logger: SpotLogger
 ): Promise<StorageStatus> => {
-	const sqlLogEntries: OperationalLogEntry[] = [];
+	const sqlLogEntries: PendingSpotLogEntry[] = [];
 
 	try {
 		withTaskDatabase({
 			...options,
-			sqlLogger: createSqlLogCollector(sqlLogEntries, options.now)
+			sqlLogger: createSqlLogCollector(sqlLogEntries)
 		}, () => {
 			return undefined;
 		});
-		const operationalLogStatus = await flushOperationalLogEntries(operationalLog, sqlLogEntries);
+		const operationalLogStatus = await flushSpotLogEntries(logger, sqlLogEntries);
 
 		return createConfiguredStorageStatus(options.storageDirectory, { state: 'healthy' }, operationalLogStatus);
 	}
 	catch(error) {
-		const operationalLogStatus = await flushOperationalLogEntries(operationalLog, sqlLogEntries);
+		const operationalLogStatus = await flushSpotLogEntries(logger, sqlLogEntries);
 		return createDatabaseFailure(options.storageDirectory, error, operationalLogStatus).status;
 	}
 };
 
 export const createTaskStorage = (options: CreateTaskStorageOptions = {}): TaskStorage => {
-	let operationalLog: OperationalLog | undefined;
+	let logger: SpotLogger | undefined;
 
 	if(options.storageDirectory) {
-		operationalLog = createOperationalLog({
+		logger = createSpotLogger({
 			storageDirectory: options.storageDirectory,
-			...options.operationalLog
+			now: options.now,
+			...options.logger
 		});
 	}
 
@@ -351,7 +359,7 @@ export const createTaskStorage = (options: CreateTaskStorageOptions = {}): TaskS
 		return getConfiguredStorageStatus({
 			storageDirectory: options.storageDirectory,
 			now: options.now
-		}, operationalLog!);
+		}, logger!);
 	};
 
 	const loadTasks = async(): Promise<LoadTasksResult> => {
@@ -362,7 +370,7 @@ export const createTaskStorage = (options: CreateTaskStorageOptions = {}): TaskS
 		return loadConfiguredTasks({
 			storageDirectory: options.storageDirectory,
 			now: options.now
-		}, operationalLog!);
+		}, logger!);
 	};
 
 	const executeTaskCommand = async(command: TaskStorageCommand): Promise<TaskStorageCommandResult> => {
@@ -373,7 +381,7 @@ export const createTaskStorage = (options: CreateTaskStorageOptions = {}): TaskS
 		return executeConfiguredTaskCommand({
 			storageDirectory: options.storageDirectory,
 			now: options.now
-		}, command, operationalLog!);
+		}, command, logger!);
 	};
 
 	const writeOperationalLogLine = async(entry: OperationalLogEntry): Promise<OperationalLogWriteResult> => {
@@ -381,10 +389,11 @@ export const createTaskStorage = (options: CreateTaskStorageOptions = {}): TaskS
 			return createNotImplementedFailure(await getStorageStatus());
 		}
 
-		const result = await operationalLog!.writeEntry(entry);
+		const { message, ...fields } = entry;
+		const result = await logger!.info(message, fields);
 
 		if(!result.ok) {
-			return createOperationalLogFailure(options.storageDirectory, result.status);
+			return createOperationalLoggingFailure(options.storageDirectory, result.status);
 		}
 
 		return {

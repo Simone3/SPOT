@@ -1,8 +1,8 @@
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { SPOT_LOG_WRITE_FAILED_MESSAGE, type CreateSpotLoggerBackend } from 'src/main/logging/SpotLogger';
 import { DATABASE_FILE_NAME, openTaskDatabase } from 'src/main/storage/TaskDatabase';
-import { OPERATIONAL_LOG_WRITE_FAILED_MESSAGE, type CreateOperationalLogLogger } from 'src/main/storage/OperationalLog';
 import { TASK_INSERT_COLUMN_NAMES, TASK_SELECT_COLUMN_NAMES, createImmutableTaskFieldChangeMessage, taskRowToColumnValues, taskToTaskRow, type TaskRow } from 'src/main/storage/TaskRowMapping';
 import { createTaskStorage, OPERATIONAL_LOG_FILE_NAME, STORAGE_NOT_IMPLEMENTED_MESSAGE, type OperationalLogEntry, type PersistedTask, type TaskStorageCommand } from 'src/main/storage/TaskStorage';
 
@@ -82,10 +82,19 @@ const readOperationalLogEntries = (storageDirectory: string): OperationalLogEntr
 	});
 };
 
-const createNoopLoggerFactory = (): CreateOperationalLogLogger => {
+const createNoopBackendFactory = (): CreateSpotLoggerBackend => {
 	return () => {
 		return {
+			debug: () => {
+				return undefined;
+			},
+			error: () => {
+				return undefined;
+			},
 			info: () => {
+				return undefined;
+			},
+			warn: () => {
 				return undefined;
 			},
 			transports: {
@@ -154,7 +163,7 @@ describe('TaskStorage', () => {
 			}
 		};
 		const logEntry: OperationalLogEntry = {
-			createdAt: '2026-06-06T12:00:00.000Z',
+			message: 'React storage command received',
 			type: 'react.command',
 			command: command.command,
 			payload: command.payload
@@ -496,6 +505,8 @@ describe('TaskStorage', () => {
 		expect(logEntries).toEqual(expect.arrayContaining([
 			expect.objectContaining({
 				createdAt: createdAt.toISOString(),
+				level: 'info',
+				message: 'React storage command received',
 				type: 'react.command',
 				command: 'task.create',
 				payload: {
@@ -513,14 +524,20 @@ describe('TaskStorage', () => {
 			}),
 			expect.objectContaining({
 				createdAt: createdAt.toISOString(),
+				level: 'info',
+				message: 'Storage SQL query completed',
 				type: 'sql.query',
 				query: expect.stringContaining('INSERT INTO tasks'),
+				elapsedMillis: expect.any(Number),
 				result: 'success'
 			}),
 			expect.objectContaining({
 				createdAt: createdAt.toISOString(),
+				level: 'info',
+				message: 'Storage SQL query completed',
 				type: 'sql.query',
 				query: expect.stringContaining('SELECT id, text, state'),
+				elapsedMillis: expect.any(Number),
 				result: 'success'
 			})
 		]));
@@ -546,8 +563,8 @@ describe('TaskStorage', () => {
 			now: () => {
 				return createdAt;
 			},
-			operationalLog: {
-				loggerFactory: createNoopLoggerFactory(),
+			logger: {
+				backendFactory: createNoopBackendFactory(),
 				maximumWriteAttempts: 1,
 				retryDelayMs: 0
 			}
@@ -568,7 +585,7 @@ describe('TaskStorage', () => {
 				},
 				operationalLog: {
 					state: 'unavailable',
-					message: expect.stringContaining(OPERATIONAL_LOG_WRITE_FAILED_MESSAGE)
+					message: expect.stringContaining(SPOT_LOG_WRITE_FAILED_MESSAGE)
 				}
 			}
 		});

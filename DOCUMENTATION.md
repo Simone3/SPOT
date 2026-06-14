@@ -59,9 +59,9 @@ npm run make
 - `index.html` and `public/index.html` are HTML entry points.
 - `src/index.tsx` mounts the React app and defines routes.
 - `src/index.css` defines global layout and theme variables.
+- `src/main/logging/SpotLogger.ts` configures `electron-log` behind a generic factory-created logger with `info`, `warn`, `error`, and `debug` methods, newline-delimited JSON output, size-based rolling, and one retained archive.
 - `src/main/storage/TaskStorage.ts` defines the unwired Electron main-process storage contract, configured SQLite task loading, configured SQLite task write commands, and operational-log health reporting.
 - `src/main/storage/TaskCommandExecutor.ts` maps task storage commands to the task repository operations and keeps each command inside one transaction.
-- `src/main/storage/OperationalLog.ts` configures `electron-log` to write newline-delimited JSON entries to `spot-logs.ndjson` with size-based rolling and one retained archive.
 - `src/main/storage/TaskDatabase.ts` opens `spot.sqlite`, applies schema migrations, currently creates schema version `1`, and emits SQL query log records when a caller supplies a logger.
 - `src/main/storage/TaskRowMapping.ts` maps between SQLite task rows and React `Task` objects and owns the shared task field to SQLite column mapping used by storage queries.
 - `src/main/storage/TaskSqlRepository.ts` owns SQLite task queries, database sessions, and transaction helpers.
@@ -128,13 +128,13 @@ Known Electron work still pending:
 - `OperationalLogEntry`
 - storage status and result types
 
-Without a storage directory, the storage boundary reports both the database and operational log as `not-configured`. With a storage directory, `loadTasks()` opens `spot.sqlite`, applies migrations, reads task rows, maps them to React `Task` objects, logs the storage-layer SQL queries, and returns storage status. `executeTaskCommand()` appends the incoming storage command to `spot-logs.ndjson`, applies `task.create`, `task.update`, `task.delete`, and `tasks.updateMany` commands to SQLite through `TaskCommandExecutor.ts` and `TaskSqlRepository.ts`, appends the resulting SQL query records, and returns storage status. Nothing calls these methods yet, so application behavior is unchanged.
+Without a storage directory, the storage boundary reports both the database and operational log as `not-configured`. With a storage directory, `loadTasks()` opens `spot.sqlite`, applies migrations, reads task rows, maps them to React `Task` objects, logs the storage-layer SQL queries through `SpotLogger`, and returns storage status. `executeTaskCommand()` logs the incoming storage command through `SpotLogger`, applies `task.create`, `task.update`, `task.delete`, and `tasks.updateMany` commands to SQLite through `TaskCommandExecutor.ts` and `TaskSqlRepository.ts`, logs the resulting SQL query records, and returns storage status. Nothing calls these methods yet, so application behavior is unchanged.
 
 Each configured task write command runs in one SQLite transaction. Completing and restoring tasks are represented as `task.update`; manual reorder and sort by importance are represented as `tasks.updateMany`. Fields marked immutable in `TASK_FIELD_COLUMN_MAPPINGS` cannot be included in update changes; currently, that means task IDs are immutable after creation. If an update or delete references a missing task row, the command fails and the transaction rolls back. Operational-log writes are best-effort: repeated log failures return an `operational-log-error` from `writeOperationalLogLine()` or an `unavailable` operational-log status from task operations, but they do not invalidate successful SQLite writes.
 
 `src/main/storage/TaskDatabase.ts` opens or creates `spot.sqlite` in a caller-provided storage directory using Electron's bundled Node `node:sqlite` support. No external SQLite dependency is used. Opening the database creates `schema_migrations` when needed and applies migration version `1`, which creates the `tasks` table.
 
-`src/main/storage/OperationalLog.ts` uses `electron-log` to write newline-delimited JSON entries to `spot-logs.ndjson`. The file transport is configured with a 1 MiB maximum file size, `electron-log`'s size-based rolling, and one retained archive named `spot-logs.old.ndjson`. Log writes are synchronous at the transport layer and are retried up to three times with a short bounded delay. The storage boundary verifies that the expected JSON line reached the current log file after each write attempt so operational-log health is deterministic in tests and future IPC responses.
+`src/main/logging/SpotLogger.ts` uses `electron-log` to write newline-delimited JSON entries to `spot-logs.ndjson`. It is factory-initialized with a storage directory and exposes generic `info`, `warn`, `error`, and `debug` methods that take a message plus optional structured fields such as `type`, `command`, `query`, or `elapsedMillis`. The file transport is configured with a 1 MiB maximum file size, `electron-log`'s size-based rolling, and one retained archive named `spot-logs.old.ndjson`. Log writes are synchronous at the transport layer and are retried up to three times with a short bounded delay. The logger verifies that the expected JSON line reached the current log file after each write attempt so logging health is deterministic in tests and future IPC responses.
 
 `src/main/storage/TaskRowMapping.ts` serializes task rows for SQLite. `tags` are stored as `tags_json`, `completionDate` is stored as an ISO string in `completion_date`, optional string fields are stored as `NULL`, and the runtime-only `visible` flag is not stored. The `TASK_FIELD_COLUMN_MAPPINGS` list is the shared source for task field names, SQLite column names, mutability, and serialization/parsing behavior. `TaskStorage.ts` builds its task `SELECT`, `INSERT`, and `UPDATE` column lists from those mapping exports. Versioned schema migrations in `TaskDatabase.ts` remain explicit.
 
@@ -185,9 +185,9 @@ Failure model:
 Operational log format:
 
 ```json
-{"createdAt":"2026-06-02T12:00:00.000Z","type":"react.command","command":"task.update","payload":{"taskId":"...","change":{"text":"New"}}}
-{"createdAt":"2026-06-02T12:00:00.001Z","type":"react.command","command":"tasks.updateMany","payload":{"reason":"manual-reorder","updates":[{"taskId":"...","change":{"sortPosition":1000}},{"taskId":"...","change":{"sortPosition":2000}}]}}
-{"createdAt":"2026-06-02T12:00:00.003Z","type":"sql.query","query":"UPDATE tasks SET text = ? WHERE id = ?","durationMs":2.4,"result":"success"}
+{"createdAt":"2026-06-02T12:00:00.000Z","level":"info","message":"React storage command received","type":"react.command","command":"task.update","payload":{"taskId":"...","change":{"text":"New"}}}
+{"createdAt":"2026-06-02T12:00:00.001Z","level":"info","message":"React storage command received","type":"react.command","command":"tasks.updateMany","payload":{"reason":"manual-reorder","updates":[{"taskId":"...","change":{"sortPosition":1000}},{"taskId":"...","change":{"sortPosition":2000}}]}}
+{"createdAt":"2026-06-02T12:00:00.003Z","level":"info","message":"Storage SQL query completed","type":"sql.query","query":"UPDATE tasks SET text = ? WHERE id = ?","elapsedMillis":2.4,"result":"success"}
 ```
 
 React command names:
@@ -233,6 +233,7 @@ Operational-log contract:
 - The main process logs every incoming React storage command.
 - The main process logs every SQL query run by the storage layer, including `SELECT` queries.
 - Operational log entries are newline-delimited JSON objects in `spot-logs.ndjson`.
+- Operational log entries include `createdAt`, `level`, `message`, `type`, and any event-specific fields.
 - Operational logging is best-effort and retried for a bounded time.
 - A failed operational-log write must not invalidate a successful SQLite transaction.
 
@@ -247,7 +248,7 @@ Failure contract:
 SQL log entries:
 
 - Log all `SELECT`, `INSERT`, `UPDATE`, and `DELETE` queries run by the storage layer.
-- Include the query text, duration in milliseconds, and success or failure.
+- Include the query text, `elapsedMillis`, and success or failure.
 - Do not log sensitive values beyond the task data the user already stores in SPOT.
 - Log query parameters only when they are useful for debugging and safe to write to disk.
 
@@ -255,6 +256,7 @@ Logging library decision:
 
 - The first implementation uses `electron-log` version `5.4.4`.
 - The dependency is justified because it provides Electron-oriented file logging, configurable log paths, formatting, and built-in size-based rolling.
+- The project wraps the dependency in `createSpotLogger()` so the rest of the main process calls generic `info`, `warn`, `error`, and `debug` methods instead of depending on `electron-log` directly.
 - The file transport writes only JSON lines to `spot-logs.ndjson`.
 - The file transport uses a 1 MiB maximum file size and keeps one rolled archive, `spot-logs.old.ndjson`, so logs cannot grow without limit.
 - Keep logging in the Electron main process. React sends storage commands through IPC; it does not write logs directly.
@@ -800,7 +802,7 @@ Current test coverage includes focused regression checks for:
 - date comparison and display formatting
 - smoke coverage for task filters and task list interactions
 - SQLite storage setup, task row mapping, command execution, transaction rollback, and operational-log health separation
-- operational logging success, bounded retry failures, retry recovery, and size-based rolling with bounded retention
+- generic SPOT logging success, public log levels, bounded retry failures, retry recovery, and size-based rolling with bounded retention
 
 Validation commands:
 
