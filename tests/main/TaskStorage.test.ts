@@ -1,9 +1,10 @@
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { DATABASE_FILE_NAME, openTaskDatabase } from 'src/main/storage/TaskDatabase';
+import { OPERATIONAL_LOG_WRITE_FAILED_MESSAGE, type CreateOperationalLogLogger } from 'src/main/storage/OperationalLog';
 import { TASK_INSERT_COLUMN_NAMES, TASK_SELECT_COLUMN_NAMES, createImmutableTaskFieldChangeMessage, taskRowToColumnValues, taskToTaskRow, type TaskRow } from 'src/main/storage/TaskRowMapping';
-import { createTaskStorage, OPERATIONAL_LOG_FILE_NAME, OPERATIONAL_LOG_NOT_IMPLEMENTED_MESSAGE, STORAGE_NOT_IMPLEMENTED_MESSAGE, type OperationalLogEntry, type PersistedTask, type TaskStorageCommand } from 'src/main/storage/TaskStorage';
+import { createTaskStorage, OPERATIONAL_LOG_FILE_NAME, STORAGE_NOT_IMPLEMENTED_MESSAGE, type OperationalLogEntry, type PersistedTask, type TaskStorageCommand } from 'src/main/storage/TaskStorage';
 
 const makeTempStorageDirectory = (): string => {
 	return mkdtempSync(path.join(tmpdir(), 'spot-storage-'));
@@ -67,6 +68,51 @@ ${formatColumnList(TASK_SELECT_COLUMN_NAMES)}
 	finally {
 		taskDatabase.close();
 	}
+};
+
+const readOperationalLogEntries = (storageDirectory: string): OperationalLogEntry[] => {
+	const content = readFileSync(path.join(storageDirectory, OPERATIONAL_LOG_FILE_NAME), 'utf8').trim();
+
+	if(!content) {
+		return [];
+	}
+
+	return content.split(/\r?\n/).map((line) => {
+		return JSON.parse(line) as OperationalLogEntry;
+	});
+};
+
+const createNoopLoggerFactory = (): CreateOperationalLogLogger => {
+	return () => {
+		return {
+			info: () => {
+				return undefined;
+			},
+			transports: {
+				console: {
+					level: 'info'
+				},
+				file: {
+					level: 'info',
+					fileName: '',
+					format: ({ data }) => {
+						return data;
+					},
+					maxSize: 0,
+					resolvePathFn: () => {
+						return '';
+					},
+					sync: false
+				},
+				ipc: {
+					level: 'info'
+				},
+				remote: {
+					level: 'info'
+				}
+			}
+		};
+	};
 };
 
 describe('TaskStorage', () => {
@@ -146,7 +192,7 @@ describe('TaskStorage', () => {
 					state: 'healthy'
 				},
 				operationalLog: {
-					state: 'not-configured'
+					state: 'healthy'
 				},
 				storageDirectory,
 				databasePath: path.join(storageDirectory, DATABASE_FILE_NAME),
@@ -168,8 +214,7 @@ describe('TaskStorage', () => {
 				state: 'healthy'
 			},
 			operationalLog: {
-				state: 'not-configured',
-				message: OPERATIONAL_LOG_NOT_IMPLEMENTED_MESSAGE
+				state: 'healthy'
 			},
 			storageDirectory,
 			databasePath: path.join(storageDirectory, DATABASE_FILE_NAME),
@@ -227,8 +272,7 @@ describe('TaskStorage', () => {
 					state: 'healthy'
 				},
 				operationalLog: {
-					state: 'not-configured',
-					message: OPERATIONAL_LOG_NOT_IMPLEMENTED_MESSAGE
+					state: 'healthy'
 				},
 				storageDirectory,
 				databasePath: path.join(storageDirectory, DATABASE_FILE_NAME),
@@ -274,7 +318,7 @@ describe('TaskStorage', () => {
 					state: 'healthy'
 				},
 				operationalLog: {
-					state: 'not-configured'
+					state: 'healthy'
 				}
 			}
 		});
@@ -357,8 +401,7 @@ describe('TaskStorage', () => {
 					state: 'healthy'
 				},
 				operationalLog: {
-					state: 'not-configured',
-					message: OPERATIONAL_LOG_NOT_IMPLEMENTED_MESSAGE
+					state: 'healthy'
 				},
 				storageDirectory,
 				databasePath: path.join(storageDirectory, DATABASE_FILE_NAME),
@@ -412,6 +455,138 @@ describe('TaskStorage', () => {
 		});
 
 		expect(readPersistedTaskRows(storageDirectory)).toEqual([]);
+	});
+
+	test('writes task commands and storage SQL queries to the operational log', async() => {
+		const storageDirectory = makeTempStorageDirectory();
+		tempStorageDirectories.push(storageDirectory);
+		const createdAt = new Date('2026-06-06T12:00:00.000Z');
+		const createdTask: PersistedTask = {
+			id: 'logged-task',
+			text: 'Log this task command',
+			state: 'ACTIVE',
+			priority: 'HIGH',
+			owner: 'Simone',
+			dueDate: '2026-06-10',
+			tags: [ 'storage', 'log' ],
+			sortPosition: 100,
+			completionDate: undefined
+		};
+		const taskStorage = createTaskStorage({
+			storageDirectory,
+			now: () => {
+				return createdAt;
+			}
+		});
+
+		await expect(taskStorage.executeTaskCommand({
+			command: 'task.create',
+			payload: {
+				task: createdTask
+			}
+		})).resolves.toMatchObject({
+			ok: true
+		});
+		await expect(taskStorage.loadTasks()).resolves.toMatchObject({
+			ok: true
+		});
+
+		const logEntries = readOperationalLogEntries(storageDirectory);
+
+		expect(logEntries).toEqual(expect.arrayContaining([
+			expect.objectContaining({
+				createdAt: createdAt.toISOString(),
+				type: 'react.command',
+				command: 'task.create',
+				payload: {
+					task: expect.objectContaining({
+						id: createdTask.id,
+						text: createdTask.text,
+						state: createdTask.state,
+						priority: createdTask.priority,
+						owner: createdTask.owner,
+						dueDate: createdTask.dueDate,
+						tags: createdTask.tags,
+						sortPosition: createdTask.sortPosition
+					})
+				}
+			}),
+			expect.objectContaining({
+				createdAt: createdAt.toISOString(),
+				type: 'sql.query',
+				query: expect.stringContaining('INSERT INTO tasks'),
+				result: 'success'
+			}),
+			expect.objectContaining({
+				createdAt: createdAt.toISOString(),
+				type: 'sql.query',
+				query: expect.stringContaining('SELECT id, text, state'),
+				result: 'success'
+			})
+		]));
+	});
+
+	test('keeps SQLite writes valid when operational logging repeatedly fails', async() => {
+		const storageDirectory = makeTempStorageDirectory();
+		tempStorageDirectories.push(storageDirectory);
+		const createdAt = new Date('2026-06-06T12:00:00.000Z');
+		const createdTask: PersistedTask = {
+			id: 'log-failure-task',
+			text: 'Persist despite log failure',
+			state: 'ACTIVE',
+			priority: 'NORMAL',
+			owner: undefined,
+			dueDate: undefined,
+			tags: [],
+			sortPosition: 100,
+			completionDate: undefined
+		};
+		const taskStorage = createTaskStorage({
+			storageDirectory,
+			now: () => {
+				return createdAt;
+			},
+			operationalLog: {
+				loggerFactory: createNoopLoggerFactory(),
+				maximumWriteAttempts: 1,
+				retryDelayMs: 0
+			}
+		});
+
+		const result = await taskStorage.executeTaskCommand({
+			command: 'task.create',
+			payload: {
+				task: createdTask
+			}
+		});
+
+		expect(result).toMatchObject({
+			ok: true,
+			status: {
+				database: {
+					state: 'healthy'
+				},
+				operationalLog: {
+					state: 'unavailable',
+					message: expect.stringContaining(OPERATIONAL_LOG_WRITE_FAILED_MESSAGE)
+				}
+			}
+		});
+		expect(readPersistedTaskRows(storageDirectory)).toEqual([
+			{
+				id: 'log-failure-task',
+				text: 'Persist despite log failure',
+				state: 'ACTIVE',
+				priority: 'NORMAL',
+				owner: null,
+				due_date: null,
+				tags_json: '[]',
+				sort_position: 100,
+				completion_date: null,
+				created_at: createdAt.toISOString(),
+				updated_at: createdAt.toISOString()
+			}
+		]);
 	});
 
 	test('rejects task update commands that try to change an immutable task field', async() => {

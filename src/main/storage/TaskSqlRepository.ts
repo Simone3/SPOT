@@ -1,4 +1,4 @@
-import { openTaskDatabase, type TaskDatabase } from 'src/main/storage/TaskDatabase';
+import { openTaskDatabase, runObservedSqlQuery, type SqlQueryLogger, type TaskDatabase } from 'src/main/storage/TaskDatabase';
 import { TASK_INSERT_COLUMN_NAMES, TASK_SELECT_COLUMN_NAMES, taskChangeToTaskUpdateColumns, taskRowToColumnValues, taskRowToTask, taskToTaskRow, type TaskRow } from 'src/main/storage/TaskRowMapping';
 import type { PersistedTask, PersistedTaskChange } from 'src/main/storage/TaskStorage';
 import type { Task } from 'src/types/TaskTypes';
@@ -6,6 +6,7 @@ import type { Task } from 'src/types/TaskTypes';
 export interface TaskSqlRepositoryOptions {
 	storageDirectory: string;
 	now?: () => Date;
+	sqlLogger?: SqlQueryLogger;
 }
 
 const formatColumnList = (columnNames: readonly string[]): string => {
@@ -41,7 +42,8 @@ export const withTaskDatabase = <T>(
 ): T => {
 	const taskDatabase = openTaskDatabase({
 		storageDirectory: options.storageDirectory,
-		now: options.now
+		now: options.now,
+		sqlLogger: options.sqlLogger
 	});
 
 	try {
@@ -53,20 +55,28 @@ export const withTaskDatabase = <T>(
 };
 
 export const runTaskTransaction = (taskDatabase: TaskDatabase, callback: () => void): void => {
-	taskDatabase.connection.exec('BEGIN');
+	runObservedSqlQuery(taskDatabase.sqlLogger, 'BEGIN', () => {
+		taskDatabase.connection.exec('BEGIN');
+	});
 
 	try {
 		callback();
-		taskDatabase.connection.exec('COMMIT');
+		runObservedSqlQuery(taskDatabase.sqlLogger, 'COMMIT', () => {
+			taskDatabase.connection.exec('COMMIT');
+		});
 	}
 	catch(error) {
-		taskDatabase.connection.exec('ROLLBACK');
+		runObservedSqlQuery(taskDatabase.sqlLogger, 'ROLLBACK', () => {
+			taskDatabase.connection.exec('ROLLBACK');
+		});
 		throw error;
 	}
 };
 
 export const readTaskRows = (taskDatabase: TaskDatabase): TaskRow[] => {
-	return taskDatabase.connection.prepare(SELECT_TASKS_QUERY).all() as unknown as TaskRow[];
+	return runObservedSqlQuery(taskDatabase.sqlLogger, SELECT_TASKS_QUERY, () => {
+		return taskDatabase.connection.prepare(SELECT_TASKS_QUERY).all() as unknown as TaskRow[];
+	});
 };
 
 export const readTasks = (options: TaskSqlRepositoryOptions): Task[] => {
@@ -82,9 +92,11 @@ export const insertTaskRecord = (taskDatabase: TaskDatabase, task: PersistedTask
 		createdAt: writtenAt,
 		updatedAt: writtenAt
 	});
-	const result = taskDatabase.connection.prepare(INSERT_TASK_QUERY).run(
-		...taskRowToColumnValues(row, TASK_INSERT_COLUMN_NAMES)
-	);
+	const result = runObservedSqlQuery(taskDatabase.sqlLogger, INSERT_TASK_QUERY, () => {
+		return taskDatabase.connection.prepare(INSERT_TASK_QUERY).run(
+			...taskRowToColumnValues(row, TASK_INSERT_COLUMN_NAMES)
+		);
+	});
 
 	assertSingleTaskChanged(result.changes, 'create', task.id);
 };
@@ -99,25 +111,31 @@ export const updateTaskRecord = (
 	const assignments = columns.map((column) => {
 		return `${column.columnName} = ?`;
 	}).join(', ');
-	const result = taskDatabase.connection.prepare(`
+	const query = `
 		UPDATE tasks
 		SET ${assignments}
 		WHERE id = ?
-	`).run(
-		...columns.map((column) => {
-			return column.value;
-		}),
-		taskId
-	);
+	`;
+	const result = runObservedSqlQuery(taskDatabase.sqlLogger, query, () => {
+		return taskDatabase.connection.prepare(query).run(
+			...columns.map((column) => {
+				return column.value;
+			}),
+			taskId
+		);
+	});
 
 	assertSingleTaskChanged(result.changes, 'update', taskId);
 };
 
 export const deleteTaskRecord = (taskDatabase: TaskDatabase, taskId: string): void => {
-	const result = taskDatabase.connection.prepare(`
+	const query = `
 		DELETE FROM tasks
 		WHERE id = ?
-	`).run(taskId);
+	`;
+	const result = runObservedSqlQuery(taskDatabase.sqlLogger, query, () => {
+		return taskDatabase.connection.prepare(query).run(taskId);
+	});
 
 	assertSingleTaskChanged(result.changes, 'delete', taskId);
 };
