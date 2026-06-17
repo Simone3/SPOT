@@ -1,7 +1,7 @@
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { CURRENT_SCHEMA_VERSION, DATABASE_FILE_NAME, openTaskDatabase } from 'src/main/storage/TaskDatabase';
+import { CURRENT_SCHEMA_VERSION, DATABASE_FILE_NAME, openSpotDatabase } from 'src/main/storage/SpotDatabase';
 
 interface TableColumnRow {
 	name: string;
@@ -19,7 +19,7 @@ const makeTempStorageDirectory = (): string => {
 	return mkdtempSync(path.join(tmpdir(), 'spot-storage-'));
 };
 
-describe('TaskDatabase', () => {
+describe('SpotDatabase', () => {
 	const tempStorageDirectories: string[] = [];
 
 	afterEach(() => {
@@ -34,7 +34,7 @@ describe('TaskDatabase', () => {
 		tempStorageDirectories.push(storageDirectory);
 		const appliedAt = new Date('2026-06-06T12:00:00.000Z');
 
-		const taskDatabase = openTaskDatabase({
+		const spotDatabase = openSpotDatabase({
 			storageDirectory,
 			now: () => {
 				return appliedAt;
@@ -42,11 +42,11 @@ describe('TaskDatabase', () => {
 		});
 
 		try {
-			expect(taskDatabase.databasePath).toBe(path.join(storageDirectory, DATABASE_FILE_NAME));
-			expect(existsSync(taskDatabase.databasePath)).toBe(true);
-			expect(taskDatabase.getAppliedMigrationVersions()).toEqual([ CURRENT_SCHEMA_VERSION ]);
+			expect(spotDatabase.databasePath).toBe(path.join(storageDirectory, DATABASE_FILE_NAME));
+			expect(existsSync(spotDatabase.databasePath)).toBe(true);
+			expect(spotDatabase.getAppliedMigrationVersions()).toEqual([ CURRENT_SCHEMA_VERSION ]);
 
-			const taskColumns = taskDatabase.connection.prepare('PRAGMA table_info(tasks)').all() as unknown as TableColumnRow[];
+			const taskColumns = spotDatabase.getAllQueryRows<TableColumnRow>('PRAGMA table_info(tasks)');
 			expect(taskColumns.map((column) => {
 				return {
 					name: column.name,
@@ -68,17 +68,17 @@ describe('TaskDatabase', () => {
 				{ name: 'updated_at', type: 'TEXT', notnull: 1, pk: 0 }
 			]);
 
-			const migration = taskDatabase.connection.prepare(`
+			const migration = spotDatabase.getQuery<MigrationRow>(`
 				SELECT version, applied_at
 				FROM schema_migrations
-			`).get() as unknown as MigrationRow;
+			`);
 			expect(migration).toEqual({
 				version: CURRENT_SCHEMA_VERSION,
 				applied_at: appliedAt.toISOString()
 			});
 		}
 		finally {
-			taskDatabase.close();
+			spotDatabase.close();
 		}
 	});
 
@@ -87,15 +87,15 @@ describe('TaskDatabase', () => {
 		tempStorageDirectories.push(storageDirectory);
 		const firstAppliedAt = new Date('2026-06-06T12:00:00.000Z');
 		const secondAppliedAt = new Date('2026-06-07T12:00:00.000Z');
-		const firstTaskDatabase = openTaskDatabase({
+		const firstSpotDatabase = openSpotDatabase({
 			storageDirectory,
 			now: () => {
 				return firstAppliedAt;
 			}
 		});
-		firstTaskDatabase.close();
+		firstSpotDatabase.close();
 
-		const secondTaskDatabase = openTaskDatabase({
+		const secondSpotDatabase = openSpotDatabase({
 			storageDirectory,
 			now: () => {
 				return secondAppliedAt;
@@ -103,10 +103,10 @@ describe('TaskDatabase', () => {
 		});
 
 		try {
-			const migrations = secondTaskDatabase.connection.prepare(`
+			const migrations = secondSpotDatabase.getAllQueryRows<MigrationRow>(`
 				SELECT version, applied_at
 				FROM schema_migrations
-			`).all() as unknown as MigrationRow[];
+			`);
 			expect(migrations).toEqual([
 				{
 					version: CURRENT_SCHEMA_VERSION,
@@ -115,7 +115,7 @@ describe('TaskDatabase', () => {
 			]);
 		}
 		finally {
-			secondTaskDatabase.close();
+			secondSpotDatabase.close();
 		}
 	});
 });

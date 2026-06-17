@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { SPOT_LOG_FILE_NAME, SPOT_LOG_WRITE_FAILED_MESSAGE, type CreateSpotLoggerBackend } from 'src/main/logging/SpotLogger';
-import { DATABASE_FILE_NAME, openTaskDatabase } from 'src/main/storage/TaskDatabase';
+import { DATABASE_FILE_NAME, openSpotDatabase } from 'src/main/storage/SpotDatabase';
 import { TASK_INSERT_COLUMN_NAMES, TASK_SELECT_COLUMN_NAMES, createImmutableTaskFieldChangeMessage, taskRowToColumnValues, taskToTaskRow, type TaskRow } from 'src/main/storage/TaskRowMapping';
 import { createTaskStorage, STORAGE_NOT_IMPLEMENTED_MESSAGE, type OperationalLogEntry, type TaskStorageCommand } from 'src/main/storage/TaskStorage';
 import type { PersistedTask } from 'src/types/TaskTypes';
@@ -24,7 +24,7 @@ const createParameterList = (parameterCount: number): string => {
 };
 
 const insertPersistedTask = (storageDirectory: string, task: PersistedTask): void => {
-	const taskDatabase = openTaskDatabase({
+	const spotDatabase = openSpotDatabase({
 		storageDirectory,
 		now: () => {
 			return new Date('2026-06-06T09:00:00.000Z');
@@ -34,24 +34,23 @@ const insertPersistedTask = (storageDirectory: string, task: PersistedTask): voi
 		createdAt: new Date('2026-06-06T10:00:00.000Z'),
 		updatedAt: new Date('2026-06-06T11:00:00.000Z')
 	});
+	const query = `
+		INSERT INTO tasks (
+${formatColumnList(TASK_INSERT_COLUMN_NAMES)}
+		)
+		VALUES (${createParameterList(TASK_INSERT_COLUMN_NAMES.length)})
+	`;
 
 	try {
-		taskDatabase.connection.prepare(`
-			INSERT INTO tasks (
-${formatColumnList(TASK_INSERT_COLUMN_NAMES)}
-			)
-			VALUES (${createParameterList(TASK_INSERT_COLUMN_NAMES.length)})
-		`).run(
-			...taskRowToColumnValues(row, TASK_INSERT_COLUMN_NAMES)
-		);
+		spotDatabase.runQuery(query, ...taskRowToColumnValues(row, TASK_INSERT_COLUMN_NAMES));
 	}
 	finally {
-		taskDatabase.close();
+		spotDatabase.close();
 	}
 };
 
 const readPersistedTaskRows = (storageDirectory: string): TaskRow[] => {
-	const taskDatabase = openTaskDatabase({
+	const spotDatabase = openSpotDatabase({
 		storageDirectory,
 		now: () => {
 			return new Date('2026-06-06T09:00:00.000Z');
@@ -59,15 +58,15 @@ const readPersistedTaskRows = (storageDirectory: string): TaskRow[] => {
 	});
 
 	try {
-		return taskDatabase.connection.prepare(`
+		return spotDatabase.getAllQueryRows<TaskRow>(`
 			SELECT
 ${formatColumnList(TASK_SELECT_COLUMN_NAMES)}
 			FROM tasks
 			ORDER BY id ASC
-		`).all() as unknown as TaskRow[];
+		`);
 	}
 	finally {
-		taskDatabase.close();
+		spotDatabase.close();
 	}
 };
 

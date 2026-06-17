@@ -1,5 +1,5 @@
-import type { TaskDatabase } from 'src/main/storage/TaskDatabase';
-import { deleteTaskRecord, insertTaskRecord, runTaskTransaction, updateTaskRecord, withTaskDatabase, type TaskRepositoryOptions } from 'src/main/storage/TaskRepository';
+import type { SpotDatabase } from 'src/main/storage/SpotDatabase';
+import { deleteTaskRecord, insertTaskRecord, runTaskTransaction, updateTaskRecord, withSpotDatabase, type TaskRepositoryOptions } from 'src/main/storage/TaskRepository';
 import type { TaskStorageCommand } from 'src/main/storage/TaskStorage';
 
 const getCurrentDate = (options: TaskRepositoryOptions): Date => {
@@ -10,23 +10,23 @@ const getCurrentDate = (options: TaskRepositoryOptions): Date => {
 	return new Date();
 };
 
-const applyTaskCommand = (taskDatabase: TaskDatabase, command: TaskStorageCommand, writtenAt: Date): void => {
+const applyTaskCommand = (spotDatabase: SpotDatabase, command: TaskStorageCommand, writtenAt: Date): void => {
 	switch(command.command) {
 		case 'task.create':
-			insertTaskRecord(taskDatabase, command.payload.task, writtenAt);
+			insertTaskRecord(spotDatabase, command.payload.task, writtenAt);
 			break;
 
 		case 'task.update':
-			updateTaskRecord(taskDatabase, command.payload.taskId, command.payload.change, writtenAt);
+			updateTaskRecord(spotDatabase, command.payload.taskId, command.payload.change, writtenAt);
 			break;
 
 		case 'task.delete':
-			deleteTaskRecord(taskDatabase, command.payload.taskId);
+			deleteTaskRecord(spotDatabase, command.payload.taskId);
 			break;
 
 		case 'tasks.updateMany':
 			command.payload.updates.forEach((update) => {
-				updateTaskRecord(taskDatabase, update.taskId, update.change, writtenAt);
+				updateTaskRecord(spotDatabase, update.taskId, update.change, writtenAt);
 			});
 			break;
 
@@ -39,11 +39,11 @@ export const executeTaskCommandInStorage = (
 	options: TaskRepositoryOptions,
 	command: TaskStorageCommand
 ): void => {
-	withTaskDatabase(options, (taskDatabase) => {
+	withSpotDatabase(options, (spotDatabase) => {
 		const writtenAt = getCurrentDate(options);
 
-		runTaskTransaction(taskDatabase, () => {
-			applyTaskCommand(taskDatabase, command, writtenAt);
+		runTaskTransaction(spotDatabase, () => {
+			applyTaskCommand(spotDatabase, command, writtenAt);
 		});
 	});
 };

@@ -1,8 +1,8 @@
 import path from 'node:path';
 import { createSpotLogger, type CreateSpotLoggerOptions, type SpotLogFields, type SpotLogLevel, type SpotLogger, type SpotLoggerStatus, type SpotLoggerUnavailableStatus } from 'src/main/logging/SpotLogger';
 import { executeTaskCommandInStorage } from 'src/main/storage/TaskCommandExecutor';
-import { DATABASE_FILE_NAME, type SqlQueryLogger, type SqlQueryLogRecord } from 'src/main/storage/TaskDatabase';
-import { readTasks, withTaskDatabase, type TaskRepositoryOptions } from 'src/main/storage/TaskRepository';
+import { DATABASE_FILE_NAME, type SqlQueryLogger, type SqlQueryLogRecord } from 'src/main/storage/SpotDatabase';
+import { readTasks, withSpotDatabase, type TaskRepositoryOptions } from 'src/main/storage/TaskRepository';
 import { isInvalidTaskChangeError } from 'src/main/storage/TaskRowMapping';
 import type { PersistedTask, PersistedTaskChange, Task } from 'src/types/TaskTypes';
 
@@ -320,7 +320,7 @@ const getConfiguredStorageStatus = async(
 	const sqlLogEntries: PendingSpotLogEntry[] = [];
 
 	try {
-		withTaskDatabase({
+		withSpotDatabase({
 			...options,
 			sqlLogger: createSqlLogCollector(sqlLogEntries)
 		}, () => {
