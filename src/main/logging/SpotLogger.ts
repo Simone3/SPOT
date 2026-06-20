@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { closeSync, existsSync, openSync, readFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import electronLog from 'electron-log';
@@ -83,7 +83,7 @@ export type SpotLoggerWriteOutcome = {
 } | {
 	ok: false;
 	message: string;
-	status: SpotLoggerUnavailableStatus;
+	status: SpotLoggerStatus;
 };
 
 export interface CreateSpotLoggerOptions {
@@ -189,8 +189,27 @@ const assertCurrentLogEndsWithLine = (filePath: string, line: string): void => {
 	}
 };
 
+const assertLogFileWritable = (filePath: string): void => {
+	const fileDescriptor = openSync(filePath, 'a');
+	closeSync(fileDescriptor);
+};
+
 const createFailureMessage = (maximumWriteAttempts: number, error: unknown): string => {
 	return `${SPOT_LOG_WRITE_FAILED_MESSAGE} Failed after ${maximumWriteAttempts} write attempts. ${getErrorMessage(error)}`;
+};
+
+const createStartupFailureMessage = (filePath: string, error: unknown): string => {
+	return `${SPOT_LOG_WRITE_FAILED_MESSAGE} Could not open "${filePath}" for appending. ${getErrorMessage(error)}`;
+};
+
+const getStartupFailureMessage = (filePath: string): string | undefined => {
+	try {
+		assertLogFileWritable(filePath);
+		return undefined;
+	}
+	catch(error) {
+		return createStartupFailureMessage(filePath, error);
+	}
 };
 
 export const createSpotLogger = ({
@@ -212,15 +231,15 @@ export const createSpotLogger = ({
 		retryDelayMs
 	};
 	const backend = backendFactory(createSpotLogId(storageDirectory));
-	let lastFailureMessage: string | undefined;
 
 	configureLoggerBackend(backend, configuration);
+	const startupFailureMessage = getStartupFailureMessage(configuration.filePath);
 
 	const getStatus = (): SpotLoggerStatus => {
-		if(lastFailureMessage) {
+		if(startupFailureMessage) {
 			return {
 				state: 'unavailable',
-				message: lastFailureMessage
+				message: startupFailureMessage
 			};
 		}
 
@@ -243,7 +262,6 @@ export const createSpotLogger = ({
 				backend[level](serializedEntry);
 				assertCurrentLogEndsWithLine(configuration.filePath, serializedEntry);
 
-				lastFailureMessage = undefined;
 				return {
 					ok: true,
 					status: getStatus()
@@ -258,16 +276,12 @@ export const createSpotLogger = ({
 			}
 		}
 
-		lastFailureMessage = createFailureMessage(maximumWriteAttempts, lastError);
-		const status: SpotLoggerUnavailableStatus = {
-			state: 'unavailable',
-			message: lastFailureMessage
-		};
+		const failureMessage = createFailureMessage(maximumWriteAttempts, lastError);
 
 		return {
 			ok: false,
-			message: lastFailureMessage,
-			status
+			message: failureMessage,
+			status: getStatus()
 		};
 	};
 

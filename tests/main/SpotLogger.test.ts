@@ -1,4 +1,4 @@
-import { appendFileSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { appendFileSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { EOL, tmpdir } from 'node:os';
 import path from 'node:path';
 import { createSpotLogger, SPOT_LOG_FILE_NAME, SPOT_LOG_RETAINED_ARCHIVE_COUNT, SPOT_LOG_WRITE_FAILED_MESSAGE, type CreateSpotLoggerBackend, type SpotLogEntry } from 'src/main/logging/SpotLogger';
@@ -128,6 +128,27 @@ describe('SpotLogger', () => {
 		});
 	});
 
+	test('reports unavailable startup logging when the log file cannot be opened', () => {
+		const parentDirectory = makeTempStorageDirectory();
+		tempStorageDirectories.push(parentDirectory);
+		const storageDirectory = path.join(parentDirectory, 'not-a-directory');
+		writeFileSync(storageDirectory, 'file', 'utf8');
+
+		const spotLogger = createSpotLogger({
+			storageDirectory,
+			retryDelayMs: 0
+		});
+
+		expect(spotLogger.getStatus()).toEqual({
+			state: 'unavailable',
+			message: expect.stringContaining('Could not open')
+		});
+		expect(spotLogger.getStatus()).toEqual({
+			state: 'unavailable',
+			message: expect.stringContaining(SPOT_LOG_WRITE_FAILED_MESSAGE)
+		});
+	});
+
 	test('configures size-based rolling with bounded retention', async() => {
 		const storageDirectory = makeTempStorageDirectory();
 		tempStorageDirectories.push(storageDirectory);
@@ -197,7 +218,7 @@ describe('SpotLogger', () => {
 		]);
 	});
 
-	test('reports an unavailable logger after bounded retry failures', async() => {
+	test('reports failed writes without changing startup logging status', async() => {
 		const storageDirectory = makeTempStorageDirectory();
 		tempStorageDirectories.push(storageDirectory);
 		let attempts = 0;
@@ -221,10 +242,14 @@ describe('SpotLogger', () => {
 			ok: false,
 			message: expect.stringContaining(SPOT_LOG_WRITE_FAILED_MESSAGE),
 			status: {
-				state: 'unavailable',
-				message: expect.stringContaining('Failed after 2 write attempts')
+				state: 'healthy'
 			}
 		});
-		expect(spotLogger.getStatus()).toEqual(result.status);
+		if(!result.ok) {
+			expect(result.message).toContain('Failed after 2 write attempts');
+		}
+		expect(spotLogger.getStatus()).toEqual({
+			state: 'healthy'
+		});
 	});
 });

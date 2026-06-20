@@ -1,7 +1,7 @@
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { SPOT_LOG_FILE_NAME, SPOT_LOG_WRITE_FAILED_MESSAGE, type CreateSpotLoggerBackend } from 'src/main/logging/SpotLogger';
+import { SPOT_LOG_FILE_NAME, type CreateSpotLoggerBackend } from 'src/main/logging/SpotLogger';
 import { DATABASE_FILE_NAME, openSpotDatabase } from 'src/main/storage/SpotDatabase';
 import { TASK_INSERT_COLUMN_NAMES, TASK_SELECT_COLUMN_NAMES, createImmutableTaskFieldChangeMessage, taskRowToColumnValues, taskToTaskRow, type TaskRow } from 'src/main/storage/TaskRowMapping';
 import { createTaskStorage, STORAGE_NOT_IMPLEMENTED_MESSAGE, type OperationalLogEntry, type TaskStorageCommand } from 'src/main/storage/TaskStorage';
@@ -134,17 +134,13 @@ describe('TaskStorage', () => {
 		}
 	});
 
-	test('reports the unwired database and operational log status', async() => {
+	test('reports the unwired database status', async() => {
 		const taskStorage = createTaskStorage();
 
 		const status = await taskStorage.getStorageStatus();
 
 		expect(status).toEqual({
 			database: {
-				state: 'not-configured',
-				message: STORAGE_NOT_IMPLEMENTED_MESSAGE
-			},
-			operationalLog: {
 				state: 'not-configured',
 				message: STORAGE_NOT_IMPLEMENTED_MESSAGE
 			}
@@ -200,12 +196,8 @@ describe('TaskStorage', () => {
 				database: {
 					state: 'healthy'
 				},
-				operationalLog: {
-					state: 'healthy'
-				},
 				storageDirectory,
-				databasePath: path.join(storageDirectory, DATABASE_FILE_NAME),
-				operationalLogPath: path.join(storageDirectory, SPOT_LOG_FILE_NAME)
+				databasePath: path.join(storageDirectory, DATABASE_FILE_NAME)
 			}
 		});
 		expect(existsSync(path.join(storageDirectory, DATABASE_FILE_NAME))).toBe(true);
@@ -222,12 +214,8 @@ describe('TaskStorage', () => {
 			database: {
 				state: 'healthy'
 			},
-			operationalLog: {
-				state: 'healthy'
-			},
 			storageDirectory,
-			databasePath: path.join(storageDirectory, DATABASE_FILE_NAME),
-			operationalLogPath: path.join(storageDirectory, SPOT_LOG_FILE_NAME)
+			databasePath: path.join(storageDirectory, DATABASE_FILE_NAME)
 		});
 		expect(existsSync(path.join(storageDirectory, DATABASE_FILE_NAME))).toBe(true);
 	});
@@ -280,12 +268,8 @@ describe('TaskStorage', () => {
 				database: {
 					state: 'healthy'
 				},
-				operationalLog: {
-					state: 'healthy'
-				},
 				storageDirectory,
-				databasePath: path.join(storageDirectory, DATABASE_FILE_NAME),
-				operationalLogPath: path.join(storageDirectory, SPOT_LOG_FILE_NAME)
+				databasePath: path.join(storageDirectory, DATABASE_FILE_NAME)
 			}
 		});
 	});
@@ -324,9 +308,6 @@ describe('TaskStorage', () => {
 			ok: true,
 			status: {
 				database: {
-					state: 'healthy'
-				},
-				operationalLog: {
 					state: 'healthy'
 				}
 			}
@@ -409,12 +390,8 @@ describe('TaskStorage', () => {
 				database: {
 					state: 'healthy'
 				},
-				operationalLog: {
-					state: 'healthy'
-				},
 				storageDirectory,
-				databasePath: path.join(storageDirectory, DATABASE_FILE_NAME),
-				operationalLogPath: path.join(storageDirectory, SPOT_LOG_FILE_NAME)
+				databasePath: path.join(storageDirectory, DATABASE_FILE_NAME)
 			}
 		});
 
@@ -582,13 +559,12 @@ describe('TaskStorage', () => {
 			status: {
 				database: {
 					state: 'healthy'
-				},
-				operationalLog: {
-					state: 'unavailable',
-					message: expect.stringContaining(SPOT_LOG_WRITE_FAILED_MESSAGE)
 				}
 			}
 		});
+		if(result.ok) {
+			expect(result.status).not.toHaveProperty('operationalLog');
+		}
 		expect(readPersistedTaskRows(storageDirectory)).toEqual([
 			{
 				id: 'log-failure-task',

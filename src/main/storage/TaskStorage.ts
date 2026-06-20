@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { createSpotLogger, type CreateSpotLoggerOptions, type SpotLogFields, type SpotLogLevel, type SpotLogger, type SpotLoggerStatus, type SpotLoggerUnavailableStatus } from 'src/main/logging/SpotLogger';
+import { createSpotLogger, type CreateSpotLoggerOptions, type SpotLogFields, type SpotLogLevel, type SpotLogger } from 'src/main/logging/SpotLogger';
 import { executeTaskCommandInStorage } from 'src/main/storage/TaskCommandExecutor';
 import { DATABASE_FILE_NAME, type SqlQueryLogger, type SqlQueryLogRecord } from 'src/main/storage/SpotDatabase';
 import { readTasks, withSpotDatabase, type TaskRepositoryOptions } from 'src/main/storage/TaskRepository';
@@ -60,22 +60,20 @@ interface SqlQueryOperationalLogEntry {
 
 export type OperationalLogEntry = ReactCommandOperationalLogEntry | SqlQueryOperationalLogEntry;
 
-export type StorageSubsystemHealth = 'not-configured' | 'healthy' | 'degraded' | 'unavailable';
+export type StorageDatabaseHealth = 'not-configured' | 'healthy' | 'unavailable';
 
-export interface StorageSubsystemStatus {
-	state: StorageSubsystemHealth;
+export interface StorageDatabaseStatus {
+	state: StorageDatabaseHealth;
 	message?: string;
 }
 
 export interface StorageStatus {
-	database: StorageSubsystemStatus;
-	operationalLog: StorageSubsystemStatus;
+	database: StorageDatabaseStatus;
 	storageDirectory?: string;
 	databasePath?: string;
-	operationalLogPath?: string;
 }
 
-type StorageFailureReason = 'not-implemented' | 'database-error' | 'invalid-command' | 'operational-log-error';
+type StorageFailureReason = 'not-implemented' | 'database-error' | 'invalid-command';
 
 interface StorageFailure {
 	ok: false;
@@ -118,26 +116,18 @@ const createUnwiredStorageStatus = (): StorageStatus => {
 		database: {
 			state: 'not-configured',
 			message: STORAGE_NOT_IMPLEMENTED_MESSAGE
-		},
-		operationalLog: {
-			state: 'not-configured',
-			message: STORAGE_NOT_IMPLEMENTED_MESSAGE
 		}
 	};
 };
 
 const createConfiguredStorageStatus = (
 	storageDirectory: string,
-	logger: SpotLogger,
-	database: StorageSubsystemStatus = { state: 'healthy' },
-	operationalLog: StorageSubsystemStatus = logger.getStatus()
+	database: StorageDatabaseStatus = { state: 'healthy' }
 ): StorageStatus => {
 	return {
 		database,
-		operationalLog,
 		storageDirectory,
-		databasePath: path.join(storageDirectory, DATABASE_FILE_NAME),
-		operationalLogPath: logger.getConfiguration().filePath
+		databasePath: path.join(storageDirectory, DATABASE_FILE_NAME)
 	};
 };
 
@@ -147,19 +137,6 @@ const createNotImplementedFailure = (status: StorageStatus): StorageFailure => {
 		reason: 'not-implemented',
 		message: STORAGE_NOT_IMPLEMENTED_MESSAGE,
 		status
-	};
-};
-
-const createOperationalLoggingFailure = (
-	storageDirectory: string,
-	logger: SpotLogger,
-	operationalLog: SpotLoggerUnavailableStatus
-): StorageFailure => {
-	return {
-		ok: false,
-		reason: 'operational-log-error',
-		message: operationalLog.message,
-		status: createConfiguredStorageStatus(storageDirectory, logger, { state: 'healthy' }, operationalLog)
 	};
 };
 
@@ -177,9 +154,7 @@ const getErrorMessage = (error: unknown): string => {
 
 const createDatabaseFailure = (
 	storageDirectory: string,
-	logger: SpotLogger,
-	error: unknown,
-	operationalLog: StorageSubsystemStatus = logger.getStatus()
+	error: unknown
 ): StorageFailure => {
 	const message = getErrorMessage(error);
 
@@ -187,24 +162,22 @@ const createDatabaseFailure = (
 		ok: false,
 		reason: 'database-error',
 		message,
-		status: createConfiguredStorageStatus(storageDirectory, logger, {
+		status: createConfiguredStorageStatus(storageDirectory, {
 			state: 'unavailable',
 			message
-		}, operationalLog)
+		})
 	};
 };
 
 const createInvalidCommandFailure = (
 	storageDirectory: string,
-	logger: SpotLogger,
-	error: unknown,
-	operationalLog: StorageSubsystemStatus = logger.getStatus()
+	error: unknown
 ): StorageFailure => {
 	return {
 		ok: false,
 		reason: 'invalid-command',
 		message: getErrorMessage(error),
-		status: createConfiguredStorageStatus(storageDirectory, logger, { state: 'healthy' }, operationalLog)
+		status: createConfiguredStorageStatus(storageDirectory, { state: 'healthy' })
 	};
 };
 
@@ -245,15 +218,10 @@ const createSqlLogCollector = (entries: PendingSpotLogEntry[]): SqlQueryLogger =
 const flushSpotLogEntries = async(
 	logger: SpotLogger,
 	entries: PendingSpotLogEntry[]
-): Promise<SpotLoggerStatus> => {
-	let operationalLogStatus = logger.getStatus();
-
+): Promise<void> => {
 	for(const entry of entries) {
-		const result = await logger[entry.level](entry.message, entry.fields);
-		operationalLogStatus = result.status;
+		await logger[entry.level](entry.message, entry.fields);
 	}
-
-	return operationalLogStatus;
 };
 
 const loadConfiguredTasks = async(
@@ -267,17 +235,17 @@ const loadConfiguredTasks = async(
 			...options,
 			sqlLogger: createSqlLogCollector(sqlLogEntries)
 		});
-		const operationalLogStatus = await flushSpotLogEntries(logger, sqlLogEntries);
+		await flushSpotLogEntries(logger, sqlLogEntries);
 
 		return {
 			ok: true,
 			tasks,
-			status: createConfiguredStorageStatus(options.storageDirectory, logger, { state: 'healthy' }, operationalLogStatus)
+			status: createConfiguredStorageStatus(options.storageDirectory, { state: 'healthy' })
 		};
 	}
 	catch(error) {
-		const operationalLogStatus = await flushSpotLogEntries(logger, sqlLogEntries);
-		return createDatabaseFailure(options.storageDirectory, logger, error, operationalLogStatus);
+		await flushSpotLogEntries(logger, sqlLogEntries);
+		return createDatabaseFailure(options.storageDirectory, error);
 	}
 };
 
@@ -295,21 +263,21 @@ const executeConfiguredTaskCommand = async(
 			...options,
 			sqlLogger: createSqlLogCollector(sqlLogEntries)
 		}, command);
-		const operationalLogStatus = await flushSpotLogEntries(logger, sqlLogEntries);
+		await flushSpotLogEntries(logger, sqlLogEntries);
 
 		return {
 			ok: true,
-			status: createConfiguredStorageStatus(options.storageDirectory, logger, { state: 'healthy' }, operationalLogStatus)
+			status: createConfiguredStorageStatus(options.storageDirectory, { state: 'healthy' })
 		};
 	}
 	catch(error) {
-		const operationalLogStatus = await flushSpotLogEntries(logger, sqlLogEntries);
+		await flushSpotLogEntries(logger, sqlLogEntries);
 
 		if(isInvalidTaskChangeError(error)) {
-			return createInvalidCommandFailure(options.storageDirectory, logger, error, operationalLogStatus);
+			return createInvalidCommandFailure(options.storageDirectory, error);
 		}
 
-		return createDatabaseFailure(options.storageDirectory, logger, error, operationalLogStatus);
+		return createDatabaseFailure(options.storageDirectory, error);
 	}
 };
 
@@ -326,13 +294,13 @@ const getConfiguredStorageStatus = async(
 		}, () => {
 			return undefined;
 		});
-		const operationalLogStatus = await flushSpotLogEntries(logger, sqlLogEntries);
+		await flushSpotLogEntries(logger, sqlLogEntries);
 
-		return createConfiguredStorageStatus(options.storageDirectory, logger, { state: 'healthy' }, operationalLogStatus);
+		return createConfiguredStorageStatus(options.storageDirectory, { state: 'healthy' });
 	}
 	catch(error) {
-		const operationalLogStatus = await flushSpotLogEntries(logger, sqlLogEntries);
-		return createDatabaseFailure(options.storageDirectory, logger, error, operationalLogStatus).status;
+		await flushSpotLogEntries(logger, sqlLogEntries);
+		return createDatabaseFailure(options.storageDirectory, error).status;
 	}
 };
 
@@ -386,15 +354,11 @@ export const createTaskStorage = (options: CreateTaskStorageOptions = {}): TaskS
 		}
 
 		const { message, ...fields } = entry;
-		const result = await logger!.info(message, fields);
-
-		if(!result.ok) {
-			return createOperationalLoggingFailure(options.storageDirectory, logger!, result.status);
-		}
+		await logger!.info(message, fields);
 
 		return {
 			ok: true,
-			status: createConfiguredStorageStatus(options.storageDirectory, logger!, { state: 'healthy' }, result.status)
+			status: createConfiguredStorageStatus(options.storageDirectory, { state: 'healthy' })
 		};
 	};
 

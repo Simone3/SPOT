@@ -28,10 +28,10 @@
 ## Persistence Work Rules
 - The persistence contract in `DOCUMENTATION.md` is the source of truth for the initial storage implementation.
 - Preserve the initial command names: `task.create`, `task.update`, `task.delete`, and `tasks.updateMany`.
-- Keep database health and operational-log health separate. Database failures are user-facing and require state reconciliation; operational-log failures are non-blocking warnings when SQLite succeeds.
+- Expose database health to React. Database failures are user-facing and require state reconciliation; operational-log failures are optional, best-effort, and ignored by React when SQLite succeeds.
 - Runtime persistence is not wired yet. The storage modules under `src/main/storage` are intentionally unwired from Electron and React, and React still uses in-memory sample state until later steps explicitly change that behavior.
 - The first SQLite implementation uses Electron's bundled Node `node:sqlite` support. Do not add an external SQLite dependency unless the reason is documented in `DOCUMENTATION.md`.
-- `createTaskStorage({ storageDirectory })` can load and mutate persisted task rows and write the operational log through `createSpotLogger()` for tests and future IPC wiring, but React startup and mutations are not wired to it yet.
+- `createTaskStorage({ storageDirectory })` can load and mutate persisted task rows and write the optional operational log through `createSpotLogger()` for tests and future IPC wiring, but React startup and mutations are not wired to it yet.
 
 ## Delivery Rules
 - You MUST commit the code when you complete any task.

@@ -60,7 +60,7 @@ npm run make
 - `src/index.tsx` mounts the React app and defines routes.
 - `src/index.css` defines global layout and theme variables.
 - `src/main/logging/SpotLogger.ts` configures `electron-log` behind a generic factory-created logger with `info`, `warn`, `error`, and `debug` methods, newline-delimited JSON output, size-based rolling, and one retained archive.
-- `src/main/storage/TaskStorage.ts` defines the unwired Electron main-process storage contract, configured SQLite task loading, configured SQLite task write commands, and operational-log health reporting.
+- `src/main/storage/TaskStorage.ts` defines the unwired Electron main-process storage contract, configured SQLite task loading, configured SQLite task write commands, and database health reporting.
 - `src/main/storage/TaskCommandExecutor.ts` maps task storage commands to the task repository operations and keeps each command inside one transaction.
 - `src/main/storage/SpotDatabase.ts` opens `spot.sqlite`, applies schema migrations, currently creates schema version `1`, exposes a small internal query wrapper, and emits SQL query log records when a caller supplies a logger.
 - `src/main/storage/TaskRowMapping.ts` maps between SQLite task rows and React `Task` objects and owns the shared task field to SQLite column mapping used by storage queries.
@@ -128,13 +128,13 @@ Known Electron work still pending:
 - `OperationalLogEntry`
 - storage status and result types
 
-Without a storage directory, the storage boundary reports both the database and operational log as `not-configured`. With a storage directory, `loadTasks()` opens `spot.sqlite`, applies migrations, reads task rows, maps them to React `Task` objects, logs the storage-layer SQL queries through `SpotLogger`, and returns storage status. `executeTaskCommand()` logs the incoming storage command through `SpotLogger`, applies `task.create`, `task.update`, `task.delete`, and `tasks.updateMany` commands to SQLite through `TaskCommandExecutor.ts` and `TaskRepository.ts`, logs the resulting SQL query records, and returns storage status. Nothing calls these methods yet, so application behavior is unchanged.
+Without a storage directory, the storage boundary reports the database as `not-configured`. With a storage directory, `loadTasks()` opens `spot.sqlite`, applies migrations, reads task rows, maps them to React `Task` objects, logs the storage-layer SQL queries through `SpotLogger`, and returns database storage status. `executeTaskCommand()` logs the incoming storage command through `SpotLogger`, applies `task.create`, `task.update`, `task.delete`, and `tasks.updateMany` commands to SQLite through `TaskCommandExecutor.ts` and `TaskRepository.ts`, logs the resulting SQL query records, and returns database storage status. Nothing calls these methods yet, so application behavior is unchanged.
 
-Each configured task write command runs in one SQLite transaction. Completing and restoring tasks are represented as `task.update`; manual reorder and sort by importance are represented as `tasks.updateMany`. Fields marked immutable in `TASK_FIELD_COLUMN_MAPPINGS` cannot be included in update changes; currently, that means task IDs are immutable after creation. If an update or delete references a missing task row, the command fails and the transaction rolls back. Operational-log writes are best-effort: repeated log failures return an `operational-log-error` from `writeOperationalLogLine()` or an `unavailable` operational-log status from task operations, but they do not invalidate successful SQLite writes.
+Each configured task write command runs in one SQLite transaction. Completing and restoring tasks are represented as `task.update`; manual reorder and sort by importance are represented as `tasks.updateMany`. Fields marked immutable in `TASK_FIELD_COLUMN_MAPPINGS` cannot be included in update changes; currently, that means task IDs are immutable after creation. If an update or delete references a missing task row, the command fails and the transaction rolls back. Operational-log writes are best-effort and optional: repeated log failures are ignored by storage results and do not invalidate successful SQLite writes.
 
 `src/main/storage/SpotDatabase.ts` opens or creates the app-wide `spot.sqlite` database in a caller-provided storage directory using Electron's bundled Node `node:sqlite` support. No external SQLite dependency is used. Opening the database creates `schema_migrations` when needed and applies migration version `1`, which creates the `tasks` table. The raw SQLite connection stays private to `SpotDatabase.ts`; task storage code uses internal wrapper methods for SQL execution, row reads, and transactions.
 
-`src/main/logging/SpotLogger.ts` uses `electron-log` to write newline-delimited JSON entries to `spot-logs.ndjson`. It is factory-initialized with a storage directory and exposes generic `info`, `warn`, `error`, and `debug` methods that take a message plus optional structured fields such as `type`, `command`, `query`, or `elapsedMillis`. The file transport is configured with a 1 MiB maximum file size, `electron-log`'s size-based rolling, and one retained archive named `spot-logs.old.ndjson`. Log writes are synchronous at the transport layer and are retried up to three times with a short bounded delay. The logger verifies that the expected JSON line reached the current log file after each write attempt so logging health is deterministic in tests and future IPC responses.
+`src/main/logging/SpotLogger.ts` uses `electron-log` to write newline-delimited JSON entries to `spot-logs.ndjson`. It is factory-initialized with a storage directory and exposes generic `info`, `warn`, `error`, and `debug` methods that take a message plus optional structured fields such as `type`, `command`, `query`, or `elapsedMillis`. The file transport is configured with a 1 MiB maximum file size, `electron-log`'s size-based rolling, and one retained archive named `spot-logs.old.ndjson`. Logger creation probes whether the configured log file can be opened for appending and keeps that startup status internally. Individual log writes are synchronous at the transport layer, retried up to three times with a short bounded delay, and verified against the current log file, but runtime logging failures remain logging-local and are not exposed through storage status.
 
 `src/main/storage/TaskRowMapping.ts` serializes task rows for SQLite. `tags` are stored as `tags_json`, `completionDate` is stored as an ISO string in `completion_date`, optional string fields are stored as `NULL`, and the runtime-only `visible` flag is not stored. The `TASK_FIELD_COLUMN_MAPPINGS` list is the shared source for task field names, SQLite column names, mutability, and serialization/parsing behavior. `TaskRepository.ts` builds its task `SELECT`, `INSERT`, and `UPDATE` column lists from those mapping exports. Versioned schema migrations in `SpotDatabase.ts` remain explicit.
 
@@ -149,6 +149,7 @@ Reasoning:
 - The log should be append-only so each meaningful main-process action leaves an external trace.
 - The log should use a standard Electron/Node logging library with built-in log rolling instead of custom append-and-rotate filesystem code.
 - The log is best-effort. If writing a log line fails, the app should retry for a bounded time and then continue running. A logging failure must not make a successful database write invalid.
+- React should not receive operational-log health. Logging is an optional diagnostic trace, so runtime logging failures are ignored when SQLite succeeds.
 - React should update optimistically for normal task changes. The main process reports the extreme case where a database write fails, and the UI must warn the user and reconcile state.
 
 Storage files:
@@ -178,8 +179,8 @@ Core invariants:
 Failure model:
 
 - Database write failure: report the failure to React, show a user-facing storage error, and reconcile any optimistic local state.
-- Operational-log write failure: retry for a bounded time, keep the app usable if retries fail, and expose logging health through storage status.
-- Startup operational-log write failure: load tasks from SQLite, but show a warning that operational logging is unavailable if the failure persists.
+- Operational-log write failure: retry for a bounded time, keep the app usable if retries fail, and ignore the failure when SQLite succeeds.
+- Startup operational-log file failure: `SpotLogger` keeps an internal unavailable startup status if the configured log file cannot be opened for appending, but task loading still uses SQLite and React does not need to show a warning.
 - Storage folder unavailable: fail startup or enter a clear read-only/error state, depending on the final UI decision.
 
 Operational log format:
@@ -208,7 +209,7 @@ This contract is frozen for the first persistence implementation. Later persiste
 Runtime boundary:
 
 - React owns responsive in-memory UI state.
-- The Electron main process owns durable storage, operational logging, and storage health.
+- The Electron main process owns durable storage, operational logging, and database storage health.
 - The preload layer exposes only a narrow storage API. It must not expose raw filesystem, SQLite, or unrestricted IPC access.
 - Until React startup is explicitly wired to storage in a later step, browser-only React mode continues to use sample in-memory data.
 
@@ -216,7 +217,7 @@ Read contract:
 
 - Normal task loading reads from `spot.sqlite`.
 - Startup never rebuilds task state from `spot-logs.ndjson`.
-- Loading returns task data plus storage health so the renderer can distinguish database availability from operational-log availability.
+- Loading returns task data plus database storage health.
 - The runtime-only `visible` task field is derived by React filters and is not stored in SQLite.
 
 Write command contract:
@@ -241,9 +242,9 @@ Failure contract:
 
 - Database write failure: the transaction must not partially commit. The main process reports the failure to React, React shows a clear storage error, and React reconciles the optimistic local state.
 - Database read or startup failure: React receives a storage error state instead of silently falling back to stale persisted data.
-- Operational-log failure: SQLite remains authoritative. React receives a non-blocking storage health warning if the failure persists after bounded retries.
+- Operational-log failure: SQLite remains authoritative. Runtime log write failures are ignored after bounded retries and are not exposed to React.
 - Storage folder unavailable: startup must enter a clear storage error state or a future explicit read-only mode. The app must not pretend persistence is healthy.
-- Logging health and database health are separate; one can fail without implying the other has failed.
+- Startup operational-log file failure: `SpotLogger` tracks the internal startup status when the log file cannot be opened for appending, but database health remains the only renderer-facing storage health.
 
 SQL log entries:
 
@@ -388,8 +389,9 @@ Each step below is intended to be self-contained, committed separately, and manu
    - Append every storage-layer SQL query to `spot-logs.ndjson`, including `SELECT` queries.
    - Include query duration, success or failure, and safe diagnostic details.
    - Retry failed log writes for a bounded time.
-   - Keep operational-log failure separate from database write failure.
-   - Add tests for successful logging, failed logging, rolling/retention configuration, retry behavior, and continued app operation after repeated logging failures.
+   - Keep operational-log failures optional and out of renderer-facing storage status.
+   - Track startup log file open failures internally through `SpotLogger`.
+   - Add tests for successful logging, failed logging, startup log file failures, rolling/retention configuration, retry behavior, and continued app operation after repeated logging failures.
 
    Validation:
 
@@ -468,8 +470,7 @@ Each step below is intended to be self-contained, committed separately, and manu
    Scope:
 
    - Show database write failures as prominent task-save errors.
-   - Show operational-log failures as non-blocking warnings.
-   - Expose enough storage status for the UI to tell the difference.
+   - Expose database storage status to the UI.
    - Avoid noisy UI when storage is healthy.
 
    Validation:
@@ -477,11 +478,11 @@ Each step below is intended to be self-contained, committed separately, and manu
    - `npm run lint`
    - `npm run typecheck`
    - `npm test`
-   - Manual smoke check for simulated database and operational-log failures.
+   - Manual smoke check for simulated database failures.
 
    Commit boundary:
 
-   - Users can tell whether tasks are saved and whether the operational log is healthy.
+   - Users can tell whether tasks are saved.
 
 11. Add shutdown and pending-write handling.
 
@@ -801,8 +802,8 @@ Current test coverage includes focused regression checks for:
 - domain counting, active/filter domain separation, and selected-filter cleanup
 - date comparison and display formatting
 - smoke coverage for task filters and task list interactions
-- SQLite storage setup, task row mapping, command execution, transaction rollback, and operational-log health separation
-- generic SPOT logging success, public log levels, bounded retry failures, retry recovery, and size-based rolling with bounded retention
+- SQLite storage setup, task row mapping, command execution, transaction rollback, and optional operational logging behavior
+- generic SPOT logging success, public log levels, startup file-open failures, bounded retry failures, retry recovery, and size-based rolling with bounded retention
 
 Validation commands:
 
