@@ -1,7 +1,7 @@
 import path from 'node:path';
-import { createSpotLogger, type CreateSpotLoggerOptions, type SpotLogFields, type SpotLogLevel, type SpotLogger } from 'src/main/logging/SpotLogger';
+import { createSpotLogger, type CreateSpotLoggerOptions, type SpotLogger } from 'src/main/logging/SpotLogger';
 import { executeTaskCommandInStorage } from 'src/main/storage/TaskCommandExecutor';
-import { DATABASE_FILE_NAME, type SqlQueryLogger, type SqlQueryLogRecord } from 'src/main/storage/SpotDatabase';
+import { DATABASE_FILE_NAME, type SqlQueryLogger } from 'src/main/storage/SpotDatabase';
 import { readTasks, withSpotDatabase, type TaskRepositoryOptions } from 'src/main/storage/TaskRepository';
 import { isInvalidTaskChangeError } from 'src/main/storage/TaskRowMapping';
 import type { PersistedTask, PersistedTaskChange, Task } from 'src/types/TaskTypes';
@@ -181,61 +181,38 @@ const createInvalidCommandFailure = (
 	};
 };
 
-interface PendingSpotLogEntry {
-	level: SpotLogLevel;
-	message: string;
-	fields?: SpotLogFields;
-}
-
-const createReactCommandLogEntry = (command: TaskStorageCommand): PendingSpotLogEntry => {
-	return {
-		level: 'info',
-		message: 'React storage command received',
-		fields: {
-			type: 'react.command',
-			command: command.command,
-			payload: command.payload
-		}
-	};
+const writeReactCommandLogEntry = (
+	logger: SpotLogger,
+	command: TaskStorageCommand
+): void => {
+	logger.info('React storage command received', {
+		type: 'react.command',
+		command: command.command,
+		payload: command.payload
+	});
 };
 
-const createSqlLogCollector = (entries: PendingSpotLogEntry[]): SqlQueryLogger => {
-	return (record: SqlQueryLogRecord) => {
-		entries.push({
-			level: record.result === 'failure' ? 'error' : 'info',
-			message: 'Storage SQL query completed',
-			fields: {
-				type: 'sql.query',
-				query: record.query,
-				elapsedMillis: record.durationMs,
-				result: record.result,
-				error: record.error
-			}
+const createSqlLogger = (logger: SpotLogger): SqlQueryLogger => {
+	return (record) => {
+		logger[record.result === 'failure' ? 'error' : 'info']('Storage SQL query completed', {
+			type: 'sql.query',
+			query: record.query,
+			elapsedMillis: record.durationMs,
+			result: record.result,
+			error: record.error
 		});
 	};
-};
-
-const writeSpotLogEntries = (
-	logger: SpotLogger,
-	entries: PendingSpotLogEntry[]
-): void => {
-	for(const entry of entries) {
-		logger[entry.level](entry.message, entry.fields);
-	}
 };
 
 const loadConfiguredTasks = (
 	options: TaskRepositoryOptions,
 	logger: SpotLogger
 ): LoadTasksResult => {
-	const sqlLogEntries: PendingSpotLogEntry[] = [];
-
 	try {
 		const tasks = readTasks({
 			...options,
-			sqlLogger: createSqlLogCollector(sqlLogEntries)
+			sqlLogger: createSqlLogger(logger)
 		});
-		writeSpotLogEntries(logger, sqlLogEntries);
 
 		return {
 			ok: true,
@@ -244,7 +221,6 @@ const loadConfiguredTasks = (
 		};
 	}
 	catch(error) {
-		writeSpotLogEntries(logger, sqlLogEntries);
 		return createDatabaseFailure(options.storageDirectory, error);
 	}
 };
@@ -254,16 +230,13 @@ const executeConfiguredTaskCommand = (
 	command: TaskStorageCommand,
 	logger: SpotLogger
 ): TaskStorageCommandResult => {
-	const reactCommandLogEntry = createReactCommandLogEntry(command);
-	logger[reactCommandLogEntry.level](reactCommandLogEntry.message, reactCommandLogEntry.fields);
-	const sqlLogEntries: PendingSpotLogEntry[] = [];
+	writeReactCommandLogEntry(logger, command);
 
 	try {
 		executeTaskCommandInStorage({
 			...options,
-			sqlLogger: createSqlLogCollector(sqlLogEntries)
+			sqlLogger: createSqlLogger(logger)
 		}, command);
-		writeSpotLogEntries(logger, sqlLogEntries);
 
 		return {
 			ok: true,
@@ -271,8 +244,6 @@ const executeConfiguredTaskCommand = (
 		};
 	}
 	catch(error) {
-		writeSpotLogEntries(logger, sqlLogEntries);
-
 		if(isInvalidTaskChangeError(error)) {
 			return createInvalidCommandFailure(options.storageDirectory, error);
 		}
@@ -285,21 +256,17 @@ const getConfiguredStorageStatus = (
 	options: TaskRepositoryOptions,
 	logger: SpotLogger
 ): StorageStatus => {
-	const sqlLogEntries: PendingSpotLogEntry[] = [];
-
 	try {
 		withSpotDatabase({
 			...options,
-			sqlLogger: createSqlLogCollector(sqlLogEntries)
+			sqlLogger: createSqlLogger(logger)
 		}, () => {
 			return undefined;
 		});
-		writeSpotLogEntries(logger, sqlLogEntries);
 
 		return createConfiguredStorageStatus(options.storageDirectory, { state: 'healthy' });
 	}
 	catch(error) {
-		writeSpotLogEntries(logger, sqlLogEntries);
 		return createDatabaseFailure(options.storageDirectory, error).status;
 	}
 };
