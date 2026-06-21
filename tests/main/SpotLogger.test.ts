@@ -7,6 +7,33 @@ const makeTempStorageDirectory = (): string => {
 	return mkdtempSync(path.join(tmpdir(), 'spot-logger-'));
 };
 
+const sleep = (durationMs: number): Promise<void> => {
+	return new Promise((resolve) => {
+		setTimeout(resolve, durationMs);
+	});
+};
+
+const waitForExpectation = async(expectation: () => void): Promise<void> => {
+	let lastError: unknown;
+
+	for(let attempt = 1; attempt <= 20; attempt += 1) {
+		try {
+			expectation();
+			return;
+		}
+		catch(error) {
+			lastError = error;
+			await sleep(5);
+		}
+	}
+
+	if(lastError instanceof Error) {
+		throw lastError;
+	}
+
+	throw new Error(String(lastError));
+};
+
 const readSpotLogEntries = (storageDirectory: string): SpotLogEntry[] => {
 	const content = readFileSync(path.join(storageDirectory, SPOT_LOG_FILE_NAME), 'utf8').trim();
 
@@ -63,7 +90,7 @@ describe('SpotLogger', () => {
 		}
 	});
 
-	test('writes structured newline-delimited JSON entries for public log levels', async() => {
+	test('writes structured newline-delimited JSON entries for public log levels', () => {
 		const storageDirectory = makeTempStorageDirectory();
 		tempStorageDirectories.push(storageDirectory);
 		const createdAt = new Date('2026-06-06T12:00:00.000Z');
@@ -75,23 +102,18 @@ describe('SpotLogger', () => {
 			}
 		});
 
-		await expect(spotLogger.info('React storage command received', {
+		spotLogger.info('React storage command received', {
 			type: 'react.command',
 			command: 'task.create'
-		})).resolves.toEqual({
-			ok: true,
-			status: {
-				state: 'healthy'
-			}
 		});
-		await spotLogger.warn('Storage warning', {
+		spotLogger.warn('Storage warning', {
 			type: 'storage.warning'
 		});
-		await spotLogger.error('Storage SQL query failed', {
+		spotLogger.error('Storage SQL query failed', {
 			type: 'sql.query',
 			elapsedMillis: 2.5
 		});
-		await spotLogger.debug('Storage debug detail', {
+		spotLogger.debug('Storage debug detail', {
 			type: 'storage.debug'
 		});
 
@@ -136,6 +158,10 @@ describe('SpotLogger', () => {
 
 		const spotLogger = createSpotLogger({
 			storageDirectory,
+			maximumWriteAttempts: 1,
+			backendFactory: createFakeBackendFactory(() => {
+				return undefined;
+			}),
 			retryDelayMs: 0
 		});
 
@@ -147,9 +173,12 @@ describe('SpotLogger', () => {
 			state: 'unavailable',
 			message: expect.stringContaining(SPOT_LOG_WRITE_FAILED_MESSAGE)
 		});
+		expect(() => {
+			spotLogger.info('Startup logging is unavailable');
+		}).not.toThrow();
 	});
 
-	test('configures size-based rolling with bounded retention', async() => {
+	test('configures size-based rolling with bounded retention', () => {
 		const storageDirectory = makeTempStorageDirectory();
 		tempStorageDirectories.push(storageDirectory);
 		const spotLogger = createSpotLogger({
@@ -159,7 +188,7 @@ describe('SpotLogger', () => {
 		});
 
 		for(let index = 0; index < 8; index += 1) {
-			await spotLogger.info('Storage SQL query completed', {
+			spotLogger.info('Storage SQL query completed', {
 				type: 'sql.query',
 				query: `SELECT '${'x'.repeat(80)}-${index}'`
 			});
@@ -177,7 +206,7 @@ describe('SpotLogger', () => {
 		expect(logFiles.length).toBeLessThanOrEqual(SPOT_LOG_RETAINED_ARCHIVE_COUNT + 1);
 	});
 
-	test('retries a failed write and reports success when a later attempt reaches the file', async() => {
+	test('retries a failed write until a later attempt reaches the file', async() => {
 		const storageDirectory = makeTempStorageDirectory();
 		tempStorageDirectories.push(storageDirectory);
 		const spotLogPath = path.join(storageDirectory, SPOT_LOG_FILE_NAME);
@@ -196,29 +225,25 @@ describe('SpotLogger', () => {
 			backendFactory
 		});
 
-		const result = await spotLogger.info('Storage SQL query completed', {
+		spotLogger.info('Storage SQL query completed', {
 			type: 'sql.query',
 			query: 'SELECT retry_success'
 		});
 
-		expect(attempts).toBe(2);
-		expect(result).toEqual({
-			ok: true,
-			status: {
-				state: 'healthy'
-			}
+		await waitForExpectation(() => {
+			expect(attempts).toBe(2);
+			expect(readSpotLogEntries(storageDirectory)).toEqual([
+				expect.objectContaining({
+					level: 'info',
+					message: 'Storage SQL query completed',
+					type: 'sql.query',
+					query: 'SELECT retry_success'
+				})
+			]);
 		});
-		expect(readSpotLogEntries(storageDirectory)).toEqual([
-			expect.objectContaining({
-				level: 'info',
-				message: 'Storage SQL query completed',
-				type: 'sql.query',
-				query: 'SELECT retry_success'
-			})
-		]);
 	});
 
-	test('reports failed writes without changing startup logging status', async() => {
+	test('ignores failed writes without changing startup logging status', async() => {
 		const storageDirectory = makeTempStorageDirectory();
 		tempStorageDirectories.push(storageDirectory);
 		let attempts = 0;
@@ -232,22 +257,17 @@ describe('SpotLogger', () => {
 			backendFactory
 		});
 
-		const result = await spotLogger.info('Storage SQL query completed', {
-			type: 'sql.query',
-			query: 'SELECT retry_failure'
+		expect(() => {
+			spotLogger.info('Storage SQL query completed', {
+				type: 'sql.query',
+				query: 'SELECT retry_failure'
+			});
+		}).not.toThrow();
+
+		await waitForExpectation(() => {
+			expect(attempts).toBe(2);
 		});
 
-		expect(attempts).toBe(2);
-		expect(result).toMatchObject({
-			ok: false,
-			message: expect.stringContaining(SPOT_LOG_WRITE_FAILED_MESSAGE),
-			status: {
-				state: 'healthy'
-			}
-		});
-		if(!result.ok) {
-			expect(result.message).toContain('Failed after 2 write attempts');
-		}
 		expect(spotLogger.getStatus()).toEqual({
 			state: 'healthy'
 		});

@@ -215,19 +215,19 @@ const createSqlLogCollector = (entries: PendingSpotLogEntry[]): SqlQueryLogger =
 	};
 };
 
-const flushSpotLogEntries = async(
+const writeSpotLogEntries = (
 	logger: SpotLogger,
 	entries: PendingSpotLogEntry[]
-): Promise<void> => {
+): void => {
 	for(const entry of entries) {
-		await logger[entry.level](entry.message, entry.fields);
+		logger[entry.level](entry.message, entry.fields);
 	}
 };
 
-const loadConfiguredTasks = async(
+const loadConfiguredTasks = (
 	options: TaskRepositoryOptions,
 	logger: SpotLogger
-): Promise<LoadTasksResult> => {
+): LoadTasksResult => {
 	const sqlLogEntries: PendingSpotLogEntry[] = [];
 
 	try {
@@ -235,7 +235,7 @@ const loadConfiguredTasks = async(
 			...options,
 			sqlLogger: createSqlLogCollector(sqlLogEntries)
 		});
-		await flushSpotLogEntries(logger, sqlLogEntries);
+		writeSpotLogEntries(logger, sqlLogEntries);
 
 		return {
 			ok: true,
@@ -244,18 +244,18 @@ const loadConfiguredTasks = async(
 		};
 	}
 	catch(error) {
-		await flushSpotLogEntries(logger, sqlLogEntries);
+		writeSpotLogEntries(logger, sqlLogEntries);
 		return createDatabaseFailure(options.storageDirectory, error);
 	}
 };
 
-const executeConfiguredTaskCommand = async(
+const executeConfiguredTaskCommand = (
 	options: TaskRepositoryOptions,
 	command: TaskStorageCommand,
 	logger: SpotLogger
-): Promise<TaskStorageCommandResult> => {
+): TaskStorageCommandResult => {
 	const reactCommandLogEntry = createReactCommandLogEntry(command);
-	await logger[reactCommandLogEntry.level](reactCommandLogEntry.message, reactCommandLogEntry.fields);
+	logger[reactCommandLogEntry.level](reactCommandLogEntry.message, reactCommandLogEntry.fields);
 	const sqlLogEntries: PendingSpotLogEntry[] = [];
 
 	try {
@@ -263,7 +263,7 @@ const executeConfiguredTaskCommand = async(
 			...options,
 			sqlLogger: createSqlLogCollector(sqlLogEntries)
 		}, command);
-		await flushSpotLogEntries(logger, sqlLogEntries);
+		writeSpotLogEntries(logger, sqlLogEntries);
 
 		return {
 			ok: true,
@@ -271,7 +271,7 @@ const executeConfiguredTaskCommand = async(
 		};
 	}
 	catch(error) {
-		await flushSpotLogEntries(logger, sqlLogEntries);
+		writeSpotLogEntries(logger, sqlLogEntries);
 
 		if(isInvalidTaskChangeError(error)) {
 			return createInvalidCommandFailure(options.storageDirectory, error);
@@ -281,10 +281,10 @@ const executeConfiguredTaskCommand = async(
 	}
 };
 
-const getConfiguredStorageStatus = async(
+const getConfiguredStorageStatus = (
 	options: TaskRepositoryOptions,
 	logger: SpotLogger
-): Promise<StorageStatus> => {
+): StorageStatus => {
 	const sqlLogEntries: PendingSpotLogEntry[] = [];
 
 	try {
@@ -294,12 +294,12 @@ const getConfiguredStorageStatus = async(
 		}, () => {
 			return undefined;
 		});
-		await flushSpotLogEntries(logger, sqlLogEntries);
+		writeSpotLogEntries(logger, sqlLogEntries);
 
 		return createConfiguredStorageStatus(options.storageDirectory, { state: 'healthy' });
 	}
 	catch(error) {
-		await flushSpotLogEntries(logger, sqlLogEntries);
+		writeSpotLogEntries(logger, sqlLogEntries);
 		return createDatabaseFailure(options.storageDirectory, error).status;
 	}
 };
@@ -315,15 +315,15 @@ export const createTaskStorage = (options: CreateTaskStorageOptions = {}): TaskS
 		});
 	}
 
-	const getStorageStatus = async(): Promise<StorageStatus> => {
+	const getStorageStatus = (): Promise<StorageStatus> => {
 		if(!options.storageDirectory) {
-			return createUnwiredStorageStatus();
+			return Promise.resolve(createUnwiredStorageStatus());
 		}
 
-		return getConfiguredStorageStatus({
+		return Promise.resolve(getConfiguredStorageStatus({
 			storageDirectory: options.storageDirectory,
 			now: options.now
-		}, logger!);
+		}, logger!));
 	};
 
 	const loadTasks = async(): Promise<LoadTasksResult> => {
@@ -354,7 +354,7 @@ export const createTaskStorage = (options: CreateTaskStorageOptions = {}): TaskS
 		}
 
 		const { message, ...fields } = entry;
-		await logger!.info(message, fields);
+		logger!.info(message, fields);
 
 		return {
 			ok: true,

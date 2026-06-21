@@ -77,15 +77,6 @@ export interface SpotLoggerUnavailableStatus {
 
 export type SpotLoggerStatus = SpotLoggerHealthyStatus | SpotLoggerUnavailableStatus;
 
-export type SpotLoggerWriteOutcome = {
-	ok: true;
-	status: SpotLoggerStatus;
-} | {
-	ok: false;
-	message: string;
-	status: SpotLoggerStatus;
-};
-
 export interface CreateSpotLoggerOptions {
 	storageDirectory: string;
 	maximumFileSizeBytes?: number;
@@ -96,10 +87,10 @@ export interface CreateSpotLoggerOptions {
 }
 
 export interface SpotLogger {
-	debug: (message: string, fields?: SpotLogFields) => Promise<SpotLoggerWriteOutcome>;
-	error: (message: string, fields?: SpotLogFields) => Promise<SpotLoggerWriteOutcome>;
-	info: (message: string, fields?: SpotLogFields) => Promise<SpotLoggerWriteOutcome>;
-	warn: (message: string, fields?: SpotLogFields) => Promise<SpotLoggerWriteOutcome>;
+	debug: (message: string, fields?: SpotLogFields) => void;
+	error: (message: string, fields?: SpotLogFields) => void;
+	info: (message: string, fields?: SpotLogFields) => void;
+	warn: (message: string, fields?: SpotLogFields) => void;
 	getStatus: () => SpotLoggerStatus;
 	getConfiguration: () => SpotLoggerConfiguration;
 }
@@ -194,10 +185,6 @@ const assertLogFileWritable = (filePath: string): void => {
 	closeSync(fileDescriptor);
 };
 
-const createFailureMessage = (maximumWriteAttempts: number, error: unknown): string => {
-	return `${SPOT_LOG_WRITE_FAILED_MESSAGE} Failed after ${maximumWriteAttempts} write attempts. ${getErrorMessage(error)}`;
-};
-
 const createStartupFailureMessage = (filePath: string, error: unknown): string => {
 	return `${SPOT_LOG_WRITE_FAILED_MESSAGE} Could not open "${filePath}" for appending. ${getErrorMessage(error)}`;
 };
@@ -252,9 +239,7 @@ export const createSpotLogger = ({
 		level: SpotLogLevel,
 		message: string,
 		fields?: SpotLogFields
-	): Promise<SpotLoggerWriteOutcome> => {
-		let lastError: unknown;
-
+	): Promise<void> => {
 		for(let attempt = 1; attempt <= maximumWriteAttempts; attempt += 1) {
 			try {
 				const serializedEntry = serializeLogEntry(createLogEntry(level, message, fields, now));
@@ -262,41 +247,28 @@ export const createSpotLogger = ({
 				backend[level](serializedEntry);
 				assertCurrentLogEndsWithLine(configuration.filePath, serializedEntry);
 
-				return {
-					ok: true,
-					status: getStatus()
-				};
+				return;
 			}
-			catch(error) {
-				lastError = error;
-
+			catch {
 				if(attempt < maximumWriteAttempts) {
 					await sleep(retryDelayMs);
 				}
 			}
 		}
-
-		const failureMessage = createFailureMessage(maximumWriteAttempts, lastError);
-
-		return {
-			ok: false,
-			message: failureMessage,
-			status: getStatus()
-		};
 	};
 
 	return {
 		debug: (message, fields) => {
-			return write('debug', message, fields);
+			void write('debug', message, fields);
 		},
 		error: (message, fields) => {
-			return write('error', message, fields);
+			void write('error', message, fields);
 		},
 		info: (message, fields) => {
-			return write('info', message, fields);
+			void write('info', message, fields);
 		},
 		warn: (message, fields) => {
-			return write('warn', message, fields);
+			void write('warn', message, fields);
 		},
 		getStatus,
 		getConfiguration: () => {
