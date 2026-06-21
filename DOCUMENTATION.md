@@ -1,13 +1,13 @@
 # SPOT Documentation
 
-SPOT is the Simple Planner & Organizer Tool: a small Electron + React task manager intended to run on macOS, Windows, and Linux. The project is still in progress. The React web application is the current working surface, and the next major focus is wiring the Electron shell to persistent task storage.
+SPOT is the Simple Planner & Organizer Tool: a small Electron + React task manager intended to run on macOS, Windows, and Linux. The project is still in progress. The React web application is the current working surface, and the next major focus is wiring React task flows to persistent Electron storage.
 
 ## Current Status
 
 - The React app is the primary working surface and is considered done for now.
 - Task data is currently loaded from in-memory sample data in `src/logic/TaskStateLogic.ts`.
 - Task changes are held in React state only. They are not persisted to disk or a database.
-- Main-process storage modules exist under `src/main/storage`. Configured storage can initialize SQLite, load task rows, execute task write commands, and write the rolled operational log, but it is not wired to Electron or React yet.
+- Main-process storage modules exist under `src/main/storage`. Configured storage can initialize SQLite, load task rows, execute task write commands, and write the rolled operational log. Electron exposes that boundary through storage IPC and `window.spotStorage`, but React task startup and mutations do not use it yet.
 - The Electron main process opens `http://localhost:3000`, so the React dev server must be running when using the Electron shell.
 - The Notes, Tags, and Settings routes exist as placeholder pages.
 - The planned persistence architecture is one SQLite database as the source of truth plus one append-only rolled `spot-logs.ndjson` operational log.
@@ -60,13 +60,14 @@ npm run make
 - `src/index.tsx` mounts the React app and defines routes.
 - `src/index.css` defines global layout and theme variables.
 - `src/main/logging/SpotLogger.ts` configures `electron-log` behind a generic factory-created logger with `info`, `warn`, `error`, and `debug` methods, newline-delimited JSON output, size-based rolling, and one retained archive.
-- `src/main/storage/TaskStorage.ts` defines the unwired Electron main-process storage contract, configured SQLite task loading, configured SQLite task write commands, and database health reporting.
+- `src/main/ipc/TaskStorageIpc.ts` registers the narrow Electron IPC surface for storage loading, task write commands, and database health reporting.
+- `src/main/storage/TaskStorage.ts` defines the Electron main-process storage contract, configured SQLite task loading, configured SQLite task write commands, and database health reporting.
 - `src/main/storage/TaskCommandExecutor.ts` maps task storage commands to the task repository operations and keeps each command inside one transaction.
 - `src/main/storage/SpotDatabase.ts` opens `spot.sqlite`, applies schema migrations, currently creates schema version `1`, exposes a small internal query wrapper, and emits SQL query log records when a caller supplies a logger.
 - `src/main/storage/TaskRowMapping.ts` maps between SQLite task rows and React `Task` objects and owns the shared task field to SQLite column mapping used by storage queries.
 - `src/main/storage/TaskRepository.ts` owns SQLite task queries and task repository sessions while using the shared SPOT database wrapper for query execution and transactions.
-- `src/types` contains shared TypeScript types split into semantic files for tasks, domains, filters, and dates. Types that have one clear owner stay in the owning `.ts` or `.tsx` file instead.
-- `src/react-app-env.d.ts` contains the React Scripts TypeScript reference.
+- `src/types` contains shared TypeScript types split into semantic files for tasks, task storage, domains, filters, and dates. Types that have one clear owner stay in the owning `.ts` or `.tsx` file instead.
+- `src/react-app-env.d.ts` contains the React Scripts TypeScript reference plus renderer-side declarations for `window.versions` and `window.spotStorage`.
 - `src/components/common` contains layout and shared UI primitives.
 - `src/components/inputs` contains reusable inputs.
 - `src/components/tasks` contains the current task-management UI.
@@ -106,21 +107,21 @@ The page layout is a fixed-height flex app:
 
 ## Electron Layer
 
-`main.js` creates a `BrowserWindow` and loads `http://localhost:3000`. It also registers a sample `ping` IPC handler.
+`main.js` creates a `BrowserWindow` and loads `http://localhost:3000`. It registers a sample `ping` IPC handler and the storage IPC handlers from `src/main/ipc/TaskStorageIpc.ts`. Because Electron still starts from a CommonJS root file, `main.js` installs a small Node module resolver so Electron's native TypeScript stripping can load the main-process TypeScript modules and their existing `src/...` imports without adding a bundler.
 
-`preload.js` exposes a `window.versions` API with Node, Chrome, Electron, and `ping` helpers.
+`preload.js` exposes a `window.versions` API with Node, Chrome, Electron, and `ping` helpers. It also exposes `window.spotStorage` with `loadTasks()`, `executeTaskCommand(command)`, and `getStorageStatus()` methods. It does not expose raw `ipcRenderer`, filesystem, or SQLite objects.
 
 `renderer.js` is still the default Electron starter-style renderer script and is not part of the React task UI.
 
 Known Electron work still pending:
 
 - Load the built React app in packaged mode.
-- Wire the existing main-process storage boundary into Electron and React.
+- Wire React startup and task mutations to the existing `window.spotStorage` API.
 - Add robust save, reload, error handling, and shutdown behavior.
 
 ## Main-Process Storage
 
-`src/main/storage/TaskStorage.ts` defines the unwired storage boundary. It exports:
+`src/main/storage/TaskStorage.ts` defines the storage boundary. It exports:
 
 - `createTaskStorage()`
 - `TaskStorage`
@@ -128,7 +129,9 @@ Known Electron work still pending:
 - `OperationalLogEntry`
 - storage status and result types
 
-Without a storage directory, the storage boundary reports the database as `not-configured`. With a storage directory, `loadTasks()` opens `spot.sqlite`, applies migrations, reads task rows, maps them to React `Task` objects, emits storage-layer SQL query log entries through `SpotLogger`, and returns database storage status. `executeTaskCommand()` emits the incoming storage command through `SpotLogger`, applies `task.create`, `task.update`, `task.delete`, and `tasks.updateMany` commands to SQLite through `TaskCommandExecutor.ts` and `TaskRepository.ts`, emits the resulting SQL query records, and returns database storage status. Nothing calls these methods yet, so application behavior is unchanged.
+Without a storage directory, the storage boundary reports the database as `not-configured`. With a storage directory, `loadTasks()` opens `spot.sqlite`, applies migrations, reads task rows, maps them to React `Task` objects, emits storage-layer SQL query log entries through `SpotLogger`, and returns database storage status. `executeTaskCommand()` emits the incoming storage command through `SpotLogger`, applies `task.create`, `task.update`, `task.delete`, and `tasks.updateMany` commands to SQLite through `TaskCommandExecutor.ts` and `TaskRepository.ts`, emits the resulting SQL query records, and returns database storage status. Electron can reach these methods through the storage IPC boundary, but React does not call them yet, so application task behavior is unchanged.
+
+`src/types/TaskStorageTypes.ts` owns the shared command, result, status, and `SpotStorageApi` types used across main-process storage, IPC, and renderer declarations. `TaskStorage.ts` re-exports those shared storage types for existing main-process callers.
 
 Each configured task write command runs in one SQLite transaction. Completing and restoring tasks are represented as `task.update`; manual reorder and sort by importance are represented as `tasks.updateMany`. Fields marked immutable in `TASK_FIELD_COLUMN_MAPPINGS` cannot be included in update changes; currently, that means task IDs are immutable after creation. If an update or delete references a missing task row, the command fails and the transaction rolls back. `TaskStorage.ts` adapts `SpotDatabase.ts` SQL query callbacks directly to `SpotLogger` calls instead of collecting or flushing log batches. Operational-log writes are best-effort and optional: repeated log failures are ignored by storage results and do not invalidate successful SQLite writes.
 
@@ -160,7 +163,7 @@ Storage files:
 
 Initial storage location:
 
-- Use Electron's app data location through the main process, with files kept in an app-owned subdirectory.
+- In Electron runtime, `src/main/ipc/TaskStorageIpc.ts` resolves storage to `path.join(app.getPath('userData'), 'storage')`.
 - A later settings feature can allow the user to choose a Google Drive, OneDrive, Dropbox, or other synced folder.
 
 Core invariants:
@@ -404,7 +407,7 @@ Each step below is intended to be self-contained, committed separately, and manu
 
    - SQLite remains canonical and operational logging is best-effort, but React is still unwired.
 
-7. Add preload and IPC API.
+7. Add preload and IPC API. Status: complete.
 
    Scope:
 
@@ -412,6 +415,7 @@ Each step below is intended to be self-contained, committed separately, and manu
    - Expose a narrow `window.spotStorage` API through `preload.js`.
    - Add renderer-side TypeScript declarations for the exposed API.
    - Do not expose raw `ipcRenderer`, filesystem, or SQLite objects.
+   - Keep existing React task data flow unchanged.
 
    Validation:
 
@@ -804,6 +808,7 @@ Current test coverage includes focused regression checks for:
 - date comparison and display formatting
 - smoke coverage for task filters and task list interactions
 - SQLite storage setup, task row mapping, command execution, transaction rollback, and optional operational logging behavior
+- storage IPC handler registration, channel delegation, and default Electron storage directory resolution
 - generic SPOT logging success, public log levels, startup file-open failures, bounded retry failures, retry recovery, and size-based rolling with bounded retention
 
 Validation commands:
@@ -817,7 +822,7 @@ npm test
 Future testing priorities:
 
 - broader interaction coverage as task editing and drag-and-drop behavior are polished
-- integration coverage for Electron and React wiring once the storage boundary is connected to runtime flows
+- integration coverage for React startup and mutation wiring once the existing storage IPC boundary is used by runtime task flows
 
 ## Development Rules
 

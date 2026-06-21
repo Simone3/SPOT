@@ -4,43 +4,11 @@ import { executeTaskCommandInStorage } from 'src/main/storage/TaskCommandExecuto
 import { DATABASE_FILE_NAME, type SqlQueryLogger } from 'src/main/storage/SpotDatabase';
 import { readTasks, withSpotDatabase, type TaskRepositoryOptions } from 'src/main/storage/TaskRepository';
 import { isInvalidTaskChangeError } from 'src/main/storage/TaskRowMapping';
-import type { PersistedTask, PersistedTaskChange, Task } from 'src/types/TaskTypes';
+import type { LoadTasksResult, StorageDatabaseStatus, StorageFailure, StorageStatus, TaskStorageCommand, TaskStorageCommandName, TaskStorageCommandResult } from 'src/types/TaskStorageTypes';
+
+export type { LoadTasksResult, SpotStorageApi, StorageDatabaseHealth, StorageDatabaseStatus, StorageFailure, StorageFailureReason, StorageStatus, TaskStorageCommand, TaskStorageCommandName, TaskStorageCommandResult } from 'src/types/TaskStorageTypes';
 
 export const STORAGE_NOT_IMPLEMENTED_MESSAGE = 'Persistent task storage is not implemented yet.';
-
-export type TaskStorageCommandName = 'task.create' | 'task.update' | 'task.delete' | 'tasks.updateMany';
-
-interface TaskCreateCommand {
-	command: 'task.create';
-	payload: {
-		task: PersistedTask;
-	};
-}
-
-interface TaskUpdateCommand {
-	command: 'task.update';
-	payload: {
-		taskId: string;
-		change: PersistedTaskChange;
-	};
-}
-
-interface TaskDeleteCommand {
-	command: 'task.delete';
-	payload: {
-		taskId: string;
-	};
-}
-
-interface TaskUpdateManyCommand {
-	command: 'tasks.updateMany';
-	payload: {
-		reason: string;
-		updates: TaskUpdateCommand['payload'][];
-	};
-}
-
-export type TaskStorageCommand = TaskCreateCommand | TaskUpdateCommand | TaskDeleteCommand | TaskUpdateManyCommand;
 
 interface ReactCommandOperationalLogEntry {
 	message: string;
@@ -59,39 +27,6 @@ interface SqlQueryOperationalLogEntry {
 }
 
 export type OperationalLogEntry = ReactCommandOperationalLogEntry | SqlQueryOperationalLogEntry;
-
-export type StorageDatabaseHealth = 'not-configured' | 'healthy' | 'unavailable';
-
-export interface StorageDatabaseStatus {
-	state: StorageDatabaseHealth;
-	message?: string;
-}
-
-export interface StorageStatus {
-	database: StorageDatabaseStatus;
-	storageDirectory?: string;
-	databasePath?: string;
-}
-
-type StorageFailureReason = 'not-implemented' | 'database-error' | 'invalid-command';
-
-interface StorageFailure {
-	ok: false;
-	reason: StorageFailureReason;
-	message: string;
-	status: StorageStatus;
-}
-
-export type LoadTasksResult = {
-	ok: true;
-	tasks: Task[];
-	status: StorageStatus;
-} | StorageFailure;
-
-export type TaskStorageCommandResult = {
-	ok: true;
-	status: StorageStatus;
-} | StorageFailure;
 
 export type OperationalLogWriteResult = {
 	ok: true;
