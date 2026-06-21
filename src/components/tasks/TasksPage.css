@@ -1,0 +1,21 @@
+
+.tasks-page-status {
+	margin: 20px;
+	color: var(--colors-text-secondary);
+	line-height: 1.4;
+}
+
+.tasks-page-status-title {
+	margin: 0 0 8px 0;
+	color: var(--colors-text-primary);
+	font-size: 1.1rem;
+}
+
+.tasks-page-status-message {
+	max-width: 640px;
+	margin: 0;
+}
+
+.tasks-page-status-error .tasks-page-status-title {
+	color: var(--colors-danger-text);
+}

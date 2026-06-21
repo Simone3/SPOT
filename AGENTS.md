@@ -29,9 +29,9 @@
 - The persistence contract in `DOCUMENTATION.md` is the source of truth for the initial storage implementation.
 - Preserve the initial command names: `task.create`, `task.update`, `task.delete`, and `tasks.updateMany`.
 - Expose database health to React. Database failures are user-facing and require state reconciliation; operational-log failures are optional, best-effort, and ignored by React when SQLite succeeds.
-- Runtime persistence is partially wired. Electron registers storage IPC handlers through `src/main/ipc/TaskStorageIpc.ts`, and `preload.js` exposes them as `window.spotStorage`. React startup and mutations are not migrated yet and still use in-memory sample state until later steps explicitly change that behavior.
+- Runtime persistence is partially wired. Electron registers storage IPC handlers through `src/main/ipc/TaskStorageIpc.ts`, `preload.js` exposes them as `window.spotStorage`, and React startup loads tasks through that API when it exists. Browser-only React mode still uses sample data, and React task mutations are not migrated yet.
 - The first SQLite implementation uses Electron's bundled Node `node:sqlite` support. Do not add an external SQLite dependency unless the reason is documented in `DOCUMENTATION.md`.
-- `createTaskStorage({ storageDirectory })` can load and mutate persisted task rows and write the optional operational log through `createSpotLogger()` for tests and the current IPC boundary, but React startup and mutations are not wired to it yet.
+- `createTaskStorage({ storageDirectory })` can load and mutate persisted task rows and write the optional operational log through `createSpotLogger()` for tests and the current IPC boundary. React startup is wired to `loadTasks()` in Electron; React mutations are not wired to storage yet.
 
 ## Delivery Rules
 - You MUST commit the code when you complete any task.

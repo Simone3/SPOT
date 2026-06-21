@@ -5,13 +5,13 @@ SPOT is the Simple Planner & Organizer Tool: a small Electron + React task manag
 ## Current Status
 
 - The React app is the primary working surface and is considered done for now.
-- Task data is currently loaded from in-memory sample data in `src/logic/TaskStateLogic.ts`.
+- Task data loads through `window.spotStorage.loadTasks()` in Electron. Browser-only React mode falls back to in-memory sample data from `src/logic/TaskStateLogic.ts`.
 - Task changes are held in React state only. They are not persisted to disk or a database.
-- Main-process storage modules exist under `src/main/storage`. Configured storage can initialize SQLite, load task rows, execute task write commands, and write the rolled operational log. Electron exposes that boundary through storage IPC and `window.spotStorage`, but React task startup and mutations do not use it yet.
+- Main-process storage modules exist under `src/main/storage`. Configured storage can initialize SQLite, load task rows, execute task write commands, and write the rolled operational log. Electron exposes that boundary through storage IPC and `window.spotStorage`; React startup uses it for loading, while React task mutations do not use it yet.
 - The Electron main process opens `http://localhost:3000`, so the React dev server must be running when using the Electron shell.
 - The Notes, Tags, and Settings routes exist as placeholder pages.
 - The planned persistence architecture is one SQLite database as the source of truth plus one append-only rolled `spot-logs.ndjson` operational log.
-- The initial persistence contract is documented and frozen below. Runtime behavior is unchanged: React still uses in-memory sample state until later persistence steps are wired.
+- The initial persistence contract is documented and frozen below. Startup persistence is wired in Electron, but task mutations still use in-memory React state until later persistence steps are wired.
 
 ## How To Run
 
@@ -116,7 +116,7 @@ The page layout is a fixed-height flex app:
 Known Electron work still pending:
 
 - Load the built React app in packaged mode.
-- Wire React startup and task mutations to the existing `window.spotStorage` API.
+- Wire React task mutations to the existing `window.spotStorage` API.
 - Add robust save, reload, error handling, and shutdown behavior.
 
 ## Main-Process Storage
@@ -129,7 +129,7 @@ Known Electron work still pending:
 - `OperationalLogEntry`
 - storage status and result types
 
-Without a storage directory, the storage boundary reports the database as `not-configured`. With a storage directory, `loadTasks()` opens `spot.sqlite`, applies migrations, reads task rows, maps them to React `Task` objects, emits storage-layer SQL query log entries through `SpotLogger`, and returns database storage status. `executeTaskCommand()` emits the incoming storage command through `SpotLogger`, applies `task.create`, `task.update`, `task.delete`, and `tasks.updateMany` commands to SQLite through `TaskCommandExecutor.ts` and `TaskRepository.ts`, emits the resulting SQL query records, and returns database storage status. Electron can reach these methods through the storage IPC boundary, but React does not call them yet, so application task behavior is unchanged.
+Without a storage directory, the storage boundary reports the database as `not-configured`. With a storage directory, `loadTasks()` opens `spot.sqlite`, applies migrations, reads task rows, maps them to React `Task` objects, emits storage-layer SQL query log entries through `SpotLogger`, and returns database storage status. `executeTaskCommand()` emits the incoming storage command through `SpotLogger`, applies `task.create`, `task.update`, `task.delete`, and `tasks.updateMany` commands to SQLite through `TaskCommandExecutor.ts` and `TaskRepository.ts`, emits the resulting SQL query records, and returns database storage status. React calls `loadTasks()` through `window.spotStorage` on Electron startup. React task mutations still use the in-memory flow and do not call `executeTaskCommand()` yet.
 
 `src/types/TaskStorageTypes.ts` owns the shared command, result, status, and `SpotStorageApi` types used across main-process storage, IPC, and renderer declarations. `TaskStorage.ts` re-exports those shared storage types for existing main-process callers.
 
@@ -214,7 +214,7 @@ Runtime boundary:
 - React owns responsive in-memory UI state.
 - The Electron main process owns durable storage, operational logging, and database storage health.
 - The preload layer exposes only a narrow storage API. It must not expose raw filesystem, SQLite, or unrestricted IPC access.
-- Until React startup is explicitly wired to storage in a later step, browser-only React mode continues to use sample in-memory data.
+- Browser-only React mode continues to use sample in-memory data because `window.spotStorage` exists only in Electron.
 
 Read contract:
 
@@ -427,7 +427,7 @@ Each step below is intended to be self-contained, committed separately, and manu
 
    - React can call the storage API, but existing React data flow is not migrated yet.
 
-8. Wire React startup loading.
+8. Wire React startup loading. Status: complete.
 
    Scope:
 
@@ -809,6 +809,7 @@ Current test coverage includes focused regression checks for:
 - smoke coverage for task filters and task list interactions
 - SQLite storage setup, task row mapping, command execution, transaction rollback, and optional operational logging behavior
 - storage IPC handler registration, channel delegation, and default Electron storage directory resolution
+- React task-page startup loading, browser sample fallback, persisted Electron loading, and startup-error rendering
 - generic SPOT logging success, public log levels, startup file-open failures, bounded retry failures, retry recovery, and size-based rolling with bounded retention
 
 Validation commands:
@@ -822,7 +823,7 @@ npm test
 Future testing priorities:
 
 - broader interaction coverage as task editing and drag-and-drop behavior are polished
-- integration coverage for React startup and mutation wiring once the existing storage IPC boundary is used by runtime task flows
+- integration coverage for React mutation wiring once the existing storage IPC boundary is used by write flows
 
 ## Development Rules
 
@@ -842,10 +843,10 @@ Future testing priorities:
 
 The most important remaining work is:
 
-- Add persistence and Electron-shell integration tests once storage is wired into runtime flows.
+- Add persistence and Electron-shell integration tests once task mutations are wired into runtime flows.
 - Improve accessibility and focus behavior in reusable inputs and clickables.
 - Continue polishing drag-and-drop feedback as the task interaction model settles.
 - Make `DatesContextProvider` refresh date labels after midnight.
-- Replace sample data loading with real data loading.
+- Persist task mutations through the existing storage API.
 - Add error handling and user-facing save/reload feedback.
 - Finish Notes, Tags, and Settings pages when their scope is clear.

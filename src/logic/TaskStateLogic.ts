@@ -231,13 +231,13 @@ export const getInitialTaskState = (): TaskStateContainer => {
 	};
 };
 
-export const loadBackEndTasksIntoState = (setTaskState: SetTaskState): void => {
+export const loadTasksIntoState = (setTaskState: SetTaskState, tasks: Task[]): void => {
 	setTaskState((prevTaskState) => {
-		const newTasksContainer = cloneTasks(prevTaskState.tasksContainer);
-		const newDomainsContainer = cloneDomains(prevTaskState.domainsContainer);
+		const newTasksContainer = getInitialTasks();
+		const newDomainsContainer = getInitialDomains();
 
 		// Add tasks to the proper state lists
-		loadBackEndTasks(newTasksContainer, SAMPLE_INPUT_TASKS);
+		loadBackEndTasks(newTasksContainer, tasks);
 
 		// Extract domains from all tasks and add them to the proper state lists
 		addDomainsForTasks(newDomainsContainer, newTasksContainer);
@@ -252,6 +252,12 @@ export const loadBackEndTasksIntoState = (setTaskState: SetTaskState): void => {
 		};
 	});
 };
+
+export const loadSampleTasksIntoState = (setTaskState: SetTaskState): void => {
+	loadTasksIntoState(setTaskState, SAMPLE_INPUT_TASKS);
+};
+
+export const loadBackEndTasksIntoState = loadSampleTasksIntoState;
 
 export const addTaskToState = (setTaskState: SetTaskState): void => {
 	setTaskState((prevTaskState) => {
