@@ -19,3 +19,13 @@
 .tasks-page-status-error .tasks-page-status-title {
 	color: var(--colors-danger-text);
 }
+
+.tasks-page-storage-warning {
+	margin: 20px 20px 0 20px;
+	padding: 12px 14px;
+	border: 1px solid var(--colors-danger-border);
+	border-radius: 5px;
+	background-color: var(--colors-danger-background-muted);
+	color: var(--colors-danger-text);
+	line-height: 1.4;
+}
