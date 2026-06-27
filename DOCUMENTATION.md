@@ -59,9 +59,9 @@ npm run make
 - `index.html` and `public/index.html` are HTML entry points.
 - `src/index.tsx` mounts the React app and defines routes.
 - `src/index.css` defines global layout and theme variables.
-- `src/main/logging/SpotLogger.ts` configures `electron-log` behind a generic factory-created logger with `info`, `warn`, `error`, and `debug` methods, newline-delimited JSON output, size-based rolling, and one retained archive.
-- `src/main/ipc/TaskStorageIpc.ts` registers the narrow Electron IPC surface for storage loading, task write commands, and database health reporting.
-- `src/main/storage/TaskStorage.ts` defines the Electron main-process storage contract, configured SQLite task loading, configured SQLite task write commands, and database health reporting.
+- `src/main/logging/SpotLogger.ts` configures `electron-log` behind a generic factory-created logger with `info`, `warn`, `error`, `debug`, and `flush` methods, newline-delimited JSON output, size-based rolling, and one retained archive.
+- `src/main/ipc/TaskStorageIpc.ts` registers the narrow Electron IPC surface for storage loading, task write commands, database health reporting, and shutdown draining for in-flight task commands.
+- `src/main/storage/TaskStorage.ts` defines the Electron main-process storage contract, configured SQLite task loading, configured SQLite task write commands, database health reporting, and shutdown preparation.
 - `src/main/storage/TaskCommandExecutor.ts` maps task storage commands to the task repository operations and keeps each command inside one transaction.
 - `src/main/storage/SpotDatabase.ts` opens `spot.sqlite`, applies schema migrations, currently creates schema version `1`, exposes a small internal query wrapper, and emits SQL query log records when a caller supplies a logger.
 - `src/main/storage/TaskRowMapping.ts` maps between SQLite task rows and React `Task` objects and owns the shared task field to SQLite column mapping used by storage queries.
@@ -107,7 +107,7 @@ The page layout is a fixed-height flex app:
 
 ## Electron Layer
 
-`main.js` creates a `BrowserWindow` and loads `http://localhost:3000`. It registers a sample `ping` IPC handler and the storage IPC handlers from `src/main/ipc/TaskStorageIpc.ts`. Because Electron still starts from a CommonJS root file, `main.js` installs a small Node module resolver so Electron's native TypeScript stripping can load the main-process TypeScript modules and their existing `src/...` imports without adding a bundler.
+`main.js` creates a `BrowserWindow` and loads `http://localhost:3000`. It registers a sample `ping` IPC handler and the storage IPC handlers from `src/main/ipc/TaskStorageIpc.ts`, which also attach the storage shutdown drain to Electron's `before-quit` event. Because Electron still starts from a CommonJS root file, `main.js` installs a small Node module resolver so Electron's native TypeScript stripping can load the main-process TypeScript modules and their existing `src/...` imports without adding a bundler.
 
 `preload.js` exposes a `window.versions` API with Node, Chrome, Electron, and `ping` helpers. It also exposes `window.spotStorage` with `loadTasks()`, `executeTaskCommand(command)`, and `getStorageStatus()` methods. It does not expose raw `ipcRenderer`, filesystem, or SQLite objects.
 
@@ -116,7 +116,7 @@ The page layout is a fixed-height flex app:
 Known Electron work still pending:
 
 - Load the built React app in packaged mode.
-- Add robust save, reload, error handling, and shutdown behavior.
+- Add robust save, reload, and error handling polish.
 
 ## Main-Process Storage
 
@@ -128,15 +128,15 @@ Known Electron work still pending:
 - `OperationalLogEntry`
 - storage status and result types
 
-Without a storage directory, the storage boundary reports the database as `not-configured`. With a storage directory, `loadTasks()` opens `spot.sqlite`, applies migrations, reads task rows, maps them to React `Task` objects, emits storage-layer SQL query log entries through `SpotLogger`, and returns database storage status. `executeTaskCommand()` emits the incoming storage command through `SpotLogger`, applies `task.create`, `task.update`, `task.delete`, and `tasks.updateMany` commands to SQLite through `TaskCommandExecutor.ts` and `TaskRepository.ts`, emits the resulting SQL query records, and returns database storage status. React calls `loadTasks()` through `window.spotStorage` on Electron startup and calls `executeTaskCommand()` for task mutations when `window.spotStorage` exists. It keeps the latest renderer-facing `StorageStatus`, stays quiet while the database is healthy, shows startup storage failures before rendering task lists, and shows a prominent save warning when writes fail, including database health details when storage remains non-healthy.
+Without a storage directory, the storage boundary reports the database as `not-configured`. With a storage directory, `loadTasks()` opens `spot.sqlite`, applies migrations, reads task rows, maps them to React `Task` objects, emits storage-layer SQL query log entries through `SpotLogger`, and returns database storage status. `executeTaskCommand()` emits the incoming storage command through `SpotLogger`, applies `task.create`, `task.update`, `task.delete`, and `tasks.updateMany` commands to SQLite through `TaskCommandExecutor.ts` and `TaskRepository.ts`, emits the resulting SQL query records, and returns database storage status. `prepareForShutdown()` waits for pending operational-log writes to finish their bounded retry attempts. React calls `loadTasks()` through `window.spotStorage` on Electron startup and calls `executeTaskCommand()` for task mutations when `window.spotStorage` exists. It keeps the latest renderer-facing `StorageStatus`, stays quiet while the database is healthy, shows startup storage failures before rendering task lists, and shows a prominent save warning when writes fail, including database health details when storage remains non-healthy.
 
 `src/types/TaskStorageTypes.ts` owns the shared command, result, status, and `SpotStorageApi` types used across main-process storage, IPC, and renderer declarations. `TaskStorage.ts` re-exports those shared storage types for existing main-process callers.
 
-Each configured task write command runs in one SQLite transaction. Completing and restoring tasks are represented as `task.update`; manual reorder and sort by importance are represented as `tasks.updateMany`. Fields marked immutable in `TASK_FIELD_COLUMN_MAPPINGS` cannot be included in update changes; currently, that means task IDs are immutable after creation. If an update or delete references a missing task row, the command fails and the transaction rolls back. `TaskStorage.ts` adapts `SpotDatabase.ts` SQL query callbacks directly to `SpotLogger` calls instead of collecting or flushing log batches. Operational-log writes are best-effort and optional: repeated log failures are ignored by storage results and do not invalidate successful SQLite writes.
+Each configured task write command runs in one SQLite transaction. Completing and restoring tasks are represented as `task.update`; manual reorder and sort by importance are represented as `tasks.updateMany`. Fields marked immutable in `TASK_FIELD_COLUMN_MAPPINGS` cannot be included in update changes; currently, that means task IDs are immutable after creation. If an update or delete references a missing task row, the command fails and the transaction rolls back. Task durability does not rely on delayed batching. `TaskStorage.ts` adapts `SpotDatabase.ts` SQL query callbacks directly to `SpotLogger` calls instead of collecting log batches. Operational-log writes are best-effort and optional: repeated log failures are ignored by storage results and do not invalidate successful SQLite writes.
 
 `src/main/storage/SpotDatabase.ts` opens or creates the app-wide `spot.sqlite` database in a caller-provided storage directory using Electron's bundled Node `node:sqlite` support. No external SQLite dependency is used. Opening the database creates `schema_migrations` when needed and applies migration version `1`, which creates the `tasks` table. The raw SQLite connection stays private to `SpotDatabase.ts`; task storage code uses internal wrapper methods for SQL execution, row reads, and transactions.
 
-`src/main/logging/SpotLogger.ts` uses `electron-log` to write newline-delimited JSON entries to `spot-logs.ndjson`. It is factory-initialized with a storage directory and exposes generic `info`, `warn`, `error`, and `debug` methods that take a message plus optional structured fields such as `type`, `command`, `query`, or `elapsedMillis`. Those methods return `void`, so callers can emit log entries without awaiting write outcomes or handling log failures. The file transport is configured with a 1 MiB maximum file size, `electron-log`'s size-based rolling, and one retained archive named `spot-logs.old.ndjson`. Logger creation probes whether the configured log file can be opened for appending and keeps that startup status internally. Individual log writes are attempted synchronously at the transport layer, retried up to three times with a short bounded delay when needed, and verified against the current log file, but runtime logging failures remain logging-local and are not exposed through storage status.
+`src/main/logging/SpotLogger.ts` uses `electron-log` to write newline-delimited JSON entries to `spot-logs.ndjson`. It is factory-initialized with a storage directory and exposes generic `info`, `warn`, `error`, and `debug` methods that take a message plus optional structured fields such as `type`, `command`, `query`, or `elapsedMillis`. Those methods return `void`, so callers can emit log entries without awaiting write outcomes or handling log failures. The file transport is configured with a 1 MiB maximum file size, `electron-log`'s size-based rolling, and one retained archive named `spot-logs.old.ndjson`. Logger creation probes whether the configured log file can be opened for appending and keeps that startup status internally. Individual log writes are attempted synchronously at the transport layer, retried up to three times with a short bounded delay when needed, and verified against the current log file, but runtime logging failures remain logging-local and are not exposed through storage status. `flush()` waits for the currently pending write attempts to finish, either by succeeding or by being abandoned after the bounded retry count.
 
 `src/main/storage/TaskRowMapping.ts` serializes task rows for SQLite. `tags` are stored as `tags_json`, `completionDate` is stored as an ISO string in `completion_date`, optional string fields are stored as `NULL`, and the runtime-only `visible` flag is not stored. The `TASK_FIELD_COLUMN_MAPPINGS` list is the shared source for task field names, SQLite column names, mutability, and serialization/parsing behavior. `TaskRepository.ts` builds its task `SELECT`, `INSERT`, and `UPDATE` column lists from those mapping exports. Versioned schema migrations in `SpotDatabase.ts` remain explicit.
 
@@ -489,7 +489,7 @@ Each step below is intended to be self-contained, committed separately, and manu
    - Users can tell whether tasks are saved.
    - React stores the latest renderer-facing database status, avoids healthy-state noise, shows startup failures before the task UI, and includes database health details when task-save warnings leave storage non-healthy.
 
-11. Add shutdown and pending-write handling.
+11. Add shutdown and pending-write handling. Status: complete.
 
    Scope:
 
@@ -508,6 +508,7 @@ Each step below is intended to be self-contained, committed separately, and manu
    Commit boundary:
 
    - Quitting and reopening the app preserves all committed task mutations.
+   - Electron prevents the first quit request while storage IPC drains in-flight task commands, rejects new write commands with a `shutdown` failure, flushes pending operational-log retry attempts through `prepareForShutdown()`, and then resumes quitting.
 
 12. Update packaging and production loading.
 
@@ -808,10 +809,10 @@ Current test coverage includes focused regression checks for:
 - date comparison and display formatting
 - smoke coverage for task filters and task list interactions
 - SQLite storage setup, task row mapping, command execution, transaction rollback, and optional operational logging behavior
-- storage IPC handler registration, channel delegation, and default Electron storage directory resolution
+- storage IPC handler registration, channel delegation, default Electron storage directory resolution, shutdown drain, and post-shutdown command failure behavior
 - React task-page startup loading, browser sample fallback, persisted Electron loading, and startup-error rendering
 - React task-page storage commands for create, update, delete, complete, restore, manual reorder, and importance sort, plus write-failure warning, storage-health feedback, and reconciliation behavior
-- generic SPOT logging success, public log levels, startup file-open failures, bounded retry failures, retry recovery, and size-based rolling with bounded retention
+- generic SPOT logging success, public log levels, startup file-open failures, bounded retry failures, retry recovery, shutdown flush behavior, and size-based rolling with bounded retention
 
 Validation commands:
 
@@ -848,5 +849,5 @@ The most important remaining work is:
 - Improve accessibility and focus behavior in reusable inputs and clickables.
 - Continue polishing drag-and-drop feedback as the task interaction model settles.
 - Make `DatesContextProvider` refresh date labels after midnight.
-- Continue polishing reload and pending-write feedback.
+- Continue polishing reload feedback.
 - Finish Notes, Tags, and Settings pages when their scope is clear.

@@ -47,7 +47,7 @@ export interface StorageStatus {
 	databasePath?: string;
 }
 
-export type StorageFailureReason = 'not-implemented' | 'database-error' | 'invalid-command';
+export type StorageFailureReason = 'not-implemented' | 'database-error' | 'invalid-command' | 'shutdown';
 
 export interface StorageFailure {
 	ok: false;

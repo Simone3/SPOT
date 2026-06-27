@@ -243,6 +243,43 @@ describe('SpotLogger', () => {
 		});
 	});
 
+	test('flushes pending retry writes before resolving', async() => {
+		const storageDirectory = makeTempStorageDirectory();
+		tempStorageDirectories.push(storageDirectory);
+		const spotLogPath = path.join(storageDirectory, SPOT_LOG_FILE_NAME);
+		let attempts = 0;
+		const backendFactory = createFakeBackendFactory((message) => {
+			attempts += 1;
+
+			if(attempts > 1) {
+				appendFileSync(spotLogPath, `${message}${EOL}`, 'utf8');
+			}
+		});
+		const spotLogger = createSpotLogger({
+			storageDirectory,
+			maximumWriteAttempts: 3,
+			retryDelayMs: 0,
+			backendFactory
+		});
+
+		spotLogger.info('Storage SQL query completed', {
+			type: 'sql.query',
+			query: 'SELECT flush_retry_success'
+		});
+
+		await spotLogger.flush();
+
+		expect(attempts).toBe(2);
+		expect(readSpotLogEntries(storageDirectory)).toEqual([
+			expect.objectContaining({
+				level: 'info',
+				message: 'Storage SQL query completed',
+				type: 'sql.query',
+				query: 'SELECT flush_retry_success'
+			})
+		]);
+	});
+
 	test('ignores failed writes without changing startup logging status', async() => {
 		const storageDirectory = makeTempStorageDirectory();
 		tempStorageDirectories.push(storageDirectory);
@@ -268,6 +305,33 @@ describe('SpotLogger', () => {
 			expect(attempts).toBe(2);
 		});
 
+		expect(spotLogger.getStatus()).toEqual({
+			state: 'healthy'
+		});
+	});
+
+	test('flush abandons failed writes after the bounded retry attempts', async() => {
+		const storageDirectory = makeTempStorageDirectory();
+		tempStorageDirectories.push(storageDirectory);
+		let attempts = 0;
+		const backendFactory = createFakeBackendFactory(() => {
+			attempts += 1;
+		});
+		const spotLogger = createSpotLogger({
+			storageDirectory,
+			maximumWriteAttempts: 2,
+			retryDelayMs: 0,
+			backendFactory
+		});
+
+		spotLogger.info('Storage SQL query completed', {
+			type: 'sql.query',
+			query: 'SELECT flush_retry_failure'
+		});
+
+		await spotLogger.flush();
+
+		expect(attempts).toBe(2);
 		expect(spotLogger.getStatus()).toEqual({
 			state: 'healthy'
 		});

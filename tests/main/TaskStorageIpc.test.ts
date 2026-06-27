@@ -1,11 +1,24 @@
 import path from 'node:path';
 import type { App, IpcMain, IpcMainInvokeEvent } from 'electron';
 import { makeTask } from '../testUtils';
-import { registerTaskStorageIpcHandlers, resolveSpotStorageDirectory, SPOT_STORAGE_DIRECTORY_NAME, SPOT_STORAGE_IPC_CHANNELS } from 'src/main/ipc/TaskStorageIpc';
+import { registerTaskStorageIpcHandlers, resolveSpotStorageDirectory, SPOT_STORAGE_DIRECTORY_NAME, SPOT_STORAGE_IPC_CHANNELS, TASK_STORAGE_SHUTDOWN_MESSAGE } from 'src/main/ipc/TaskStorageIpc';
 import type { TaskStorage } from 'src/main/storage/TaskStorage';
 import type { LoadTasksResult, StorageStatus, TaskStorageCommand, TaskStorageCommandResult } from 'src/types/TaskStorageTypes';
 
 type RegisteredIpcHandler = (event: IpcMainInvokeEvent, ...args: unknown[]) => unknown;
+type RegisteredAppHandler = (...args: unknown[]) => unknown;
+
+const createDeferred = <T>(): { promise: Promise<T>; resolve: (value: T) => void } => {
+	let resolve: (value: T) => void = () => {};
+	const promise = new Promise<T>((promiseResolve) => {
+		resolve = promiseResolve;
+	});
+
+	return {
+		promise,
+		resolve
+	};
+};
 
 const createMockIpcMain = (): {
 	handlers: Map<string, RegisteredIpcHandler>;
@@ -21,6 +34,28 @@ const createMockIpcMain = (): {
 	return {
 		handlers,
 		ipcMain
+	};
+};
+
+const createMockApp = (userDataPath = path.join('/tmp', 'spot-user-data')): {
+	app: Pick<App, 'getPath' | 'on' | 'quit'>;
+	handlers: Map<string, RegisteredAppHandler>;
+} => {
+	const handlers = new Map<string, RegisteredAppHandler>();
+	const app = {
+		getPath: jest.fn(() => {
+			return userDataPath;
+		}),
+		on: jest.fn((eventName: string, handler: RegisteredAppHandler) => {
+			handlers.set(eventName, handler);
+			return undefined;
+		}),
+		quit: jest.fn()
+	} as unknown as Pick<App, 'getPath' | 'on' | 'quit'>;
+
+	return {
+		app,
+		handlers
 	};
 };
 
@@ -125,11 +160,7 @@ describe('TaskStorageIpc', () => {
 		const { ipcMain } = createMockIpcMain();
 		const { taskStorage } = createMockTaskStorage();
 		const userDataPath = path.join('/tmp', 'spot-user-data');
-		const app = {
-			getPath: jest.fn(() => {
-				return userDataPath;
-			})
-		} as unknown as Pick<App, 'getPath'>;
+		const { app } = createMockApp(userDataPath);
 		const createStorage = jest.fn(() => {
 			return taskStorage;
 		});
@@ -143,5 +174,92 @@ describe('TaskStorageIpc', () => {
 		expect(createStorage).toHaveBeenCalledWith({
 			storageDirectory: path.join(userDataPath, SPOT_STORAGE_DIRECTORY_NAME)
 		});
+	});
+
+	test('waits for in-flight task commands and prepares storage before quitting', async() => {
+		const { handlers, ipcMain } = createMockIpcMain();
+		const { app, handlers: appHandlers } = createMockApp();
+		const { commandResult, taskStorage } = createMockTaskStorage();
+		const commandDeferred = createDeferred<TaskStorageCommandResult>();
+		taskStorage.executeTaskCommand = jest.fn(() => {
+			return commandDeferred.promise;
+		});
+		const prepareForShutdown = jest.fn(async() => {
+			return undefined;
+		});
+		const event = {} as IpcMainInvokeEvent;
+		const beforeQuitEvent = {
+			preventDefault: jest.fn()
+		};
+		const command: TaskStorageCommand = {
+			command: 'task.update',
+			payload: {
+				taskId: 'stored-task',
+				change: {
+					text: 'Updated before quit'
+				}
+			}
+		};
+
+		registerTaskStorageIpcHandlers({
+			app,
+			ipcMain,
+			taskStorage: {
+				...taskStorage,
+				prepareForShutdown
+			}
+		});
+
+		const commandPromise = handlers.get(SPOT_STORAGE_IPC_CHANNELS.executeTaskCommand)!(event, command) as Promise<TaskStorageCommandResult>;
+		const beforeQuitHandler = appHandlers.get('before-quit')!;
+
+		beforeQuitHandler(beforeQuitEvent);
+
+		expect(beforeQuitEvent.preventDefault).toHaveBeenCalledTimes(1);
+		expect(app.quit).not.toHaveBeenCalled();
+		expect(prepareForShutdown).not.toHaveBeenCalled();
+
+		commandDeferred.resolve(commandResult);
+		await expect(commandPromise).resolves.toBe(commandResult);
+		await Promise.resolve();
+
+		expect(prepareForShutdown).toHaveBeenCalledTimes(1);
+		expect(app.quit).toHaveBeenCalledTimes(1);
+	});
+
+	test('returns a clear shutdown failure for new task commands after shutdown begins', async() => {
+		const { handlers, ipcMain } = createMockIpcMain();
+		const { app, handlers: appHandlers } = createMockApp();
+		const { status, taskStorage } = createMockTaskStorage();
+		const event = {} as IpcMainInvokeEvent;
+		const beforeQuitEvent = {
+			preventDefault: jest.fn()
+		};
+		const command: TaskStorageCommand = {
+			command: 'task.update',
+			payload: {
+				taskId: 'stored-task',
+				change: {
+					text: 'Late update'
+				}
+			}
+		};
+
+		registerTaskStorageIpcHandlers({
+			app,
+			ipcMain,
+			taskStorage
+		});
+
+		appHandlers.get('before-quit')!(beforeQuitEvent);
+
+		await expect(handlers.get(SPOT_STORAGE_IPC_CHANNELS.executeTaskCommand)!(event, command)).resolves.toEqual({
+			ok: false,
+			reason: 'shutdown',
+			message: TASK_STORAGE_SHUTDOWN_MESSAGE,
+			status
+		});
+		expect(taskStorage.executeTaskCommand).not.toHaveBeenCalled();
+		expect(taskStorage.getStorageStatus).toHaveBeenCalledTimes(1);
 	});
 });

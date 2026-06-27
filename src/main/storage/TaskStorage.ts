@@ -38,6 +38,7 @@ export interface TaskStorage {
 	executeTaskCommand: (command: TaskStorageCommand) => Promise<TaskStorageCommandResult>;
 	writeOperationalLogLine: (entry: OperationalLogEntry) => Promise<OperationalLogWriteResult>;
 	getStorageStatus: () => Promise<StorageStatus>;
+	prepareForShutdown: () => Promise<void>;
 }
 
 export interface CreateTaskStorageOptions {
@@ -264,10 +265,15 @@ export const createTaskStorage = (options: CreateTaskStorageOptions = {}): TaskS
 		};
 	};
 
+	const prepareForShutdown = async(): Promise<void> => {
+		await logger?.flush();
+	};
+
 	return {
 		loadTasks,
 		executeTaskCommand,
 		writeOperationalLogLine,
-		getStorageStatus
+		getStorageStatus,
+		prepareForShutdown
 	};
 };

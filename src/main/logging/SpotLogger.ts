@@ -91,6 +91,7 @@ export interface SpotLogger {
 	error: (message: string, fields?: SpotLogFields) => void;
 	info: (message: string, fields?: SpotLogFields) => void;
 	warn: (message: string, fields?: SpotLogFields) => void;
+	flush: () => Promise<void>;
 	getStatus: () => SpotLoggerStatus;
 	getConfiguration: () => SpotLoggerConfiguration;
 }
@@ -218,6 +219,7 @@ export const createSpotLogger = ({
 		retryDelayMs
 	};
 	const backend = backendFactory(createSpotLogId(storageDirectory));
+	const pendingWrites = new Set<Promise<void>>();
 
 	configureLoggerBackend(backend, configuration);
 	const startupFailureMessage = getStartupFailureMessage(configuration.filePath);
@@ -257,19 +259,35 @@ export const createSpotLogger = ({
 		}
 	};
 
+	const queueWrite = (
+		level: SpotLogLevel,
+		message: string,
+		fields?: SpotLogFields
+	): void => {
+		const pendingWrite = write(level, message, fields).finally(() => {
+			pendingWrites.delete(pendingWrite);
+		});
+		pendingWrites.add(pendingWrite);
+	};
+
+	const flush = async(): Promise<void> => {
+		await Promise.allSettled(Array.from(pendingWrites));
+	};
+
 	return {
 		debug: (message, fields) => {
-			void write('debug', message, fields);
+			queueWrite('debug', message, fields);
 		},
 		error: (message, fields) => {
-			void write('error', message, fields);
+			queueWrite('error', message, fields);
 		},
 		info: (message, fields) => {
-			void write('info', message, fields);
+			queueWrite('info', message, fields);
 		},
 		warn: (message, fields) => {
-			void write('warn', message, fields);
+			queueWrite('warn', message, fields);
 		},
+		flush,
 		getStatus,
 		getConfiguration: () => {
 			return configuration;

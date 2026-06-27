@@ -31,7 +31,7 @@
 - Expose database health to React. Database failures are user-facing, include task-save feedback when writes fail, and require state reconciliation; operational-log failures are optional, best-effort, and ignored by React when SQLite succeeds.
 - Runtime persistence is wired for Electron startup and task mutations. Electron registers storage IPC handlers through `src/main/ipc/TaskStorageIpc.ts`, `preload.js` exposes them as `window.spotStorage`, and React loads and mutates tasks through that API when it exists. Browser-only React mode still uses in-memory sample data and local-only mutations.
 - The first SQLite implementation uses Electron's bundled Node `node:sqlite` support. Do not add an external SQLite dependency unless the reason is documented in `DOCUMENTATION.md`.
-- `createTaskStorage({ storageDirectory })` can load and mutate persisted task rows and write the optional operational log through `createSpotLogger()` for tests and the current IPC boundary. React startup is wired to `loadTasks()` in Electron, and React task mutations are wired to `executeTaskCommand()`.
+- `createTaskStorage({ storageDirectory })` can load and mutate persisted task rows, write the optional operational log through `createSpotLogger()`, and flush pending log retry attempts through `prepareForShutdown()` for tests and the current IPC boundary. React startup is wired to `loadTasks()` in Electron, and React task mutations are wired to `executeTaskCommand()`. Electron shutdown drains in-flight task commands before quitting and rejects new write commands after shutdown begins.
 
 ## Delivery Rules
 - You MUST commit the code when you complete any task.
