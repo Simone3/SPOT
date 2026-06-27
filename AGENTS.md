@@ -1,7 +1,7 @@
 
 ## Recap
 - The goal is to have an Electron + React application that runs on Mac / Windows / Linux to manage tasks in a simple and direct way (no frills).
-- The app is still work in progress. The React webapp is considered done for now, and the next major focus is wiring the Electron / database part.
+- The app is still work in progress. The React webapp is considered done for now, and the initial Electron / database persistence layer is wired for startup loading, task mutations, shutdown draining, and packaged loading.
 
 ## Core Constraints
 - Work only in this repository and only on the current branch.

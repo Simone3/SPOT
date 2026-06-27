@@ -1,17 +1,17 @@
 # SPOT Documentation
 
-SPOT is the Simple Planner & Organizer Tool: a small Electron + React task manager intended to run on macOS, Windows, and Linux. The project is still in progress. The React web application is the current working surface, and the next major focus is wiring React task flows to persistent Electron storage.
+SPOT is the Simple Planner & Organizer Tool: a small Electron + React task manager intended to run on macOS, Windows, and Linux. The project is still in progress. The React web application is considered done for now, and the initial Electron persistence layer is wired for startup loading, task mutations, shutdown draining, and packaged loading.
 
 ## Current Status
 
 - The React app is the primary working surface and is considered done for now.
 - Task data loads through `window.spotStorage.loadTasks()` in Electron. Browser-only React mode falls back to in-memory sample data from `src/logic/TaskStateLogic.ts`.
 - Task changes are applied optimistically in React state. In Electron, add, edit, delete, complete, restore, manual reorder, and importance sort also send storage commands through `window.spotStorage.executeTaskCommand()`. Browser-only React mode keeps those mutations local-only.
-- Main-process storage modules exist under `src/main/storage`. Configured storage can initialize SQLite, load task rows, execute task write commands, and write the rolled operational log. Electron exposes that boundary through storage IPC and `window.spotStorage`; React uses it for startup loading, task mutations, and non-healthy database status feedback.
+- Main-process storage modules exist under `src/main/storage`. Configured storage initializes SQLite at the Electron user-data storage path, loads task rows, executes task write commands, writes the rolled operational log, reports database health, and flushes pending log retries during shutdown. Electron exposes that boundary through storage IPC and `window.spotStorage`; React uses it for startup loading, task mutations, and non-healthy database status feedback.
 - The Electron main process opens `http://localhost:3000` in development and loads `build/index.html` from the packaged app when Electron is packaged. `package.json` sets CRA's `homepage` to `.` so production asset URLs stay relative under file loading.
 - The Notes, Tags, and Settings routes exist as placeholder pages.
-- The planned persistence architecture is one SQLite database as the source of truth plus one append-only rolled `spot-logs.ndjson` operational log.
-- The initial persistence contract is documented and frozen below. Startup loading, task mutations, and user-facing database health feedback are wired in Electron.
+- The implemented persistence architecture is one SQLite database as the source of truth plus one append-only rolled `spot-logs.ndjson` operational log.
+- The initial persistence contract is documented and implemented below. Startup loading, task mutations, shutdown draining, packaged React loading, and user-facing database health feedback are wired in Electron.
 
 ## How To Run
 
@@ -114,6 +114,14 @@ The page layout is a fixed-height flex app:
 
 `preload.js` exposes a `window.versions` API with Node, Chrome, Electron, and `ping` helpers. It also exposes `window.spotStorage` with `loadTasks()`, `executeTaskCommand(command)`, and `getStorageStatus()` methods. It does not expose raw `ipcRenderer`, filesystem, or SQLite objects.
 
+The storage IPC API is deliberately narrow:
+
+- `window.spotStorage.loadTasks()` invokes `spot-storage:load-tasks`.
+- `window.spotStorage.executeTaskCommand(command)` invokes `spot-storage:execute-task-command`.
+- `window.spotStorage.getStorageStatus()` invokes `spot-storage:get-storage-status`.
+
+`src/main/ipc/TaskStorageIpc.ts` creates configured storage at `path.join(app.getPath('userData'), 'storage')` and registers a `before-quit` drain. The first quit request waits for in-flight task write commands, calls `prepareForShutdown()` to let the logger finish bounded retry attempts, and then resumes quitting. New write commands after shutdown begins fail with the `shutdown` storage failure reason.
+
 `renderer.js` is still the default Electron starter-style renderer script and is not part of the React task UI.
 
 Known Electron work still pending:
@@ -130,13 +138,17 @@ Known Electron work still pending:
 - `OperationalLogEntry`
 - storage status and result types
 
-Without a storage directory, the storage boundary reports the database as `not-configured`. With a storage directory, `loadTasks()` opens `spot.sqlite`, applies migrations, reads task rows, maps them to React `Task` objects, emits storage-layer SQL query log entries through `SpotLogger`, and returns database storage status. `executeTaskCommand()` emits the incoming storage command through `SpotLogger`, applies `task.create`, `task.update`, `task.delete`, and `tasks.updateMany` commands to SQLite through `TaskCommandExecutor.ts` and `TaskRepository.ts`, emits the resulting SQL query records, and returns database storage status. `prepareForShutdown()` waits for pending operational-log writes to finish their bounded retry attempts. React calls `loadTasks()` through `window.spotStorage` on Electron startup and calls `executeTaskCommand()` for task mutations when `window.spotStorage` exists. It keeps the latest renderer-facing `StorageStatus`, stays quiet while the database is healthy, shows startup storage failures before rendering task lists, and shows a prominent save warning when writes fail, including database health details when storage remains non-healthy.
+Without a storage directory, the storage boundary reports the database as `not-configured`. In Electron runtime, `src/main/ipc/TaskStorageIpc.ts` resolves storage to `path.join(app.getPath('userData'), 'storage')`; that directory contains `spot.sqlite`, `spot-logs.ndjson`, and the bounded rolled archive `spot-logs.old.ndjson`.
+
+With a storage directory, `loadTasks()` opens `spot.sqlite`, applies migrations, reads task rows, maps them to React `Task` objects, emits storage-layer SQL query log entries through `SpotLogger`, and returns database storage status. `executeTaskCommand()` emits the incoming storage command through `SpotLogger`, applies `task.create`, `task.update`, `task.delete`, and `tasks.updateMany` commands to SQLite through `TaskCommandExecutor.ts` and `TaskRepository.ts`, emits the resulting SQL query records, and returns database storage status. `prepareForShutdown()` waits for pending operational-log writes to finish their bounded retry attempts.
+
+`StorageStatus` reports the database state as `not-configured`, `healthy`, or `unavailable`, plus the configured `storageDirectory` and `databasePath` when available. Storage failures use `not-implemented`, `database-error`, `invalid-command`, or `shutdown`. React calls `loadTasks()` through `window.spotStorage` on Electron startup and calls `executeTaskCommand()` for task mutations when `window.spotStorage` exists. It keeps the latest renderer-facing `StorageStatus`, stays quiet while the database is healthy, shows startup storage failures before rendering task lists, and shows a prominent save warning when writes fail, including database health details when storage remains non-healthy.
 
 `src/types/TaskStorageTypes.ts` owns the shared command, result, status, and `SpotStorageApi` types used across main-process storage, IPC, and renderer declarations. `TaskStorage.ts` re-exports those shared storage types for existing main-process callers.
 
 Each configured task write command runs in one SQLite transaction. Completing and restoring tasks are represented as `task.update`; manual reorder and sort by importance are represented as `tasks.updateMany`. Fields marked immutable in `TASK_FIELD_COLUMN_MAPPINGS` cannot be included in update changes; currently, that means task IDs are immutable after creation. If an update or delete references a missing task row, the command fails and the transaction rolls back. Task durability does not rely on delayed batching. `TaskStorage.ts` adapts `SpotDatabase.ts` SQL query callbacks directly to `SpotLogger` calls instead of collecting log batches. Operational-log writes are best-effort and optional: repeated log failures are ignored by storage results and do not invalidate successful SQLite writes.
 
-`src/main/storage/SpotDatabase.ts` opens or creates the app-wide `spot.sqlite` database in a caller-provided storage directory using Electron's bundled Node `node:sqlite` support. No external SQLite dependency is used. Opening the database creates `schema_migrations` when needed and applies migration version `1`, which creates the `tasks` table. The raw SQLite connection stays private to `SpotDatabase.ts`; task storage code uses internal wrapper methods for SQL execution, row reads, and transactions.
+`src/main/storage/SpotDatabase.ts` opens or creates the app-wide `spot.sqlite` database in a caller-provided storage directory using Electron's bundled Node `node:sqlite` support. No external SQLite dependency is used. Opening the database creates `schema_migrations` when needed and applies migration version `1`, which creates the `tasks` table. Schema version `1` stores `tasks.id`, `text`, `state`, `priority`, `owner`, `due_date`, `tags_json`, `sort_position`, `completion_date`, `created_at`, and `updated_at`, plus `schema_migrations.version` and `applied_at`. The raw SQLite connection stays private to `SpotDatabase.ts`; task storage code uses internal wrapper methods for SQL execution, row reads, and transactions.
 
 `src/main/logging/SpotLogger.ts` uses `electron-log` to write newline-delimited JSON entries to `spot-logs.ndjson`. It is factory-initialized with a storage directory and exposes generic `info`, `warn`, `error`, and `debug` methods that take a message plus optional structured fields such as `type`, `command`, `query`, or `elapsedMillis`. Those methods return `void`, so callers can emit log entries without awaiting write outcomes or handling log failures. The file transport is configured with a 1 MiB maximum file size, `electron-log`'s size-based rolling, and one retained archive named `spot-logs.old.ndjson`. Logger creation probes whether the configured log file can be opened for appending and keeps that startup status internally. Individual log writes are attempted synchronously at the transport layer, retried up to three times with a short bounded delay when needed, and verified against the current log file, but runtime logging failures remain logging-local and are not exposed through storage status. `flush()` waits for the currently pending write attempts to finish, either by succeeding or by being abandoned after the bounded retry count.
 
@@ -144,7 +156,7 @@ Each configured task write command runs in one SQLite transaction. Completing an
 
 ## Persistence Plan
 
-The planned persistence architecture uses a single SQLite database as the source of truth and an append-only `spot-logs.ndjson` file as an operational log. SQLite owns normal application reads and writes. The log records what the React app asked the main process to do and what SQL the main process ran in response. It is useful for debugging, support, and manual inspection, but it is not part of the normal startup read path.
+The implemented persistence architecture uses a single SQLite database as the source of truth and an append-only `spot-logs.ndjson` file as an operational log. SQLite owns normal application reads and writes. The log records what the React app asked the main process to do and what SQL the main process ran in response. It is useful for debugging, support, and manual inspection, but it is not part of the normal startup read path.
 
 Reasoning:
 
@@ -175,10 +187,12 @@ Core invariants:
 - Each user command maps to exactly one SQLite transaction.
 - Bulk operations, such as sorting active tasks by importance, are one command and one transaction.
 - Normal startup reads tasks from SQLite, not from `spot-logs.ndjson`.
+- Task durability is immediate and does not rely on delayed batching.
 - The main process logs every incoming React storage command.
 - The main process logs every SQL query it runs, including `SELECT` queries, with duration and success or failure.
 - If the SQLite transaction fails after React has already updated optimistically, the UI must show a clear storage failure and reconcile the affected task state.
 - If logging fails but SQLite succeeds, the task change remains valid.
+- Electron shutdown drains in-flight task write commands, rejects new write commands after shutdown starts, flushes pending operational-log retry attempts, and then resumes quitting.
 
 Failure model:
 
@@ -186,6 +200,7 @@ Failure model:
 - Operational-log write failure: retry for a bounded time, keep the app usable if retries fail, and ignore the failure when SQLite succeeds.
 - Startup operational-log file failure: `SpotLogger` keeps an internal unavailable startup status if the configured log file cannot be opened for appending, but task loading still uses SQLite and React does not need to show a warning.
 - Storage folder unavailable: fail startup or enter a clear read-only/error state, depending on the final UI decision.
+- Shutdown in progress: reject new write commands with a `shutdown` failure and a storage status that explains the app is quitting.
 
 Operational log format:
 
@@ -216,6 +231,12 @@ Runtime boundary:
 - The Electron main process owns durable storage, operational logging, and database storage health.
 - The preload layer exposes only a narrow storage API. It must not expose raw filesystem, SQLite, or unrestricted IPC access.
 - Browser-only React mode continues to use sample in-memory data because `window.spotStorage` exists only in Electron.
+
+IPC API:
+
+- `loadTasks()` crosses IPC on `spot-storage:load-tasks` and returns `{ ok: true, tasks, status }` or a storage failure.
+- `executeTaskCommand(command)` crosses IPC on `spot-storage:execute-task-command` and returns `{ ok: true, status }` or a storage failure.
+- `getStorageStatus()` crosses IPC on `spot-storage:get-storage-status` and returns the latest database status.
 
 Read contract:
 
@@ -249,6 +270,7 @@ Failure contract:
 - Operational-log failure: SQLite remains authoritative. Runtime log write failures are ignored after bounded retries and are not exposed to React.
 - Storage folder unavailable: startup must enter a clear storage error state or a future explicit read-only mode. The app must not pretend persistence is healthy.
 - Startup operational-log file failure: `SpotLogger` tracks the internal startup status when the log file cannot be opened for appending, but database health remains the only renderer-facing storage health.
+- Shutdown failure: once Electron shutdown begins, new write commands return a `shutdown` failure instead of being enqueued behind the quit drain.
 
 SQL log entries:
 
@@ -261,8 +283,8 @@ Logging library decision:
 
 - The first implementation uses `electron-log` version `5.4.4`.
 - The dependency is justified because it provides Electron-oriented file logging, configurable log paths, formatting, and built-in size-based rolling.
-- The project wraps the dependency in `createSpotLogger()` so the rest of the main process calls generic `info`, `warn`, `error`, and `debug` methods instead of depending on `electron-log` directly.
-- Logger write methods return `void`; callers do not await operational logging or inspect write outcomes.
+- The project wraps the dependency in `createSpotLogger()` so the rest of the main process calls generic `info`, `warn`, `error`, `debug`, and `flush` methods instead of depending on `electron-log` directly.
+- Logger write methods return `void`; callers do not await operational logging or inspect write outcomes. `flush()` is reserved for shutdown preparation and waits for already pending write attempts to finish their bounded retries.
 - The file transport writes only JSON lines to `spot-logs.ndjson`.
 - The file transport uses a 1 MiB maximum file size and keeps one rolled archive, `spot-logs.old.ndjson`, so logs cannot grow without limit.
 - Keep logging in the Electron main process. React sends storage commands through IPC; it does not write logs directly.
@@ -533,7 +555,7 @@ Each step below is intended to be self-contained, committed separately, and manu
    - Electron can run the persisted task app outside the React dev server.
    - Packaged Electron loads the built React `build/index.html`, development Electron keeps loading `http://localhost:3000`, and `npm run package` / `npm run make` build React first.
 
-13. Final persistence documentation pass.
+13. Final persistence documentation pass. Status: complete.
 
    Scope:
 
@@ -550,6 +572,7 @@ Each step below is intended to be self-contained, committed separately, and manu
    Commit boundary:
 
    - Documentation matches the implemented persistence layer.
+   - The final documentation pass records the implemented storage paths, SQLite schema, IPC API, failure behavior, shutdown behavior, packaging behavior, and current test coverage.
 
 ## Task Data Model
 
@@ -829,7 +852,7 @@ npm test
 Future testing priorities:
 
 - broader interaction coverage as task editing and drag-and-drop behavior are polished
-- Electron-shell integration coverage for persisted startup and mutation flows
+- Electron-shell integration coverage for persisted startup, mutation, shutdown, and packaged loading flows
 
 ## Development Rules
 
@@ -849,7 +872,7 @@ Future testing priorities:
 
 The most important remaining work is:
 
-- Add persistence and Electron-shell integration tests for runtime startup and mutation flows.
+- Add persistence and Electron-shell integration tests for runtime startup, mutation, shutdown, and packaged loading flows.
 - Improve accessibility and focus behavior in reusable inputs and clickables.
 - Continue polishing drag-and-drop feedback as the task interaction model settles.
 - Make `DatesContextProvider` refresh date labels after midnight.
