@@ -2,6 +2,7 @@
 	"name": "spot",
 	"version": "1.0.0",
 	"description": "Simple Planner & Organizer Tool",
+	"homepage": ".",
 	"main": "main.js",
 	"scripts": {
 		"start-react": "BROWSER='google chrome' react-scripts start",
@@ -10,7 +11,9 @@
 		"eject-react": "react-scripts eject",
 		"start": "electron-forge start",
 		"test": "react-scripts test --watchAll=false --roots tests --testMatch '<rootDir>/tests/**/*.{spec,test}.{js,jsx,ts,tsx}' --setupFilesAfterEnv '<rootDir>/tests/setupTests.ts'",
+		"prepackage": "npm run build-react",
 		"package": "electron-forge package",
+		"premake": "npm run build-react",
 		"make": "electron-forge make",
 		"lint": "eslint 'src/**/*.ts' 'src/**/*.tsx' 'tests/**/*.ts' 'tests/**/*.tsx'",
 		"typecheck": "tsc --noEmit"

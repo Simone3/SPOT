@@ -110,7 +110,20 @@ const loadTaskStorageIpc = () => {
 	return import(pathToFileURL(path.join(__dirname, 'src/main/ipc/TaskStorageIpc.ts')).href);
 };
 
-const createWindow = () => {
+const loadWindowLoadTarget = () => {
+	return import(pathToFileURL(path.join(__dirname, 'src/main/window/WindowLoadTarget.ts')).href);
+};
+
+const loadWindowTarget = (win, loadTarget) => {
+	if(loadTarget.type === 'file') {
+		win.loadFile(loadTarget.value);
+		return;
+	}
+
+	win.loadURL(loadTarget.value);
+};
+
+const createWindow = ({ resolveWindowLoadTarget }) => {
 	const win = new BrowserWindow({
 		width: 800,
 		height: 600,
@@ -119,15 +132,22 @@ const createWindow = () => {
 		}
 	});
 
-	// TODO https://www.electronjs.org/docs/latest/tutorial/security#18-avoid-usage-of-the-file-protocol-and-prefer-usage-of-custom-protocols
-	// `file://${path.join(__dirname, '../build/index.html')}`;
-	const startURL = 'http://localhost:3000';
+	const loadTarget = resolveWindowLoadTarget({
+		isPackaged: app.isPackaged,
+		appRootDirectory: __dirname
+	});
 
-	win.loadURL(startURL);
+	loadWindowTarget(win, loadTarget);
 };
 
 app.whenReady().then(async() => {
-	const { registerTaskStorageIpcHandlers } = await loadTaskStorageIpc();
+	const [
+		{ registerTaskStorageIpcHandlers },
+		{ resolveWindowLoadTarget }
+	] = await Promise.all([
+		loadTaskStorageIpc(),
+		loadWindowLoadTarget()
+	]);
 
 	ipcMain.handle('ping', () => 'pong');
 	registerTaskStorageIpcHandlers({
@@ -135,11 +155,11 @@ app.whenReady().then(async() => {
 		ipcMain
 	});
 
-	createWindow();
+	createWindow({ resolveWindowLoadTarget });
 
 	app.on('activate', () => {
 		if(BrowserWindow.getAllWindows().length === 0) {
-			createWindow();
+			createWindow({ resolveWindowLoadTarget });
 		}
 	});
 });
