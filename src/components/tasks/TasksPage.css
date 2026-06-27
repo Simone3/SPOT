@@ -20,7 +20,7 @@
 	color: var(--colors-danger-text);
 }
 
-.tasks-page-storage-warning {
+.tasks-page-storage-feedback {
 	margin: 20px 20px 0 20px;
 	padding: 12px 14px;
 	border: 1px solid var(--colors-danger-border);
@@ -28,4 +28,18 @@
 	background-color: var(--colors-danger-background-muted);
 	color: var(--colors-danger-text);
 	line-height: 1.4;
+}
+
+.tasks-page-storage-feedback-title {
+	margin: 0 0 6px 0;
+	color: var(--colors-danger-text);
+	font-size: 0.95rem;
+}
+
+.tasks-page-storage-feedback-message {
+	margin: 0;
+}
+
+.tasks-page-storage-feedback-message + .tasks-page-storage-feedback-message {
+	margin-top: 4px;
 }

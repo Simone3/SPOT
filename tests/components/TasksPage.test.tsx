@@ -169,6 +169,24 @@ const createLoadTasks = (tasks: Task[]): jest.Mock<Promise<LoadTasksResult>, []>
 	});
 };
 
+const clickAndSettle = async(element: HTMLElement): Promise<void> => {
+	await act(async() => {
+		fireEvent.click(element);
+	});
+};
+
+const createDeferred = <T,>(): { promise: Promise<T>; resolve: (value: T) => void } => {
+	let resolve: (value: T) => void = () => {};
+	const promise = new Promise<T>((promiseResolve) => {
+		resolve = promiseResolve;
+	});
+
+	return {
+		promise,
+		resolve
+	};
+};
+
 describe('TasksPage', () => {
 	afterEach(() => {
 		setWindowSpotStorage(originalSpotStorage);
@@ -220,6 +238,7 @@ describe('TasksPage', () => {
 		expect(screen.getByRole('region', { name: 'Tasks' })).toBeInTheDocument();
 		expect(screen.getByText('Persisted startup task')).toBeInTheDocument();
 		expect(screen.queryByText(/Finish project report/)).not.toBeInTheDocument();
+		expect(screen.queryByText('Task storage needs attention')).not.toBeInTheDocument();
 	});
 
 	test('shows a startup error when Electron storage loading fails', async() => {
@@ -266,7 +285,7 @@ describe('TasksPage', () => {
 		render(<TasksPage/>);
 		expect(await screen.findByText('Persisted startup task')).toBeInTheDocument();
 
-		fireEvent.click(screen.getByRole('button', { name: 'Tasks update' }));
+		await clickAndSettle(screen.getByRole('button', { name: 'Tasks update' }));
 		expect(screen.getByText('Updated by mock')).toBeInTheDocument();
 		expect(executeTaskCommand).toHaveBeenLastCalledWith({
 			command: 'task.update',
@@ -278,7 +297,7 @@ describe('TasksPage', () => {
 			}
 		});
 
-		fireEvent.click(screen.getByRole('button', { name: 'Tasks complete' }));
+		await clickAndSettle(screen.getByRole('button', { name: 'Tasks complete' }));
 		expect(executeTaskCommand).toHaveBeenLastCalledWith({
 			command: 'task.update',
 			payload: {
@@ -290,7 +309,7 @@ describe('TasksPage', () => {
 			}
 		});
 
-		fireEvent.click(screen.getByRole('button', { name: 'Tasks add' }));
+		await clickAndSettle(screen.getByRole('button', { name: 'Tasks add' }));
 		const createCommand = executeTaskCommand.mock.calls.at(-1)![0] as TaskStorageCommand;
 		expect(createCommand).toMatchObject({
 			command: 'task.create',
@@ -309,7 +328,7 @@ describe('TasksPage', () => {
 		});
 		expect(createCommand.command === 'task.create' && 'visible' in createCommand.payload.task).toBe(false);
 
-		fireEvent.click(screen.getByRole('button', { name: 'Tasks delete' }));
+		await clickAndSettle(screen.getByRole('button', { name: 'Tasks delete' }));
 		expect(executeTaskCommand).toHaveBeenLastCalledWith({
 			command: 'task.delete',
 			payload: {
@@ -336,10 +355,10 @@ describe('TasksPage', () => {
 		render(<TasksPage/>);
 		expect(await screen.findByTestId('task-filters')).toHaveTextContent('Show completed: false');
 
-		fireEvent.click(screen.getByRole('button', { name: 'Show completed' }));
+		await clickAndSettle(screen.getByRole('button', { name: 'Show completed' }));
 		expect(screen.getByText('Completed task')).toBeInTheDocument();
 
-		fireEvent.click(screen.getByRole('button', { name: 'Completed Tasks restore' }));
+		await clickAndSettle(screen.getByRole('button', { name: 'Completed Tasks restore' }));
 		expect(executeTaskCommand).toHaveBeenLastCalledWith({
 			command: 'task.update',
 			payload: {
@@ -377,7 +396,7 @@ describe('TasksPage', () => {
 		render(<TasksPage/>);
 		expect(await screen.findByText('Normal task')).toBeInTheDocument();
 
-		fireEvent.click(screen.getByRole('button', { name: 'Tasks sort' }));
+		await clickAndSettle(screen.getByRole('button', { name: 'Tasks sort' }));
 		expect(executeTaskCommand).toHaveBeenLastCalledWith({
 			command: 'tasks.updateMany',
 			payload: {
@@ -393,7 +412,7 @@ describe('TasksPage', () => {
 			}
 		});
 
-		fireEvent.click(screen.getByRole('button', { name: 'Tasks move' }));
+		await clickAndSettle(screen.getByRole('button', { name: 'Tasks move' }));
 		expect(executeTaskCommand).toHaveBeenLastCalledWith({
 			command: 'tasks.updateMany',
 			payload: {
@@ -423,19 +442,21 @@ describe('TasksPage', () => {
 				status: healthyStatus
 			};
 		});
-		const executeTaskCommand = jest.fn(async(command: TaskStorageCommand): Promise<TaskStorageCommandResult> => {
-			void command;
-			return {
-				ok: false,
-				reason: 'database-error',
-				message: 'Cannot update missing task.',
-				status: {
-					database: {
-						state: 'unavailable',
-						message: 'Cannot update missing task.'
-					}
+		const commandFailure: TaskStorageCommandResult = {
+			ok: false,
+			reason: 'database-error',
+			message: 'Cannot update missing task.',
+			status: {
+				database: {
+					state: 'unavailable',
+					message: 'Cannot update missing task.'
 				}
-			};
+			}
+		};
+		const commandDeferred = createDeferred<TaskStorageCommandResult>();
+		const executeTaskCommand = jest.fn((command: TaskStorageCommand): Promise<TaskStorageCommandResult> => {
+			void command;
+			return commandDeferred.promise;
 		});
 		setWindowSpotStorage(createMockSpotStorage(loadTasks, executeTaskCommand));
 
@@ -445,10 +466,77 @@ describe('TasksPage', () => {
 		fireEvent.click(screen.getByRole('button', { name: 'Tasks update' }));
 		expect(screen.getByText('Updated by mock')).toBeInTheDocument();
 
+		await act(async() => {
+			commandDeferred.resolve(commandFailure);
+			await commandDeferred.promise;
+		});
+
 		const warning = await screen.findByRole('alert');
 		expect(warning).toHaveTextContent('Task storage update failed. Cannot update missing task.');
 		expect(screen.getByText('Persisted startup task')).toBeInTheDocument();
 		expect(screen.queryByText('Updated by mock')).not.toBeInTheDocument();
 		expect(loadTasks).toHaveBeenCalledTimes(2);
+	});
+
+	test('shows database health when storage remains unavailable after a write failure', async() => {
+		const persistedTask = makeTask({
+			id: 'persisted-task',
+			text: 'Persisted startup task',
+			visible: false
+		});
+		const unavailableStatus: StorageStatus = {
+			database: {
+				state: 'unavailable',
+				message: 'Could not reopen spot.sqlite.'
+			},
+			storageDirectory: '/tmp/spot-storage',
+			databasePath: '/tmp/spot-storage/spot.sqlite'
+		};
+		const loadTasks = jest.fn(async(): Promise<LoadTasksResult> => {
+			if(loadTasks.mock.calls.length === 1) {
+				return {
+					ok: true,
+					tasks: [ persistedTask ],
+					status: healthyStatus
+				};
+			}
+
+			return {
+				ok: false,
+				reason: 'database-error',
+				message: 'Could not reopen spot.sqlite.',
+				status: unavailableStatus
+			};
+		});
+		const commandFailure: TaskStorageCommandResult = {
+			ok: false,
+			reason: 'database-error',
+			message: 'Cannot write task changes.',
+			status: unavailableStatus
+		};
+		const commandDeferred = createDeferred<TaskStorageCommandResult>();
+		const executeTaskCommand = jest.fn((command: TaskStorageCommand): Promise<TaskStorageCommandResult> => {
+			void command;
+			return commandDeferred.promise;
+		});
+		setWindowSpotStorage(createMockSpotStorage(loadTasks, executeTaskCommand));
+
+		render(<TasksPage/>);
+		expect(await screen.findByText('Persisted startup task')).toBeInTheDocument();
+
+		fireEvent.click(screen.getByRole('button', { name: 'Tasks update' }));
+		expect(screen.getByText('Updated by mock')).toBeInTheDocument();
+
+		await act(async() => {
+			commandDeferred.resolve(commandFailure);
+			await commandDeferred.promise;
+		});
+
+		const alert = await screen.findByRole('alert');
+		expect(alert).toHaveTextContent('Tasks are not saved');
+		expect(alert).toHaveTextContent('Task storage update failed. Cannot write task changes.');
+		expect(alert).toHaveTextContent('Database status: unavailable. Could not reopen spot.sqlite.');
+		expect(screen.getByText('Persisted startup task')).toBeInTheDocument();
+		expect(screen.queryByText('Updated by mock')).not.toBeInTheDocument();
 	});
 });

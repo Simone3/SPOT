@@ -5,7 +5,7 @@ import { Pane } from 'src/components/common/Pane';
 import { getInitialTaskState, addTaskToTaskState, refreshVisibleTasksInTaskState, deleteTaskFromTaskState, changeFiltersInTaskState, loadTasksIntoTaskState, loadSampleTasksIntoTaskState, resetFiltersTaskState, updateTaskInTaskState, sortTasksByImportanceInTaskState, moveActiveTaskInTaskState, type TaskStateContainer } from 'src/logic/TaskStateLogic';
 import type { PersistedTask, PersistedTaskChange, Task, TaskChange, TasksContainer } from 'src/types/TaskTypes';
 import type { TaskFilterChange } from 'src/types/FilterTypes';
-import type { TaskStorageCommand } from 'src/types/TaskStorageTypes';
+import type { SpotStorageApi, StorageStatus, TaskStorageCommand } from 'src/types/TaskStorageTypes';
 import { TasksList } from 'src/components/tasks/TasksList';
 import { TaskFilters } from 'src/components/tasks/TaskFilters';
 
@@ -17,6 +17,13 @@ type TaskStartupState = {
 	state: 'startup-error';
 	message: string;
 };
+
+interface TaskStorageFeedback {
+	role: 'alert' | 'status';
+	title: string;
+	message: string;
+	statusMessage?: string;
+}
 
 const PERSISTED_TASK_FIELD_NAMES: readonly (keyof PersistedTaskChange)[] = [
 	'text',
@@ -115,6 +122,53 @@ const hasPersistedTaskChange = (change: PersistedTaskChange): boolean => {
 	return Object.keys(change).length > 0;
 };
 
+const createStorageStatusMessage = (storageStatus: StorageStatus): string | undefined => {
+	if(storageStatus.database.state === 'healthy') {
+		return undefined;
+	}
+
+	const databaseState = storageStatus.database.state === 'not-configured' ? 'not configured' : storageStatus.database.state;
+
+	return storageStatus.database.message ?
+		`Database status: ${databaseState}. ${storageStatus.database.message}` :
+		`Database status: ${databaseState}.`;
+};
+
+const createTaskStorageFeedback = (
+	taskStorageWarning: string | undefined,
+	taskStorageStatus: StorageStatus | undefined
+): TaskStorageFeedback | undefined => {
+	const statusMessage = taskStorageStatus ? createStorageStatusMessage(taskStorageStatus) : undefined;
+
+	if(taskStorageWarning) {
+		return {
+			role: 'alert',
+			title: 'Tasks are not saved',
+			message: taskStorageWarning,
+			statusMessage
+		};
+	}
+
+	if(statusMessage) {
+		return {
+			role: taskStorageStatus?.database.state === 'unavailable' ? 'alert' : 'status',
+			title: 'Task storage needs attention',
+			message: statusMessage
+		};
+	}
+
+	return undefined;
+};
+
+const tryReadTaskStorageStatus = async(spotStorage: SpotStorageApi): Promise<StorageStatus | undefined> => {
+	try {
+		return await spotStorage.getStorageStatus();
+	}
+	catch {
+		return undefined;
+	}
+};
+
 const createSortPositionUpdates = (
 	previousTasksContainer: TasksContainer,
 	nextTasksContainer: TasksContainer
@@ -143,6 +197,7 @@ const TasksPage = (): ReactElement => {
 	const [ taskState, setTaskState ] = useState(getInitialTaskState());
 	const [ taskStartupState, setTaskStartupState ] = useState<TaskStartupState>({ state: 'loading' });
 	const [ taskStorageWarning, setTaskStorageWarning ] = useState<string | undefined>();
+	const [ taskStorageStatus, setTaskStorageStatus ] = useState<StorageStatus | undefined>();
 	const taskStateRef = useRef(taskState);
 
 	const commitTaskState = (nextTaskState: TaskStateContainer): void => {
@@ -159,6 +214,7 @@ const TasksPage = (): ReactElement => {
 
 		try {
 			const loadTasksResult = await spotStorage.loadTasks();
+			setTaskStorageStatus(loadTasksResult.status);
 
 			if(loadTasksResult.ok) {
 				commitTaskState(loadTasksIntoTaskState(taskStateRef.current, loadTasksResult.tasks));
@@ -168,6 +224,12 @@ const TasksPage = (): ReactElement => {
 			}
 		}
 		catch {
+			const currentStorageStatus = await tryReadTaskStorageStatus(spotStorage);
+
+			if(currentStorageStatus) {
+				setTaskStorageStatus(currentStorageStatus);
+			}
+
 			commitTaskState(fallbackTaskState);
 		}
 	};
@@ -186,6 +248,7 @@ const TasksPage = (): ReactElement => {
 
 		try {
 			const commandResult = await spotStorage.executeTaskCommand(command);
+			setTaskStorageStatus(commandResult.status);
 
 			if(!commandResult.ok) {
 				await reconcileAfterTaskStorageFailure(spotStorage, commandResult.message, fallbackTaskState);
@@ -221,6 +284,7 @@ const TasksPage = (): ReactElement => {
 			if(!spotStorage) {
 				commitTaskState(loadSampleTasksIntoTaskState(taskStateRef.current));
 				setTaskStartupState({ state: 'loaded' });
+				setTaskStorageStatus(undefined);
 
 				return;
 			}
@@ -235,8 +299,10 @@ const TasksPage = (): ReactElement => {
 				if(loadTasksResult.ok) {
 					commitTaskState(loadTasksIntoTaskState(taskStateRef.current, loadTasksResult.tasks));
 					setTaskStartupState({ state: 'loaded' });
+					setTaskStorageStatus(loadTasksResult.status);
 				}
 				else {
+					setTaskStorageStatus(loadTasksResult.status);
 					setTaskStartupState({
 						state: 'startup-error',
 						message: loadTasksResult.message
@@ -245,6 +311,16 @@ const TasksPage = (): ReactElement => {
 			}
 			catch(error) {
 				if(!didCancelStartupLoad) {
+					const currentStorageStatus = await tryReadTaskStorageStatus(spotStorage);
+
+					if(didCancelStartupLoad) {
+						return;
+					}
+
+					if(currentStorageStatus) {
+						setTaskStorageStatus(currentStorageStatus);
+					}
+
 					setTaskStartupState({
 						state: 'startup-error',
 						message: getErrorMessage(error)
@@ -362,6 +438,8 @@ const TasksPage = (): ReactElement => {
 		});
 	};
 
+	const taskStorageFeedback = createTaskStorageFeedback(taskStorageWarning, taskStorageStatus);
+
 	if(taskStartupState.state === 'loading') {
 		return (
 			<Page>
@@ -398,9 +476,13 @@ const TasksPage = (): ReactElement => {
 				/>
 			</Pane>
 			<Pane relativeSize={2}>
-				{taskStorageWarning &&
-					<div className='tasks-page-storage-warning' role='alert'>
-						{taskStorageWarning}
+				{taskStorageFeedback &&
+					<div className='tasks-page-storage-feedback' role={taskStorageFeedback.role}>
+						<h3 className='tasks-page-storage-feedback-title'>{taskStorageFeedback.title}</h3>
+						<p className='tasks-page-storage-feedback-message'>{taskStorageFeedback.message}</p>
+						{taskStorageFeedback.statusMessage &&
+							<p className='tasks-page-storage-feedback-message'>{taskStorageFeedback.statusMessage}</p>
+						}
 					</div>
 				}
 				<TasksList
