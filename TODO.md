@@ -1,23 +1,27 @@
 
+# electron
 
-# wire in electron main process: save to disk
-careful with sort positions, especially when they change in more than one task at a time (manual sort recompute + re-sort by urgency)
-sqllite? or just file(s) that are easier to share/upload/etc. with drive? separate db / files for completed and active?
-how often?
-async
-debounce changes and merge changes on same element (text typing)
-error handling
-	notify when any error occurs
-	mark tasks in error graphically?
-	allow to retry the action from the notification?
-	or suggest to try to submit form again (careful if form submits only changed data though!)?
-allow to reload from disk with a button in settings
-log to filesystem each change (with max lifetime/size)
-batch update/insert events for multiple changes
-	careful with "sortPosition" updates in ManuallySortedList...
-move deleted tasks into another table?
-add config that turns on a "coherence check" event (added to the event queue so that any concurrent changes are queued) that every hour or so compares in-memory with db?
-does closing the program while typing save the latest value? considering both state update on blur and/or delayed disk save, if implemented
+are we opening and closing the database at each query? "That said, once this is wired into the running Electron app, I’d revisit it."
+
+move createSpotLogger() from TaskStorage to a more generic class that starts both - "global" logger like Spring
+and remove "logger?" and "logger!" stuff, it will always be there
+
+is task page the right place for all that logic?
+
+logger configs to centralized configs - also timeouts etc.
+
+also user-chosen db path, persisted in settings - choose database path (default temp folder for dev) - startup only
+
+re-review all files created/modified after "Add hover feedback" commit
+
+test persistence
+	careful with sort positions, especially when they change in more than one task at a time (manual sort recompute + re-sort by urgency)
+	errors
+	check logs
+	check database
+	does closing the program while typing save the latest value? considering both state update on blur and/or delayed disk save, if implemented
+
+
 
 # others
 view what codex wrote in "Near-Term Work" in DOCUMENTATION.md
@@ -77,6 +81,8 @@ text search
 sorted by date (with a section for each day?)
 
 # maybe in the future
+add config that turns on a "coherence check" event (added to the event queue so that any concurrent changes are queued) that every hour or so compares in-memory with db?
+allow to reload from disk with a button in settings
 click on chip icon auto-focuses on input
 animations when task list changes
 lang / translations (define all strings in lang file)
