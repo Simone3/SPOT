@@ -5,7 +5,7 @@ SPOT is the Simple Planner & Organizer Tool: a small Electron + React task manag
 ## Current Status
 
 - The React renderer is the primary working surface and is considered done for now.
-- Task data loads through `window.spotStorage.loadTasks()` in Electron. If the renderer is opened without the Electron preload API, the task page reports storage as unavailable instead of running a browser-only sample-data mode.
+- Task data loads through `window.spotStorage.loadTasks()` in Electron. If the renderer is opened without the Electron preload API, the task page reports storage as unavailable.
 - Task changes are applied optimistically in React state. Add, edit, delete, complete, restore, manual reorder, and importance sort send storage commands through `window.spotStorage.executeTaskCommand()`.
 - Main-process storage modules exist under `src/main/storage`. Configured storage initializes SQLite at the Electron user-data storage path, loads task rows, executes task write commands, writes the rolled operational log, reports database health, and flushes pending log retries during shutdown. Electron exposes that boundary through storage IPC and `window.spotStorage`; React uses it for startup loading, task mutations, and non-healthy database status feedback.
 - Electron main and preload TypeScript sources are bundled by `scripts/build-electron.js` into ignored `dist/electron` files before Electron starts or packages. The bundling step uses exact-version `esbuild` to remove the former custom runtime TypeScript/module resolver.
@@ -121,7 +121,7 @@ Known Electron work still pending:
 
 ## Persistence
 
-SPOT persists tasks only in Electron runtime. The Electron main process owns durable storage, operational logging, and database health, while React owns the responsive in-memory task state used by the UI. The renderer requires `window.spotStorage` on startup; opening the React build outside Electron reports storage as unavailable instead of running local-only sample data.
+SPOT persists tasks only in Electron runtime. The Electron main process owns durable storage, operational logging, and database health, while React owns the responsive in-memory task state used by the UI. The renderer requires `window.spotStorage` on startup; opening the React build outside Electron reports storage as unavailable.
 
 SQLite is the source of truth for task reads and writes. The append-only operational log is a diagnostic trace of storage commands and SQL activity; startup never rebuilds task state from the log. Google Drive or similar filesystem sync should be treated as backup or cross-device handoff, not live collaborative database replication.
 

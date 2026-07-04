@@ -208,7 +208,7 @@ const TasksPage = (): ReactElement => {
 	};
 
 	const reconcileAfterTaskStorageFailure = async(
-		spotStorage: NonNullable<typeof window.spotStorage>,
+		spotStorage: SpotStorageApi,
 		message: string,
 		fallbackTaskState: TaskStateContainer
 	): Promise<void> => {
@@ -241,10 +241,6 @@ const TasksPage = (): ReactElement => {
 		fallbackTaskState: TaskStateContainer
 	): Promise<void> => {
 		const spotStorage = window.spotStorage;
-
-		if(!spotStorage) {
-			return;
-		}
 
 		setTaskStorageWarning(undefined);
 
@@ -281,7 +277,7 @@ const TasksPage = (): ReactElement => {
 		let didCancelStartupLoad = false;
 
 		const loadStartupTasks = async(): Promise<void> => {
-			const spotStorage = window.spotStorage;
+			const spotStorage = window.spotStorage as SpotStorageApi | undefined;
 
 			if(!spotStorage) {
 				const storageStatus: StorageStatus = {

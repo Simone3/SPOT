@@ -4,7 +4,7 @@ import type { SpotStorageApi } from 'src/types/TaskStorageTypes';
 
 declare global {
 	interface Window {
-		spotStorage?: SpotStorageApi;
+		spotStorage: SpotStorageApi;
 		versions?: {
 			node: () => string;
 			chrome: () => string;
