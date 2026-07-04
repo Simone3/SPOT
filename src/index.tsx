@@ -3,7 +3,7 @@ import '@fontsource/inter/700.css';
 import 'src/index.css';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { BrowserRouter, Routes, Route } from 'react-router';
+import { HashRouter, Routes, Route } from 'react-router';
 import { TasksPage } from 'src/components/tasks/TasksPage';
 import { NotesPage } from 'src/components/notes/NotesPage';
 import { Sidebar } from 'src/components/common/Sidebar';
@@ -16,7 +16,7 @@ const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement)
 root.render(
 	<React.StrictMode>
 		<DatesContextProvider>
-			<BrowserRouter>
+			<HashRouter>
 				<Sidebar/>
 				<MainContent>
 					<Routes>
@@ -26,7 +26,7 @@ root.render(
 						<Route path='/settings' element={<SettingsPage/>}/>
 					</Routes>
 				</MainContent>
-			</BrowserRouter>
+			</HashRouter>
 		</DatesContextProvider>
 	</React.StrictMode>
 );

@@ -2,7 +2,7 @@ import 'src/components/tasks/TasksPage.css';
 import { useState, useEffect, useRef, type ReactElement } from 'react';
 import { Page } from 'src/components/common/Page';
 import { Pane } from 'src/components/common/Pane';
-import { getInitialTaskState, addTaskToTaskState, refreshVisibleTasksInTaskState, deleteTaskFromTaskState, changeFiltersInTaskState, loadTasksIntoTaskState, loadSampleTasksIntoTaskState, resetFiltersTaskState, updateTaskInTaskState, sortTasksByImportanceInTaskState, moveActiveTaskInTaskState, type TaskStateContainer } from 'src/logic/TaskStateLogic';
+import { getInitialTaskState, addTaskToTaskState, refreshVisibleTasksInTaskState, deleteTaskFromTaskState, changeFiltersInTaskState, loadTasksIntoTaskState, resetFiltersTaskState, updateTaskInTaskState, sortTasksByImportanceInTaskState, moveActiveTaskInTaskState, type TaskStateContainer } from 'src/logic/TaskStateLogic';
 import type { PersistedTask, PersistedTaskChange, Task, TaskChange, TasksContainer } from 'src/types/TaskTypes';
 import type { TaskFilterChange } from 'src/types/FilterTypes';
 import type { SpotStorageApi, StorageStatus, TaskStorageCommand } from 'src/types/TaskStorageTypes';
@@ -35,6 +35,8 @@ const PERSISTED_TASK_FIELD_NAMES: readonly (keyof PersistedTaskChange)[] = [
 	'sortPosition',
 	'completionDate'
 ];
+
+const ELECTRON_STORAGE_API_UNAVAILABLE_MESSAGE = 'SPOT must be opened from the Electron app.';
 
 const getErrorMessage = (error: unknown): string => {
 	if(error instanceof Error) {
@@ -282,9 +284,18 @@ const TasksPage = (): ReactElement => {
 			const spotStorage = window.spotStorage;
 
 			if(!spotStorage) {
-				commitTaskState(loadSampleTasksIntoTaskState(taskStateRef.current));
-				setTaskStartupState({ state: 'loaded' });
-				setTaskStorageStatus(undefined);
+				const storageStatus: StorageStatus = {
+					database: {
+						state: 'unavailable',
+						message: ELECTRON_STORAGE_API_UNAVAILABLE_MESSAGE
+					}
+				};
+
+				setTaskStorageStatus(storageStatus);
+				setTaskStartupState({
+					state: 'startup-error',
+					message: ELECTRON_STORAGE_API_UNAVAILABLE_MESSAGE
+				});
 
 				return;
 			}

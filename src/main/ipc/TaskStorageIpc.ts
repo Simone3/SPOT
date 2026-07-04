@@ -1,16 +1,12 @@
 import path from 'node:path';
 import type { App, IpcMain } from 'electron';
 import { createTaskStorage, type CreateTaskStorageOptions, type TaskStorage } from 'src/main/storage/TaskStorage';
+import { SPOT_STORAGE_IPC_CHANNELS } from 'src/types/TaskStorageIpcChannels';
 import type { StorageStatus, TaskStorageCommand, TaskStorageCommandResult } from 'src/types/TaskStorageTypes';
 
 export const SPOT_STORAGE_DIRECTORY_NAME = 'storage';
 export const TASK_STORAGE_SHUTDOWN_MESSAGE = 'Task storage is shutting down.';
-
-export const SPOT_STORAGE_IPC_CHANNELS = {
-	loadTasks: 'spot-storage:load-tasks',
-	executeTaskCommand: 'spot-storage:execute-task-command',
-	getStorageStatus: 'spot-storage:get-storage-status'
-} as const;
+export { SPOT_STORAGE_IPC_CHANNELS } from 'src/types/TaskStorageIpcChannels';
 
 type TaskStorageIpcMain = Pick<IpcMain, 'handle'>;
 

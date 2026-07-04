@@ -1,14 +1,15 @@
 # SPOT Documentation
 
-SPOT is the Simple Planner & Organizer Tool: a small Electron + React task manager intended to run on macOS, Windows, and Linux. The project is still in progress. The React web application is considered done for now, and the initial Electron persistence layer is wired for startup loading, task mutations, shutdown draining, and packaged loading.
+SPOT is the Simple Planner & Organizer Tool: a small Electron + React task manager intended to run on macOS, Windows, and Linux. The project is still in progress. The React renderer is considered done for now, and the initial Electron persistence layer is wired for startup loading, task mutations, shutdown draining, and packaged loading. Standalone browser mode is no longer a supported runtime.
 
 ## Current Status
 
-- The React app is the primary working surface and is considered done for now.
-- Task data loads through `window.spotStorage.loadTasks()` in Electron. Browser-only React mode falls back to in-memory sample data from `src/logic/TaskStateLogic.ts`.
-- Task changes are applied optimistically in React state. In Electron, add, edit, delete, complete, restore, manual reorder, and importance sort also send storage commands through `window.spotStorage.executeTaskCommand()`. Browser-only React mode keeps those mutations local-only.
+- The React renderer is the primary working surface and is considered done for now.
+- Task data loads through `window.spotStorage.loadTasks()` in Electron. If the renderer is opened without the Electron preload API, the task page reports storage as unavailable instead of running a browser-only sample-data mode.
+- Task changes are applied optimistically in React state. Add, edit, delete, complete, restore, manual reorder, and importance sort send storage commands through `window.spotStorage.executeTaskCommand()`.
 - Main-process storage modules exist under `src/main/storage`. Configured storage initializes SQLite at the Electron user-data storage path, loads task rows, executes task write commands, writes the rolled operational log, reports database health, and flushes pending log retries during shutdown. Electron exposes that boundary through storage IPC and `window.spotStorage`; React uses it for startup loading, task mutations, and non-healthy database status feedback.
-- The Electron main process opens `http://localhost:3000` in development and loads `build/index.html` from the packaged app when Electron is packaged. `package.json` sets CRA's `homepage` to `.` so production asset URLs stay relative under file loading.
+- Electron main and preload TypeScript sources are bundled by `scripts/build-electron.js` into ignored `dist/electron` files before Electron starts or packages. The bundling step uses exact-version `esbuild` to remove the former custom runtime TypeScript/module resolver.
+- Electron loads the built React `build/index.html` file in both development and packaged mode. `package.json` sets CRA's `homepage` to `.` so production asset URLs stay relative under file loading.
 - The Notes, Tags, and Settings routes exist as placeholder pages.
 - The implemented persistence architecture is one SQLite database as the source of truth plus one append-only rolled `spot-logs.ndjson` operational log.
 - The implemented persistence behavior is documented below. Startup loading, task mutations, shutdown draining, packaged React loading, and user-facing database health feedback are wired in Electron.
@@ -21,13 +22,7 @@ Install dependencies:
 npm install
 ```
 
-Run the React app:
-
-```sh
-npm run start-react
-```
-
-Run the Electron shell:
+Run the Electron app:
 
 ```sh
 npm start
@@ -44,12 +39,14 @@ npm test
 Build and package commands also exist:
 
 ```sh
+npm run build
 npm run build-react
+npm run build-electron
 npm run package
 npm run make
 ```
 
-`npm run package` and `npm run make` run `npm run build-react` first so the packaged Electron app includes the latest React build.
+`npm start`, `npm run package`, and `npm run make` build the React renderer and Electron main/preload bundles first so Electron always loads local generated files.
 
 ## Repository Map
 
@@ -57,10 +54,12 @@ npm run make
 - `README.md` intentionally stays minimal.
 - `DOCUMENTATION.md` is this detailed project reference.
 - `eslint.config.js` contains the flat ESLint configuration used by `npm run lint`.
-- `main.js`, `preload.js`, and `renderer.js` are the Electron layer.
-- `index.html` and `public/index.html` are HTML entry points.
+- `scripts/build-electron.js` bundles Electron main and preload TypeScript sources into ignored `dist/electron` runtime files.
+- `public/index.html` is the React renderer HTML template.
 - `src/index.tsx` mounts the React app and defines routes.
 - `src/index.css` defines global layout and theme variables.
+- `src/main/Main.ts` creates the Electron `BrowserWindow`, loads the built React renderer, and registers IPC handlers.
+- `src/main/preload/Preload.ts` exposes the narrow renderer APIs through Electron's context bridge.
 - `src/main/logging/SpotLogger.ts` configures `electron-log` behind a generic factory-created logger with `info`, `warn`, `error`, `debug`, and `flush` methods, newline-delimited JSON output, size-based rolling, and one retained archive.
 - `src/main/ipc/TaskStorageIpc.ts` registers the narrow Electron IPC surface for storage loading, task write commands, database health reporting, and shutdown draining for in-flight task commands.
 - `src/main/storage/TaskStorage.ts` defines the Electron main-process storage contract, configured SQLite task loading, configured SQLite task write commands, database health reporting, and shutdown preparation.
@@ -68,8 +67,8 @@ npm run make
 - `src/main/storage/SpotDatabase.ts` opens `spot.sqlite`, applies schema migrations, currently creates schema version `1`, exposes a small internal query wrapper, and emits SQL query log records when a caller supplies a logger.
 - `src/main/storage/TaskRowMapping.ts` maps between SQLite task rows and React `Task` objects and owns the shared task field to SQLite column mapping used by storage queries.
 - `src/main/storage/TaskRepository.ts` owns SQLite task queries and task repository sessions while using the shared SPOT database wrapper for query execution and transactions.
-- `src/main/window/WindowLoadTarget.ts` resolves whether Electron should load the React development server URL or the packaged React `build/index.html` file.
-- `src/types` contains shared TypeScript types split into semantic files for tasks, task storage, domains, filters, and dates. Types that have one clear owner stay in the owning `.ts` or `.tsx` file instead.
+- `src/main/window/WindowLoadTarget.ts` resolves the built React `build/index.html` file from the Electron app root.
+- `src/types` contains shared TypeScript types and constants split into semantic files for tasks, task storage, task-storage IPC channels, domains, filters, and dates. Types that have one clear owner stay in the owning `.ts` or `.tsx` file instead.
 - `src/react-app-env.d.ts` contains the React Scripts TypeScript reference plus renderer-side declarations for `window.versions` and `window.spotStorage`.
 - `src/components/common` contains layout and shared UI primitives.
 - `src/components/inputs` contains reusable inputs.
@@ -89,7 +88,7 @@ React source files use absolute imports rooted at `src/...`, including local CSS
 `src/index.tsx` renders:
 
 - `DatesContextProvider`
-- `BrowserRouter`
+- `HashRouter`
 - `Sidebar`
 - `MainContent`
 - routes for Tasks, Notes, Tags, and Settings
@@ -110,11 +109,11 @@ The page layout is a fixed-height flex app:
 
 ## Electron Layer
 
-`main.js` creates a `BrowserWindow`. It uses `resolveWindowLoadTarget()` from `src/main/window/WindowLoadTarget.ts` to load `http://localhost:3000` while Electron is not packaged and `build/index.html` with `loadFile()` when `app.isPackaged` is true. It registers a sample `ping` IPC handler and the storage IPC handlers from `src/main/ipc/TaskStorageIpc.ts`, which also attach the storage shutdown drain to Electron's `before-quit` event. Because Electron still starts from a CommonJS root file, `main.js` installs a small Node module resolver so Electron's native TypeScript stripping can load the main-process TypeScript modules and their existing `src/...` imports without adding a bundler.
+`package.json` points Electron at `dist/electron/main.js`, which is generated from `src/main/Main.ts` by `npm run build-electron`. The build script bundles `src/main/Main.ts` and `src/main/preload/Preload.ts` with `esbuild`, preserving external Electron and `electron-log` imports while resolving in-repository `src/...` imports at build time.
 
-`preload.js` exposes a `window.versions` API with Node, Chrome, Electron, and `ping` helpers. It also exposes the narrow `window.spotStorage` API documented in the Persistence section. It does not expose raw `ipcRenderer`, filesystem, or SQLite objects.
+`src/main/Main.ts` creates a `BrowserWindow`. It uses `resolveWindowLoadTarget()` from `src/main/window/WindowLoadTarget.ts` to load the built React `build/index.html` file through `loadFile()` in both development and packaged mode. It registers a sample `ping` IPC handler and the storage IPC handlers from `src/main/ipc/TaskStorageIpc.ts`, which also attach the storage shutdown drain to Electron's `before-quit` event.
 
-`renderer.js` is still the default Electron starter-style renderer script and is not part of the React task UI.
+`src/main/preload/Preload.ts` exposes a `window.versions` API with Node, Chrome, Electron, and `ping` helpers. It also exposes the narrow `window.spotStorage` API documented in the Persistence section. It does not expose raw `ipcRenderer`, filesystem, or SQLite objects. Shared storage IPC channel names live in `src/types/TaskStorageIpcChannels.ts` so preload and main-process handlers cannot drift.
 
 Known Electron work still pending:
 
@@ -122,7 +121,7 @@ Known Electron work still pending:
 
 ## Persistence
 
-SPOT persists tasks only in Electron runtime. The Electron main process owns durable storage, operational logging, and database health, while React owns the responsive in-memory task state used by the UI. Browser-only React mode still uses in-memory sample data and local-only mutations because `window.spotStorage` is available only through Electron preload.
+SPOT persists tasks only in Electron runtime. The Electron main process owns durable storage, operational logging, and database health, while React owns the responsive in-memory task state used by the UI. The renderer requires `window.spotStorage` on startup; opening the React build outside Electron reports storage as unavailable instead of running local-only sample data.
 
 SQLite is the source of truth for task reads and writes. The append-only operational log is a diagnostic trace of storage commands and SQL activity; startup never rebuilds task state from the log. Google Drive or similar filesystem sync should be treated as backup or cross-device handoff, not live collaborative database replication.
 
@@ -187,7 +186,7 @@ Each configured task write command runs in exactly one SQLite transaction. Bulk 
 
 ### Renderer Behavior
 
-React calls `loadTasks()` through `window.spotStorage` on Electron startup and calls `executeTaskCommand()` for task mutations when `window.spotStorage` exists. It updates optimistically for normal task changes, keeps the latest renderer-facing `StorageStatus`, stays quiet while the database is healthy, shows startup storage failures before rendering task lists, and shows a prominent save warning when writes fail.
+React calls `loadTasks()` through `window.spotStorage` on startup and calls `executeTaskCommand()` for task mutations. It updates optimistically for normal task changes, keeps the latest renderer-facing `StorageStatus`, stays quiet while the database is healthy, shows startup storage failures before rendering task lists, and shows a prominent save warning when writes fail.
 
 `StorageStatus` reports the database state as `not-configured`, `healthy`, or `unavailable`, plus the configured `storageDirectory` and `databasePath` when available. Storage failures use `not-implemented`, `database-error`, `invalid-command`, or `shutdown`.
 
@@ -477,8 +476,8 @@ Current test coverage includes focused regression checks for:
 - smoke coverage for task filters and task list interactions
 - SQLite storage setup, task row mapping, command execution, transaction rollback, and optional operational logging behavior
 - storage IPC handler registration, channel delegation, default Electron storage directory resolution, shutdown drain, and post-shutdown command failure behavior
-- Electron window load-target resolution for development server and packaged React build modes
-- React task-page startup loading, browser sample fallback, persisted Electron loading, and startup-error rendering
+- Electron window load-target resolution for local built React loading
+- React task-page startup loading, Electron preload API requirement, persisted Electron loading, and startup-error rendering
 - React task-page storage commands for create, update, delete, complete, restore, manual reorder, and importance sort, plus write-failure warning, storage-health feedback, and reconciliation behavior
 - generic SPOT logging success, public log levels, startup file-open failures, bounded retry failures, retry recovery, shutdown flush behavior, and size-based rolling with bounded retention
 

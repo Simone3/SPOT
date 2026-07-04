@@ -194,14 +194,15 @@ describe('TasksPage', () => {
 		jest.useRealTimers();
 	});
 
-	test('uses sample tasks when the Electron storage API is unavailable', async() => {
+	test('requires the Electron storage API on startup', async() => {
 		setWindowSpotStorage(undefined);
 
 		render(<TasksPage/>);
 
-		expect(await screen.findByText(/Finish project report/)).toBeInTheDocument();
-		expect(screen.getByTestId('task-filters')).toHaveTextContent('Show completed: false');
-		expect(screen.queryByRole('status')).not.toBeInTheDocument();
+		const alert = await screen.findByRole('alert');
+		expect(alert).toHaveTextContent('Task storage is unavailable');
+		expect(alert).toHaveTextContent('SPOT must be opened from the Electron app.');
+		expect(screen.queryByRole('region', { name: 'Tasks' })).not.toBeInTheDocument();
 	});
 
 	test('loads persisted tasks from Electron storage on startup', async() => {
