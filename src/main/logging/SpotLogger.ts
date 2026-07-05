@@ -1,4 +1,4 @@
-import { closeSync, existsSync, openSync, readFileSync } from 'node:fs';
+import { closeSync, existsSync, mkdirSync, openSync, readFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import electronLog from 'electron-log';
@@ -14,6 +14,8 @@ export const SPOT_LOG_MAX_WRITE_ATTEMPTS = 3;
 export const SPOT_LOG_RETRY_DELAY_MS = 25;
 
 export const SPOT_LOG_WRITE_FAILED_MESSAGE = 'SPOT logging is unavailable.';
+
+export const SPOT_LOGGER_NOT_INITIALIZED_MESSAGE = 'SPOT logging has not been initialized.';
 
 export type SpotLogLevel = 'info' | 'warn' | 'error' | 'debug';
 
@@ -100,6 +102,61 @@ const createElectronLoggerBackend: CreateSpotLoggerBackend = (logId) => {
 	return electronLog.create({ logId }) as unknown as SpotLoggerBackend;
 };
 
+const createUninitializedSpotLogger = (): SpotLogger => {
+	return {
+		debug: () => {
+			return undefined;
+		},
+		error: () => {
+			return undefined;
+		},
+		info: () => {
+			return undefined;
+		},
+		warn: () => {
+			return undefined;
+		},
+		flush: () => {
+			return Promise.resolve();
+		},
+		getStatus: () => {
+			return {
+				state: 'unavailable',
+				message: SPOT_LOGGER_NOT_INITIALIZED_MESSAGE
+			};
+		},
+		getConfiguration: () => {
+			throw new Error(SPOT_LOGGER_NOT_INITIALIZED_MESSAGE);
+		}
+	};
+};
+
+let activeSpotLogger = createUninitializedSpotLogger();
+
+export const spotLogger: SpotLogger = {
+	debug: (message, fields) => {
+		activeSpotLogger.debug(message, fields);
+	},
+	error: (message, fields) => {
+		activeSpotLogger.error(message, fields);
+	},
+	info: (message, fields) => {
+		activeSpotLogger.info(message, fields);
+	},
+	warn: (message, fields) => {
+		activeSpotLogger.warn(message, fields);
+	},
+	flush: () => {
+		return activeSpotLogger.flush();
+	},
+	getStatus: () => {
+		return activeSpotLogger.getStatus();
+	},
+	getConfiguration: () => {
+		return activeSpotLogger.getConfiguration();
+	}
+};
+
 const createSpotLogId = (storageDirectory: string): string => {
 	return `spot-logger-${storageDirectory.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
 };
@@ -181,7 +238,9 @@ const assertCurrentLogEndsWithLine = (filePath: string, line: string): void => {
 	}
 };
 
-const assertLogFileWritable = (filePath: string): void => {
+const assertLogFileWritable = (storageDirectory: string, filePath: string): void => {
+	mkdirSync(storageDirectory, { recursive: true });
+
 	const fileDescriptor = openSync(filePath, 'a');
 	closeSync(fileDescriptor);
 };
@@ -190,9 +249,9 @@ const createStartupFailureMessage = (filePath: string, error: unknown): string =
 	return `${SPOT_LOG_WRITE_FAILED_MESSAGE} Could not open "${filePath}" for appending. ${getErrorMessage(error)}`;
 };
 
-const getStartupFailureMessage = (filePath: string): string | undefined => {
+const getStartupFailureMessage = (storageDirectory: string, filePath: string): string | undefined => {
 	try {
-		assertLogFileWritable(filePath);
+		assertLogFileWritable(storageDirectory, filePath);
 		return undefined;
 	}
 	catch(error) {
@@ -222,7 +281,7 @@ export const createSpotLogger = ({
 	const pendingWrites = new Set<Promise<void>>();
 
 	configureLoggerBackend(backend, configuration);
-	const startupFailureMessage = getStartupFailureMessage(configuration.filePath);
+	const startupFailureMessage = getStartupFailureMessage(storageDirectory, configuration.filePath);
 
 	const getStatus = (): SpotLoggerStatus => {
 		if(startupFailureMessage) {
@@ -293,4 +352,14 @@ export const createSpotLogger = ({
 			return configuration;
 		}
 	};
+};
+
+export const initializeSpotLogger = (options: CreateSpotLoggerOptions): SpotLogger => {
+	activeSpotLogger = createSpotLogger(options);
+
+	return activeSpotLogger;
+};
+
+export const resetSpotLoggerForTests = (): void => {
+	activeSpotLogger = createUninitializedSpotLogger();
 };

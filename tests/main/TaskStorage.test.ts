@@ -1,7 +1,7 @@
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { SPOT_LOG_FILE_NAME, type CreateSpotLoggerBackend } from 'src/main/logging/SpotLogger';
+import { initializeSpotLogger, resetSpotLoggerForTests, SPOT_LOG_FILE_NAME, spotLogger, type CreateSpotLoggerBackend, type CreateSpotLoggerOptions } from 'src/main/logging/SpotLogger';
 import { DATABASE_FILE_NAME, openSpotDatabase } from 'src/main/storage/SpotDatabase';
 import { TASK_INSERT_COLUMN_NAMES, TASK_SELECT_COLUMN_NAMES, createImmutableTaskFieldChangeMessage, taskRowToColumnValues, taskToTaskRow, type TaskRow } from 'src/main/storage/TaskRowMapping';
 import { createTaskStorage, STORAGE_NOT_IMPLEMENTED_MESSAGE, type CreateTaskStorageOptions, type OperationalLogEntry, type TaskStorage, type TaskStorageCommand } from 'src/main/storage/TaskStorage';
@@ -124,12 +124,26 @@ const createNoopBackendFactory = (): CreateSpotLoggerBackend => {
 	};
 };
 
+type CreateTrackedTaskStorageOptions = CreateTaskStorageOptions & {
+	logger?: Omit<CreateSpotLoggerOptions, 'storageDirectory'>;
+};
+
 describe('TaskStorage', () => {
 	const tempStorageDirectories: string[] = [];
 	const taskStorageInstances: TaskStorage[] = [];
 
-	const createTrackedTaskStorage = (options?: CreateTaskStorageOptions): TaskStorage => {
-		const taskStorage = createTaskStorage(options);
+	const createTrackedTaskStorage = (options: CreateTrackedTaskStorageOptions = {}): TaskStorage => {
+		const { logger, ...taskStorageOptions } = options;
+
+		if(taskStorageOptions.storageDirectory) {
+			initializeSpotLogger({
+				storageDirectory: taskStorageOptions.storageDirectory,
+				now: taskStorageOptions.now,
+				...logger
+			});
+		}
+
+		const taskStorage = createTaskStorage(taskStorageOptions);
 		taskStorageInstances.push(taskStorage);
 
 		return taskStorage;
@@ -140,6 +154,9 @@ describe('TaskStorage', () => {
 			const taskStorage = taskStorageInstances.pop()!;
 			await taskStorage.prepareForShutdown();
 		}
+
+		await spotLogger.flush();
+		resetSpotLoggerForTests();
 
 		while(tempStorageDirectories.length > 0) {
 			const tempStorageDirectory = tempStorageDirectories.pop()!;

@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { createSpotLogger, type CreateSpotLoggerOptions, type SpotLogger } from 'src/main/logging/SpotLogger';
+import { spotLogger } from 'src/main/logging/SpotLogger';
 import { executeTaskCommandOnDatabase } from 'src/main/storage/TaskCommandExecutor';
 import { DATABASE_FILE_NAME, openSpotDatabase, type SpotDatabase, type SqlQueryLogger } from 'src/main/storage/SpotDatabase';
 import { readTasksFromDatabase } from 'src/main/storage/TaskRepository';
@@ -44,7 +44,6 @@ export interface TaskStorage {
 export interface CreateTaskStorageOptions {
 	storageDirectory?: string;
 	now?: () => Date;
-	logger?: Omit<CreateSpotLoggerOptions, 'storageDirectory'>;
 }
 
 interface ConfiguredTaskStorageDatabase {
@@ -122,20 +121,17 @@ const createInvalidCommandFailure = (
 	};
 };
 
-const writeReactCommandLogEntry = (
-	logger: SpotLogger,
-	command: TaskStorageCommand
-): void => {
-	logger.info('React storage command received', {
+const writeReactCommandLogEntry = (command: TaskStorageCommand): void => {
+	spotLogger.info('React storage command received', {
 		type: 'react.command',
 		command: command.command,
 		payload: command.payload
 	});
 };
 
-const createSqlLogger = (logger: SpotLogger): SqlQueryLogger => {
+const createSqlLogger = (): SqlQueryLogger => {
 	return (record) => {
-		logger[record.result === 'failure' ? 'error' : 'info']('Storage SQL query completed', {
+		spotLogger[record.result === 'failure' ? 'error' : 'info']('Storage SQL query completed', {
 			type: 'sql.query',
 			query: record.query,
 			elapsedMillis: record.durationMs,
@@ -147,11 +143,10 @@ const createSqlLogger = (logger: SpotLogger): SqlQueryLogger => {
 
 const createConfiguredTaskStorageDatabase = (
 	storageDirectory: string,
-	now: (() => Date) | undefined,
-	logger: SpotLogger
+	now: (() => Date) | undefined
 ): ConfiguredTaskStorageDatabase => {
 	let spotDatabase: SpotDatabase | undefined;
-	const sqlLogger = createSqlLogger(logger);
+	const sqlLogger = createSqlLogger();
 
 	const getDatabase = (): SpotDatabase => {
 		if(!spotDatabase) {
@@ -203,10 +198,9 @@ const executeConfiguredTaskCommand = (
 	storageDirectory: string,
 	now: (() => Date) | undefined,
 	database: ConfiguredTaskStorageDatabase,
-	command: TaskStorageCommand,
-	logger: SpotLogger
+	command: TaskStorageCommand
 ): TaskStorageCommandResult => {
-	writeReactCommandLogEntry(logger, command);
+	writeReactCommandLogEntry(command);
 
 	try {
 		executeTaskCommandOnDatabase(database.getDatabase(), { now }, command);
@@ -240,16 +234,10 @@ const getConfiguredStorageStatus = (
 };
 
 export const createTaskStorage = (options: CreateTaskStorageOptions = {}): TaskStorage => {
-	let logger: SpotLogger | undefined;
 	let database: ConfiguredTaskStorageDatabase | undefined;
 
 	if(options.storageDirectory) {
-		logger = createSpotLogger({
-			storageDirectory: options.storageDirectory,
-			now: options.now,
-			...options.logger
-		});
-		database = createConfiguredTaskStorageDatabase(options.storageDirectory, options.now, logger);
+		database = createConfiguredTaskStorageDatabase(options.storageDirectory, options.now);
 	}
 
 	const getStorageStatus = (): Promise<StorageStatus> => {
@@ -273,7 +261,7 @@ export const createTaskStorage = (options: CreateTaskStorageOptions = {}): TaskS
 			return createNotImplementedFailure(await getStorageStatus());
 		}
 
-		return executeConfiguredTaskCommand(options.storageDirectory, options.now, database!, command, logger!);
+		return executeConfiguredTaskCommand(options.storageDirectory, options.now, database!, command);
 	};
 
 	const writeOperationalLogLine = async(entry: OperationalLogEntry): Promise<OperationalLogWriteResult> => {
@@ -282,7 +270,7 @@ export const createTaskStorage = (options: CreateTaskStorageOptions = {}): TaskS
 		}
 
 		const { message, ...fields } = entry;
-		logger!.info(message, fields);
+		spotLogger.info(message, fields);
 
 		return {
 			ok: true,
@@ -290,13 +278,10 @@ export const createTaskStorage = (options: CreateTaskStorageOptions = {}): TaskS
 		};
 	};
 
-	const prepareForShutdown = async(): Promise<void> => {
-		try {
-			database?.close();
-		}
-		finally {
-			await logger?.flush();
-		}
+	const prepareForShutdown = (): Promise<void> => {
+		database?.close();
+
+		return Promise.resolve();
 	};
 
 	return {

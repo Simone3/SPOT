@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { app, BrowserWindow, ipcMain } from 'electron';
-import { registerTaskStorageIpcHandlers } from 'src/main/ipc/TaskStorageIpc';
+import { registerTaskStorageIpcHandlers, resolveSpotStorageDirectory } from 'src/main/ipc/TaskStorageIpc';
+import { initializeSpotLogger } from 'src/main/logging/SpotLogger';
 import { resolveWindowLoadTarget } from 'src/main/window/WindowLoadTarget';
 
 const PRELOAD_SCRIPT_FILE_NAME = 'preload.js';
@@ -24,6 +25,10 @@ const createWindow = (): void => {
 };
 
 void app.whenReady().then(() => {
+	initializeSpotLogger({
+		storageDirectory: resolveSpotStorageDirectory(app)
+	});
+
 	ipcMain.handle('ping', () => {
 		return 'pong';
 	});

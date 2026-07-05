@@ -1,6 +1,7 @@
 import path from 'node:path';
 import type { App, IpcMain, IpcMainInvokeEvent } from 'electron';
 import { makeTask } from '../testUtils';
+import { resetSpotLoggerForTests, spotLogger } from 'src/main/logging/SpotLogger';
 import { registerTaskStorageIpcHandlers, resolveSpotStorageDirectory, SPOT_STORAGE_DIRECTORY_NAME, SPOT_STORAGE_IPC_CHANNELS, TASK_STORAGE_SHUTDOWN_MESSAGE } from 'src/main/ipc/TaskStorageIpc';
 import type { TaskStorage } from 'src/main/storage/TaskStorage';
 import type { LoadTasksResult, StorageStatus, TaskStorageCommand, TaskStorageCommandResult } from 'src/types/TaskStorageTypes';
@@ -18,6 +19,12 @@ const createDeferred = <T>(): { promise: Promise<T>; resolve: (value: T) => void
 		promise,
 		resolve
 	};
+};
+
+const waitForQueuedWork = (): Promise<void> => {
+	return new Promise((resolve) => {
+		setTimeout(resolve, 0);
+	});
 };
 
 const createMockIpcMain = (): {
@@ -111,6 +118,11 @@ const createMockTaskStorage = (): {
 };
 
 describe('TaskStorageIpc', () => {
+	afterEach(() => {
+		jest.restoreAllMocks();
+		resetSpotLoggerForTests();
+	});
+
 	test('resolves the Electron storage directory from app userData', () => {
 		const userDataPath = path.join('/tmp', 'spot-user-data');
 		const app = {
@@ -187,6 +199,7 @@ describe('TaskStorageIpc', () => {
 		const prepareForShutdown = jest.fn(async() => {
 			return undefined;
 		});
+		const flushLogger = jest.spyOn(spotLogger, 'flush').mockResolvedValue(undefined);
 		const event = {} as IpcMainInvokeEvent;
 		const beforeQuitEvent = {
 			preventDefault: jest.fn()
@@ -221,9 +234,10 @@ describe('TaskStorageIpc', () => {
 
 		commandDeferred.resolve(commandResult);
 		await expect(commandPromise).resolves.toBe(commandResult);
-		await Promise.resolve();
+		await waitForQueuedWork();
 
 		expect(prepareForShutdown).toHaveBeenCalledTimes(1);
+		expect(flushLogger).toHaveBeenCalledTimes(1);
 		expect(app.quit).toHaveBeenCalledTimes(1);
 	});
 

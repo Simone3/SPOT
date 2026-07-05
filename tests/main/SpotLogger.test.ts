@@ -1,7 +1,7 @@
 import { appendFileSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { EOL, tmpdir } from 'node:os';
 import path from 'node:path';
-import { createSpotLogger, SPOT_LOG_FILE_NAME, SPOT_LOG_RETAINED_ARCHIVE_COUNT, SPOT_LOG_WRITE_FAILED_MESSAGE, type CreateSpotLoggerBackend, type SpotLogEntry } from 'src/main/logging/SpotLogger';
+import { createSpotLogger, initializeSpotLogger, resetSpotLoggerForTests, SPOT_LOG_FILE_NAME, SPOT_LOG_RETAINED_ARCHIVE_COUNT, SPOT_LOG_WRITE_FAILED_MESSAGE, SPOT_LOGGER_NOT_INITIALIZED_MESSAGE, spotLogger as processSpotLogger, type CreateSpotLoggerBackend, type SpotLogEntry } from 'src/main/logging/SpotLogger';
 
 const makeTempStorageDirectory = (): string => {
 	return mkdtempSync(path.join(tmpdir(), 'spot-logger-'));
@@ -83,11 +83,57 @@ const createFakeBackendFactory = (write: (message: string) => void): CreateSpotL
 describe('SpotLogger', () => {
 	const tempStorageDirectories: string[] = [];
 
-	afterEach(() => {
+	afterEach(async() => {
+		await processSpotLogger.flush();
+		resetSpotLoggerForTests();
+
 		while(tempStorageDirectories.length > 0) {
 			const tempStorageDirectory = tempStorageDirectories.pop()!;
 			rmSync(tempStorageDirectory, { recursive: true, force: true });
 		}
+	});
+
+	test('keeps the process-wide logger safe before initialization', async() => {
+		expect(processSpotLogger.getStatus()).toEqual({
+			state: 'unavailable',
+			message: SPOT_LOGGER_NOT_INITIALIZED_MESSAGE
+		});
+		expect(() => {
+			processSpotLogger.info('Ignored before startup initialization');
+		}).not.toThrow();
+		await expect(processSpotLogger.flush()).resolves.toBeUndefined();
+		expect(() => {
+			processSpotLogger.getConfiguration();
+		}).toThrow(SPOT_LOGGER_NOT_INITIALIZED_MESSAGE);
+	});
+
+	test('exposes initialized logging through a stable process-wide utility', () => {
+		const processLogger = processSpotLogger;
+		const storageDirectory = makeTempStorageDirectory();
+		tempStorageDirectories.push(storageDirectory);
+		const createdAt = new Date('2026-06-06T12:00:00.000Z');
+
+		initializeSpotLogger({
+			storageDirectory,
+			retryDelayMs: 0,
+			now: () => {
+				return createdAt;
+			}
+		});
+
+		expect(processSpotLogger).toBe(processLogger);
+		processSpotLogger.info('Process logger initialized', {
+			type: 'main.startup'
+		});
+
+		expect(readSpotLogEntries(storageDirectory)).toEqual([
+			{
+				createdAt: createdAt.toISOString(),
+				level: 'info',
+				message: 'Process logger initialized',
+				type: 'main.startup'
+			}
+		]);
 	});
 
 	test('writes structured newline-delimited JSON entries for public log levels', () => {
@@ -148,6 +194,36 @@ describe('SpotLogger', () => {
 		expect(spotLogger.getStatus()).toEqual({
 			state: 'healthy'
 		});
+	});
+
+	test('creates the log directory before checking startup writability', () => {
+		const parentDirectory = makeTempStorageDirectory();
+		tempStorageDirectories.push(parentDirectory);
+		const storageDirectory = path.join(parentDirectory, 'storage');
+		const createdAt = new Date('2026-06-06T12:00:00.000Z');
+		const spotLogger = createSpotLogger({
+			storageDirectory,
+			retryDelayMs: 0,
+			now: () => {
+				return createdAt;
+			}
+		});
+
+		spotLogger.info('Logger directory created', {
+			type: 'main.startup'
+		});
+
+		expect(spotLogger.getStatus()).toEqual({
+			state: 'healthy'
+		});
+		expect(readSpotLogEntries(storageDirectory)).toEqual([
+			{
+				createdAt: createdAt.toISOString(),
+				level: 'info',
+				message: 'Logger directory created',
+				type: 'main.startup'
+			}
+		]);
 	});
 
 	test('reports unavailable startup logging when the log file cannot be opened', () => {

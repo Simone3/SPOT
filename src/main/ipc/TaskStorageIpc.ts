@@ -1,5 +1,6 @@
 import path from 'node:path';
 import type { App, IpcMain } from 'electron';
+import { spotLogger } from 'src/main/logging/SpotLogger';
 import { createTaskStorage, type CreateTaskStorageOptions, type TaskStorage } from 'src/main/storage/TaskStorage';
 import { SPOT_STORAGE_IPC_CHANNELS } from 'src/types/TaskStorageIpcChannels';
 import type { StorageStatus, TaskStorageCommand, TaskStorageCommandResult } from 'src/types/TaskStorageTypes';
@@ -69,7 +70,12 @@ const createTaskStorageCommandShutdownController = (
 
 	const prepareForShutdown = async(): Promise<void> => {
 		await Promise.allSettled(Array.from(pendingCommands));
-		await taskStorage.prepareForShutdown?.();
+		try {
+			await taskStorage.prepareForShutdown?.();
+		}
+		finally {
+			await spotLogger.flush();
+		}
 	};
 
 	const requestShutdown = (): void => {
