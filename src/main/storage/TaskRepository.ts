@@ -61,11 +61,15 @@ export const readTaskRows = (spotDatabase: SpotDatabase): TaskRow[] => {
 	return spotDatabase.getAllQueryRows<TaskRow>(SELECT_TASKS_QUERY);
 };
 
+export const readTasksFromDatabase = (spotDatabase: SpotDatabase): Task[] => {
+	return readTaskRows(spotDatabase).map((taskRow) => {
+		return taskRowToTask(taskRow);
+	});
+};
+
 export const readTasks = (options: TaskRepositoryOptions): Task[] => {
 	return withSpotDatabase(options, (spotDatabase) => {
-		return readTaskRows(spotDatabase).map((taskRow) => {
-			return taskRowToTask(taskRow);
-		});
+		return readTasksFromDatabase(spotDatabase);
 	});
 };
 

@@ -1,8 +1,12 @@
 import type { SpotDatabase } from 'src/main/storage/SpotDatabase';
 import { deleteTaskRecord, insertTaskRecord, runTaskTransaction, updateTaskRecord, withSpotDatabase, type TaskRepositoryOptions } from 'src/main/storage/TaskRepository';
-import type { TaskStorageCommand } from 'src/main/storage/TaskStorage';
+import type { TaskStorageCommand } from 'src/types/TaskStorageTypes';
 
-const getCurrentDate = (options: TaskRepositoryOptions): Date => {
+interface TaskCommandExecutionOptions {
+	now?: () => Date;
+}
+
+const getCurrentDate = (options: TaskCommandExecutionOptions): Date => {
 	if(options.now) {
 		return options.now();
 	}
@@ -35,15 +39,23 @@ const applyTaskCommand = (spotDatabase: SpotDatabase, command: TaskStorageComman
 	}
 };
 
+export const executeTaskCommandOnDatabase = (
+	spotDatabase: SpotDatabase,
+	options: TaskCommandExecutionOptions,
+	command: TaskStorageCommand
+): void => {
+	const writtenAt = getCurrentDate(options);
+
+	runTaskTransaction(spotDatabase, () => {
+		applyTaskCommand(spotDatabase, command, writtenAt);
+	});
+};
+
 export const executeTaskCommandInStorage = (
 	options: TaskRepositoryOptions,
 	command: TaskStorageCommand
 ): void => {
 	withSpotDatabase(options, (spotDatabase) => {
-		const writtenAt = getCurrentDate(options);
-
-		runTaskTransaction(spotDatabase, () => {
-			applyTaskCommand(spotDatabase, command, writtenAt);
-		});
+		executeTaskCommandOnDatabase(spotDatabase, options, command);
 	});
 };

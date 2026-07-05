@@ -4,7 +4,7 @@ import path from 'node:path';
 import { SPOT_LOG_FILE_NAME, type CreateSpotLoggerBackend } from 'src/main/logging/SpotLogger';
 import { DATABASE_FILE_NAME, openSpotDatabase } from 'src/main/storage/SpotDatabase';
 import { TASK_INSERT_COLUMN_NAMES, TASK_SELECT_COLUMN_NAMES, createImmutableTaskFieldChangeMessage, taskRowToColumnValues, taskToTaskRow, type TaskRow } from 'src/main/storage/TaskRowMapping';
-import { createTaskStorage, STORAGE_NOT_IMPLEMENTED_MESSAGE, type OperationalLogEntry, type TaskStorageCommand } from 'src/main/storage/TaskStorage';
+import { createTaskStorage, STORAGE_NOT_IMPLEMENTED_MESSAGE, type CreateTaskStorageOptions, type OperationalLogEntry, type TaskStorage, type TaskStorageCommand } from 'src/main/storage/TaskStorage';
 import type { PersistedTask } from 'src/types/TaskTypes';
 
 const makeTempStorageDirectory = (): string => {
@@ -126,8 +126,21 @@ const createNoopBackendFactory = (): CreateSpotLoggerBackend => {
 
 describe('TaskStorage', () => {
 	const tempStorageDirectories: string[] = [];
+	const taskStorageInstances: TaskStorage[] = [];
 
-	afterEach(() => {
+	const createTrackedTaskStorage = (options?: CreateTaskStorageOptions): TaskStorage => {
+		const taskStorage = createTaskStorage(options);
+		taskStorageInstances.push(taskStorage);
+
+		return taskStorage;
+	};
+
+	afterEach(async() => {
+		while(taskStorageInstances.length > 0) {
+			const taskStorage = taskStorageInstances.pop()!;
+			await taskStorage.prepareForShutdown();
+		}
+
 		while(tempStorageDirectories.length > 0) {
 			const tempStorageDirectory = tempStorageDirectories.pop()!;
 			rmSync(tempStorageDirectory, { recursive: true, force: true });
@@ -135,7 +148,7 @@ describe('TaskStorage', () => {
 	});
 
 	test('reports the unwired database status', async() => {
-		const taskStorage = createTaskStorage();
+		const taskStorage = createTrackedTaskStorage();
 
 		const status = await taskStorage.getStorageStatus();
 
@@ -148,7 +161,7 @@ describe('TaskStorage', () => {
 	});
 
 	test('returns explicit placeholder failures while storage is unwired', async() => {
-		const taskStorage = createTaskStorage();
+		const taskStorage = createTrackedTaskStorage();
 		const command: TaskStorageCommand = {
 			command: 'task.update',
 			payload: {
@@ -185,7 +198,7 @@ describe('TaskStorage', () => {
 	test('loads an empty task list from a configured SQLite database', async() => {
 		const storageDirectory = makeTempStorageDirectory();
 		tempStorageDirectories.push(storageDirectory);
-		const taskStorage = createTaskStorage({ storageDirectory });
+		const taskStorage = createTrackedTaskStorage({ storageDirectory });
 
 		const result = await taskStorage.loadTasks();
 
@@ -206,7 +219,7 @@ describe('TaskStorage', () => {
 	test('reports configured storage status', async() => {
 		const storageDirectory = makeTempStorageDirectory();
 		tempStorageDirectories.push(storageDirectory);
-		const taskStorage = createTaskStorage({ storageDirectory });
+		const taskStorage = createTrackedTaskStorage({ storageDirectory });
 
 		const status = await taskStorage.getStorageStatus();
 
@@ -218,6 +231,25 @@ describe('TaskStorage', () => {
 			databasePath: path.join(storageDirectory, DATABASE_FILE_NAME)
 		});
 		expect(existsSync(path.join(storageDirectory, DATABASE_FILE_NAME))).toBe(true);
+	});
+
+	test('reuses one SQLite connection until shutdown preparation closes it', async() => {
+		const storageDirectory = makeTempStorageDirectory();
+		tempStorageDirectories.push(storageDirectory);
+		const taskStorage = createTrackedTaskStorage({ storageDirectory });
+
+		await taskStorage.getStorageStatus();
+		await taskStorage.loadTasks();
+		await taskStorage.loadTasks();
+		await taskStorage.prepareForShutdown();
+		await taskStorage.loadTasks();
+		await taskStorage.prepareForShutdown();
+
+		const schemaVersionReads = readOperationalLogEntries(storageDirectory).filter((entry) => {
+			return entry.type === 'sql.query' && entry.query === 'SELECT version FROM schema_migrations ORDER BY version ASC';
+		});
+
+		expect(schemaVersionReads).toHaveLength(2);
 	});
 
 	test('loads stored task rows from SQLite', async() => {
@@ -248,7 +280,7 @@ describe('TaskStorage', () => {
 		};
 		insertPersistedTask(storageDirectory, completedTask);
 		insertPersistedTask(storageDirectory, activeTask);
-		const taskStorage = createTaskStorage({ storageDirectory });
+		const taskStorage = createTrackedTaskStorage({ storageDirectory });
 
 		const result = await taskStorage.loadTasks();
 
@@ -292,7 +324,7 @@ describe('TaskStorage', () => {
 			sortPosition: 100,
 			completionDate: undefined
 		};
-		const createTaskStorageInstance = createTaskStorage({
+		const createTaskStorageInstance = createTrackedTaskStorage({
 			storageDirectory,
 			now: () => {
 				return createdAt;
@@ -329,7 +361,7 @@ describe('TaskStorage', () => {
 			}
 		]);
 
-		const updateTaskStorageInstance = createTaskStorage({
+		const updateTaskStorageInstance = createTrackedTaskStorage({
 			storageDirectory,
 			now: () => {
 				return updatedAt;
@@ -395,7 +427,7 @@ describe('TaskStorage', () => {
 			}
 		});
 
-		const restoreTaskStorageInstance = createTaskStorage({
+		const restoreTaskStorageInstance = createTrackedTaskStorage({
 			storageDirectory,
 			now: () => {
 				return restoredAt;
@@ -458,7 +490,7 @@ describe('TaskStorage', () => {
 			sortPosition: 100,
 			completionDate: undefined
 		};
-		const taskStorage = createTaskStorage({
+		const taskStorage = createTrackedTaskStorage({
 			storageDirectory,
 			now: () => {
 				return createdAt;
@@ -535,7 +567,7 @@ describe('TaskStorage', () => {
 			sortPosition: 100,
 			completionDate: undefined
 		};
-		const taskStorage = createTaskStorage({
+		const taskStorage = createTrackedTaskStorage({
 			storageDirectory,
 			now: () => {
 				return createdAt;
@@ -597,7 +629,7 @@ describe('TaskStorage', () => {
 			completionDate: undefined
 		};
 		insertPersistedTask(storageDirectory, task);
-		const taskStorage = createTaskStorage({
+		const taskStorage = createTrackedTaskStorage({
 			storageDirectory,
 			now: () => {
 				return new Date('2026-06-06T12:00:00.000Z');
@@ -670,7 +702,7 @@ describe('TaskStorage', () => {
 		};
 		insertPersistedTask(storageDirectory, firstTask);
 		insertPersistedTask(storageDirectory, secondTask);
-		const taskStorage = createTaskStorage({
+		const taskStorage = createTrackedTaskStorage({
 			storageDirectory,
 			now: () => {
 				return new Date('2026-06-06T12:00:00.000Z');
@@ -731,7 +763,7 @@ describe('TaskStorage', () => {
 			completionDate: undefined
 		};
 		insertPersistedTask(storageDirectory, task);
-		const taskStorage = createTaskStorage({
+		const taskStorage = createTrackedTaskStorage({
 			storageDirectory,
 			now: () => {
 				return new Date('2026-06-06T12:00:00.000Z');
