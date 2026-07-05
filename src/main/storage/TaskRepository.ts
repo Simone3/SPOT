@@ -1,11 +1,10 @@
-import { openSpotDatabase, type SpotDatabase, type SqlQueryLogger } from 'src/main/storage/SpotDatabase';
+import { openSpotDatabase, type SpotDatabase } from 'src/main/storage/SpotDatabase';
 import { TASK_INSERT_COLUMN_NAMES, TASK_SELECT_COLUMN_NAMES, taskChangeToTaskUpdateColumns, taskRowToColumnValues, taskRowToTask, taskToTaskRow, type TaskRow } from 'src/main/storage/TaskRowMapping';
 import type { PersistedTask, PersistedTaskChange, Task } from 'src/types/TaskTypes';
 
 export interface TaskRepositoryOptions {
 	storageDirectory: string;
 	now?: () => Date;
-	sqlLogger?: SqlQueryLogger;
 }
 
 const formatColumnList = (columnNames: readonly string[]): string => {
@@ -41,8 +40,7 @@ export const withSpotDatabase = <T>(
 ): T => {
 	const spotDatabase = openSpotDatabase({
 		storageDirectory: options.storageDirectory,
-		now: options.now,
-		sqlLogger: options.sqlLogger
+		now: options.now
 	});
 
 	try {

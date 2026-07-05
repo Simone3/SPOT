@@ -64,7 +64,7 @@ npm run make
 - `src/main/ipc/TaskStorageIpc.ts` registers the narrow Electron IPC surface for storage loading, task write commands, database health reporting, and shutdown draining for in-flight task commands.
 - `src/main/storage/TaskStorage.ts` defines the Electron main-process storage contract, configured SQLite task loading and write commands through a storage-owned database connection, database health reporting, and shutdown preparation.
 - `src/main/storage/TaskCommandExecutor.ts` maps task storage commands to the task repository operations and keeps each command inside one transaction.
-- `src/main/storage/SpotDatabase.ts` opens `spot.sqlite`, applies schema migrations, currently creates schema version `1`, exposes a small internal query wrapper, and emits SQL query log records when a caller supplies a logger.
+- `src/main/storage/SpotDatabase.ts` opens `spot.sqlite`, applies schema migrations, currently creates schema version `1`, exposes a small internal query wrapper, and emits SQL query log records through the process-wide logger.
 - `src/main/storage/TaskRowMapping.ts` maps between SQLite task rows and React `Task` objects and owns the shared task field to SQLite column mapping used by storage queries.
 - `src/main/storage/TaskRepository.ts` owns SQLite task queries and task repository helpers that can run against an existing SPOT database wrapper or a short scoped repository session.
 - `src/main/window/WindowLoadTarget.ts` resolves the built React `build/index.html` file from the Electron app root.

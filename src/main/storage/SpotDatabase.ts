@@ -2,6 +2,7 @@ import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
 import type { DatabaseSync, SQLInputValue } from 'node:sqlite';
+import { spotLogger } from 'src/main/logging/SpotLogger';
 
 export const DATABASE_FILE_NAME = 'spot.sqlite';
 
@@ -10,7 +11,6 @@ export const CURRENT_SCHEMA_VERSION = 1;
 interface OpenSpotDatabaseOptions {
 	storageDirectory: string;
 	now?: () => Date;
-	sqlLogger?: SqlQueryLogger;
 }
 
 export type SpotSqlParameter = SQLInputValue;
@@ -31,14 +31,12 @@ export interface SpotDatabase {
 	getAppliedMigrationVersions: () => number[];
 }
 
-export interface SqlQueryLogRecord {
+interface SqlQueryLogRecord {
 	query: string;
 	durationMs: number;
 	result: 'success' | 'failure';
 	error?: string;
 }
-
-export type SqlQueryLogger = (record: SqlQueryLogRecord) => void;
 
 interface MigrationRow {
 	version: number;
@@ -74,17 +72,23 @@ const getErrorMessage = (error: unknown): string => {
 	return String(error);
 };
 
-const logQuery = <T>(
-	sqlLogger: SqlQueryLogger | undefined,
-	query: string,
-	callback: () => T
-): T => {
+const writeSqlQueryLogRecord = (record: SqlQueryLogRecord): void => {
+	spotLogger[record.result === 'failure' ? 'error' : 'info']('Storage SQL query completed', {
+		type: 'sql.query',
+		query: record.query,
+		elapsedMillis: record.durationMs,
+		result: record.result,
+		error: record.error
+	});
+};
+
+const logQuery = <T>(query: string, callback: () => T): T => {
 	const startedAt = performance.now();
 
 	try {
 		const result = callback();
 
-		sqlLogger?.({
+		writeSqlQueryLogRecord({
 			query: normalizeSqlQuery(query),
 			durationMs: performance.now() - startedAt,
 			result: 'success'
@@ -93,7 +97,7 @@ const logQuery = <T>(
 		return result;
 	}
 	catch(error) {
-		sqlLogger?.({
+		writeSqlQueryLogRecord({
 			query: normalizeSqlQuery(query),
 			durationMs: performance.now() - startedAt,
 			result: 'failure',
@@ -106,29 +110,28 @@ const logQuery = <T>(
 
 const createSpotDatabaseWrapper = (
 	connection: DatabaseSync,
-	databasePath: string,
-	sqlLogger?: SqlQueryLogger
+	databasePath: string
 ): SpotDatabase => {
 	const execQuery = (query: string): void => {
-		logQuery(sqlLogger, query, () => {
+		logQuery(query, () => {
 			connection.exec(query);
 		});
 	};
 
 	const runQuery = (query: string, ...parameters: SpotSqlParameter[]): SpotDatabaseRunResult => {
-		return logQuery(sqlLogger, query, () => {
+		return logQuery(query, () => {
 			return connection.prepare(query).run(...parameters);
 		});
 	};
 
 	const getQuery = <TRow>(query: string, ...parameters: SpotSqlParameter[]): TRow | undefined => {
-		return logQuery(sqlLogger, query, () => {
+		return logQuery(query, () => {
 			return connection.prepare(query).get(...parameters) as unknown as TRow | undefined;
 		});
 	};
 
 	const getAllQueryRows = <TRow>(query: string, ...parameters: SpotSqlParameter[]): TRow[] => {
-		return logQuery(sqlLogger, query, () => {
+		return logQuery(query, () => {
 			return connection.prepare(query).all(...parameters) as unknown as TRow[];
 		});
 	};
@@ -228,7 +231,7 @@ const migrateSpotDatabase = (spotDatabase: SpotDatabase, now: () => Date): void 
 
 export const openSpotDatabase = ({ storageDirectory, now = () => {
 	return new Date();
-}, sqlLogger }: OpenSpotDatabaseOptions): SpotDatabase => {
+} }: OpenSpotDatabaseOptions): SpotDatabase => {
 	mkdirSync(storageDirectory, { recursive: true });
 
 	const databasePath = path.join(storageDirectory, DATABASE_FILE_NAME);
@@ -238,7 +241,7 @@ export const openSpotDatabase = ({ storageDirectory, now = () => {
 		allowExtension: false,
 		timeout: 5000
 	});
-	const spotDatabase = createSpotDatabaseWrapper(connection, databasePath, sqlLogger);
+	const spotDatabase = createSpotDatabaseWrapper(connection, databasePath);
 
 	try {
 		migrateSpotDatabase(spotDatabase, now);

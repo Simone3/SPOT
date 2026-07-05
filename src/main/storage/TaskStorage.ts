@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { spotLogger } from 'src/main/logging/SpotLogger';
 import { executeTaskCommandOnDatabase } from 'src/main/storage/TaskCommandExecutor';
-import { DATABASE_FILE_NAME, openSpotDatabase, type SpotDatabase, type SqlQueryLogger } from 'src/main/storage/SpotDatabase';
+import { DATABASE_FILE_NAME, openSpotDatabase, type SpotDatabase } from 'src/main/storage/SpotDatabase';
 import { readTasksFromDatabase } from 'src/main/storage/TaskRepository';
 import { isInvalidTaskChangeError } from 'src/main/storage/TaskRowMapping';
 import type { LoadTasksResult, StorageDatabaseStatus, StorageFailure, StorageStatus, TaskStorageCommand, TaskStorageCommandName, TaskStorageCommandResult } from 'src/types/TaskStorageTypes';
@@ -129,31 +129,17 @@ const writeReactCommandLogEntry = (command: TaskStorageCommand): void => {
 	});
 };
 
-const createSqlLogger = (): SqlQueryLogger => {
-	return (record) => {
-		spotLogger[record.result === 'failure' ? 'error' : 'info']('Storage SQL query completed', {
-			type: 'sql.query',
-			query: record.query,
-			elapsedMillis: record.durationMs,
-			result: record.result,
-			error: record.error
-		});
-	};
-};
-
 const createConfiguredTaskStorageDatabase = (
 	storageDirectory: string,
 	now: (() => Date) | undefined
 ): ConfiguredTaskStorageDatabase => {
 	let spotDatabase: SpotDatabase | undefined;
-	const sqlLogger = createSqlLogger();
 
 	const getDatabase = (): SpotDatabase => {
 		if(!spotDatabase) {
 			spotDatabase = openSpotDatabase({
 				storageDirectory,
-				now,
-				sqlLogger
+				now
 			});
 		}
 
