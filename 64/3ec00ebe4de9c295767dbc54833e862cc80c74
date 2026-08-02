@@ -1,0 +1,90 @@
+src/components/settings/SettingsPage.tsx
+  s_0506490eda225e::t_a6da6bfc91e2c1 4,10
+src/components/storage/DatabaseLocationGate.css
+  s_0506490eda225e::t_52cc24703bead9 1-18
+src/components/storage/DatabaseLocationGate.tsx
+  s_0506490eda225e::t_d97e0910ef2d76 1-38
+src/components/storage/DatabaseLocationSettings.css
+  s_0506490eda225e::t_996349f3382833 1-56
+src/components/storage/DatabaseLocationSettings.tsx
+  s_0506490eda225e::t_d274bccad3d86b 1-179
+src/components/storage/DatabaseLocationSetup.css
+  s_0506490eda225e::t_b3eae8b6080f1b 1-68
+src/components/storage/DatabaseLocationSetup.tsx
+  s_0506490eda225e::t_eaace3a9598f20 1-101
+src/components/tasks/TasksPage.tsx
+  s_0506490eda225e::t_90e44416c3d59c 2,5,205,278,282-284,350
+src/config/AppConfig.ts
+  s_0506490eda225e::t_067c746d151a28 21-25,27
+src/contexts/DatabaseLocationContext.tsx
+  s_0506490eda225e::t_9af9fde69ef381 1-151
+src/index.tsx
+  s_0506490eda225e::t_ac050ed7004e53 13-14,21-35
+src/main/Main.ts
+  s_0506490eda225e::t_355132ca9ee37d 2,4-7,9,12-13,29-35,39-41,43,46-47,51-52,54-69,72-73
+src/main/config/DatabaseLocationManager.ts
+  s_0506490eda225e::t_64d82a3a10d932 1-214
+src/main/config/SpotConfigStore.ts
+  s_0506490eda225e::t_735be879efda54 1-57
+src/main/config/SpotRuntimePaths.ts
+  s_0506490eda225e::t_20d2581ba6d6c2 1-26
+src/main/ipc/DatabaseLocationIpc.ts
+  s_0506490eda225e::t_233f797fe149f0 1-86
+src/main/ipc/TaskStorageIpc.ts
+  s_0506490eda225e::t_9821d1ee519ab9 3,12,20-23,26,57,60,65,103-129,136-140,142-144,150-153,160,166-169
+src/main/logging/SpotLogger.ts
+  s_0506490eda225e::t_cd2d38d996fbb5 74,151-152,232-233,243,245,254,264,271,275
+src/main/preload/Preload.ts
+  s_0506490eda225e::t_78cef25e99e72d 2-3,7-21,50
+src/main/storage/DatabaseDirectory.ts
+  s_0506490eda225e::t_26b6dd0f50a004 1-68
+src/main/storage/TaskStorage.ts
+  s_0506490eda225e::t_711ef428a6a0c1 42-43,226-227,230,234,238,242,246,250,254,263,267-275,287-290
+src/react-app-env.d.ts
+  s_0506490eda225e::t_94953e6cf0daae 3,9
+src/types/DatabaseLocationIpcChannels.ts
+  s_0506490eda225e::t_731bdb92f3a048 1-6
+src/types/DatabaseLocationTypes.ts
+  s_0506490eda225e::t_fee677a631fbae 1-35
+tests/components/DatabaseLocation.test.tsx
+  s_0506490eda225e::t_33eb2e6f301df4 1-125
+tests/main/DatabaseLocationIpc.test.ts
+  s_0506490eda225e::t_79ae1b5f008569 1-161
+tests/main/DatabaseLocationManager.test.ts
+  s_0506490eda225e::t_54975480ec50f9 1-236
+tests/main/SpotDatabase.test.ts
+  s_0506490eda225e::t_cc7e1d4830d272 144
+tests/main/SpotLogger.test.ts
+  s_0506490eda225e::t_33d15e0e0d1699 7,38-39,113-114,118,130,141-142,145,167,201,203,206,220,231,233-234,237,259-260,262,275,287-289,299,312,324-326,336,350,361-362,368,391-392,398
+tests/main/SpotRuntimePaths.test.ts
+  s_0506490eda225e::t_2c546f36673008 1-40
+tests/main/TaskStorage.test.ts
+  s_0506490eda225e::t_e1552f541073b4 129,141
+tests/main/TaskStorageIpc.test.ts
+  s_0506490eda225e::t_e6674058a5bedb 4,46-47,57,243-291
+CLAUDE.md
+  s_0506490eda225e::t_96e91f9e219d41 9,47
+DOCUMENTATION.md
+  s_0506490eda225e::t_60dcc82beacbfb 10-11,14,64,66-68,70-73,79-80,84-86,103-105,115-116,129-130,142,144,152,158,160,162-170,175-199,203,246,252,390-400,546-550,587
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "643ec00ebe4de9c295767dbc54833e862cc80c74",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_0506490eda225e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "506d3464-11aa-4e01-9268-f5f4533f1727",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
