@@ -40,6 +40,7 @@ npm test -- tests/logic/SomeFile.spec.ts
 - Use absolute imports rooted at `src/...` for in-repository React sources and assets, including CSS. Never relative `./` or `../`.
 - Define TypeScript types in the owning `.ts`/`.tsx` file whenever practical. Shared cross-owner types live under `src/types` in semantic files such as `TaskTypes.ts`, `DomainTypes.ts`, `FilterTypes.ts`.
 - Prefer existing project patterns over new abstractions, but do centralize behavior into shared components/utilities when convenient.
+- Tunable constants (sizes, delays, retry policies, file and directory names) belong in `src/config/AppConfig.ts`, not inline in modules. Message strings stay in the module that owns them.
 - Match the existing code style exactly, including spacing and newline conventions. Read a neighboring file before writing a new one.
 - Preserve the storage command names: `task.create`, `task.update`, `task.delete`, `tasks.updateMany`.
 - Database failures are user-facing: surface task-save feedback on write failure and reconcile state. Operational-log failures are best-effort and ignored by React when SQLite succeeds.

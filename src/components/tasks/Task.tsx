@@ -1,6 +1,7 @@
 import 'src/components/tasks/Task.css';
 import { useState, useRef, useEffect, useCallback, type CSSProperties, type ReactElement } from 'react';
 import { useSortable } from '@dnd-kit/react/sortable';
+import { TASKS_CONFIG } from 'src/config/AppConfig';
 import { TextArea } from 'src/components/inputs/TextArea';
 import type { FormDomains } from 'src/types/DomainTypes';
 import type { Task as TaskType, TaskChange } from 'src/types/TaskTypes';
@@ -24,9 +25,6 @@ type TaskValueUpdater<TKey extends keyof TaskType> = (prevValue: TaskType[TKey])
 type TaskContainerStyle = CSSProperties & {
 	'--task-state-change-delay': string;
 };
-
-const FLUSH_DELAY_MS = 5000;
-const STATE_CHANGE_DELAY_MS = 3000;
 
 const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFromProps, onDelete, showDragHandle }: TaskProps): ReactElement => {
 	// Internal copy of the task, for delayed changes propagation to the parent component (main state)
@@ -81,7 +79,7 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFrom
 	}, [ clearFlushTimer ]);
 
 	// Helper to (re)start the flush timer
-	const restartFlushTimer = useCallback((flushDelayMs = FLUSH_DELAY_MS): void => {
+	const restartFlushTimer = useCallback((flushDelayMs: number = TASKS_CONFIG.flushDelayMs): void => {
 		clearFlushTimer();
 		flushTimerRef.current = setTimeout(flushTaskChanges, flushDelayMs);
 	}, [ clearFlushTimer, flushTaskChanges ]);
@@ -107,7 +105,7 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFrom
 			flushTaskChanges();
 		}
 		else if(Object.keys(changedValuesRef.current).length !== 0) {
-			restartFlushTimer(isNewStatePending ? STATE_CHANGE_DELAY_MS : FLUSH_DELAY_MS);
+			restartFlushTimer(isNewStatePending ? TASKS_CONFIG.stateChangeDelayMs : TASKS_CONFIG.flushDelayMs);
 		}
 		else {
 			clearFlushTimer();
@@ -143,7 +141,7 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFrom
 	const dragHandle = showDragHandle ? <TaskDragHandle ref={handleRef} disabled={isStateChangePending}/> : undefined;
 	const containerStyle: TaskContainerStyle = {
 		borderLeftColor: `var(--colors-priority-${internalTask.priority.toLowerCase()})`,
-		'--task-state-change-delay': `${STATE_CHANGE_DELAY_MS}ms`
+		'--task-state-change-delay': `${TASKS_CONFIG.stateChangeDelayMs}ms`
 	};
 
 	return (

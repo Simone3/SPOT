@@ -1,6 +1,7 @@
 import path from 'node:path';
+import { WINDOW_CONFIG } from 'src/config/AppConfig';
 
-export const REACT_BUILD_INDEX_RELATIVE_PATH = path.join('build', 'index.html');
+export const REACT_BUILD_INDEX_RELATIVE_PATH = path.join(...WINDOW_CONFIG.reactBuildIndexPathSegments);
 
 export type WindowLoadTarget = {
 	type: 'file';

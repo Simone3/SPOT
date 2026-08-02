@@ -59,6 +59,7 @@ npm run make
 - `public/index.html` is the React renderer HTML template.
 - `src/index.tsx` mounts the React app and defines routes.
 - `src/index.css` defines global layout and theme variables.
+- `src/config/AppConfig.ts` holds the app-wide configuration constants shared by the Electron main process and the React renderer.
 - `src/main/Main.ts` initializes the process-wide logger, creates the Electron `BrowserWindow`, loads the built React renderer, and registers IPC handlers.
 - `src/main/preload/Preload.ts` exposes the narrow renderer APIs through Electron's context bridge.
 - `src/main/logging/SpotLogger.ts` configures `electron-log` behind a generic factory-created logger and exports the process-wide `spotLogger` utility with `info`, `warn`, `error`, `debug`, and `flush` methods, newline-delimited JSON output, size-based rolling, and one retained archive.
@@ -83,6 +84,19 @@ npm run make
 ## Source Imports
 
 React source files use absolute imports rooted at `src/...`, including local CSS imports, instead of relative `./` or `../` paths. `tsconfig.json` sets `baseUrl` to the repository root so TypeScript, React Scripts, Jest, and ESLint can resolve those imports consistently.
+
+## Configuration
+
+`src/config/AppConfig.ts` is the single place for app-wide configuration constants: sizes, delays, retry policies, and file or directory names that would otherwise be magic numbers spread across modules. Both the Electron main process and the React renderer import from it, so the file must stay free of Node and Electron imports.
+
+The exported groups are:
+
+- `WINDOW_CONFIG`: `BrowserWindow` size, the preload script file name, and the built React index path segments.
+- `STORAGE_CONFIG`: the storage directory name, the SQLite database file name, the current schema version, and the SQLite connection timeout.
+- `LOGGING_CONFIG`: the operational log file name, maximum file size, retained archive count, maximum write attempts, and retry delay.
+- `TASKS_CONFIG`: the task flush delay, the task state change delay, and the manual sort position step.
+
+Each group is declared `as const`, so consumers that pass a value to a widened parameter may need an explicit type annotation. User-facing and error message strings are not configuration and stay in the module that owns them.
 
 ## Application Shell
 

@@ -1,8 +1,9 @@
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { initializeSpotLogger, resetSpotLoggerForTests, SPOT_LOG_FILE_NAME, spotLogger, type CreateSpotLoggerBackend, type CreateSpotLoggerOptions } from 'src/main/logging/SpotLogger';
-import { DATABASE_FILE_NAME, openSpotDatabase } from 'src/main/storage/SpotDatabase';
+import { LOGGING_CONFIG, STORAGE_CONFIG } from 'src/config/AppConfig';
+import { initializeSpotLogger, resetSpotLoggerForTests, spotLogger, type CreateSpotLoggerBackend, type CreateSpotLoggerOptions } from 'src/main/logging/SpotLogger';
+import { openSpotDatabase } from 'src/main/storage/SpotDatabase';
 import { TASK_INSERT_COLUMN_NAMES, TASK_SELECT_COLUMN_NAMES, createImmutableTaskFieldChangeMessage, taskRowToColumnValues, taskToTaskRow, type TaskRow } from 'src/main/storage/TaskRowMapping';
 import { createTaskStorage, STORAGE_NOT_IMPLEMENTED_MESSAGE, type CreateTaskStorageOptions, type OperationalLogEntry, type TaskStorage, type TaskStorageCommand } from 'src/main/storage/TaskStorage';
 import type { PersistedTask } from 'src/types/TaskTypes';
@@ -71,7 +72,7 @@ ${formatColumnList(TASK_SELECT_COLUMN_NAMES)}
 };
 
 const readOperationalLogEntries = (storageDirectory: string): OperationalLogEntry[] => {
-	const content = readFileSync(path.join(storageDirectory, SPOT_LOG_FILE_NAME), 'utf8').trim();
+	const content = readFileSync(path.join(storageDirectory, LOGGING_CONFIG.fileName), 'utf8').trim();
 
 	if(!content) {
 		return [];
@@ -227,10 +228,10 @@ describe('TaskStorage', () => {
 					state: 'healthy'
 				},
 				storageDirectory,
-				databasePath: path.join(storageDirectory, DATABASE_FILE_NAME)
+				databasePath: path.join(storageDirectory, STORAGE_CONFIG.databaseFileName)
 			}
 		});
-		expect(existsSync(path.join(storageDirectory, DATABASE_FILE_NAME))).toBe(true);
+		expect(existsSync(path.join(storageDirectory, STORAGE_CONFIG.databaseFileName))).toBe(true);
 	});
 
 	test('reports configured storage status', async() => {
@@ -245,9 +246,9 @@ describe('TaskStorage', () => {
 				state: 'healthy'
 			},
 			storageDirectory,
-			databasePath: path.join(storageDirectory, DATABASE_FILE_NAME)
+			databasePath: path.join(storageDirectory, STORAGE_CONFIG.databaseFileName)
 		});
-		expect(existsSync(path.join(storageDirectory, DATABASE_FILE_NAME))).toBe(true);
+		expect(existsSync(path.join(storageDirectory, STORAGE_CONFIG.databaseFileName))).toBe(true);
 	});
 
 	test('reuses one SQLite connection until shutdown preparation closes it', async() => {
@@ -318,7 +319,7 @@ describe('TaskStorage', () => {
 					state: 'healthy'
 				},
 				storageDirectory,
-				databasePath: path.join(storageDirectory, DATABASE_FILE_NAME)
+				databasePath: path.join(storageDirectory, STORAGE_CONFIG.databaseFileName)
 			}
 		});
 	});
@@ -440,7 +441,7 @@ describe('TaskStorage', () => {
 					state: 'healthy'
 				},
 				storageDirectory,
-				databasePath: path.join(storageDirectory, DATABASE_FILE_NAME)
+				databasePath: path.join(storageDirectory, STORAGE_CONFIG.databaseFileName)
 			}
 		});
 

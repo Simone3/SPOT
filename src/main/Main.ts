@@ -1,19 +1,18 @@
 import path from 'node:path';
 import { app, BrowserWindow, ipcMain } from 'electron';
+import { WINDOW_CONFIG } from 'src/config/AppConfig';
 import { registerTaskStorageIpcHandlers, resolveSpotStorageDirectory } from 'src/main/ipc/TaskStorageIpc';
 import { initializeSpotLogger } from 'src/main/logging/SpotLogger';
 import { resolveWindowLoadTarget } from 'src/main/window/WindowLoadTarget';
 
-const PRELOAD_SCRIPT_FILE_NAME = 'preload.js';
-
 const createWindow = (): void => {
 	const win = new BrowserWindow({
-		width: 800,
-		height: 600,
+		width: WINDOW_CONFIG.widthPixels,
+		height: WINDOW_CONFIG.heightPixels,
 		webPreferences: {
 			contextIsolation: true,
 			nodeIntegration: false,
-			preload: path.join(__dirname, PRELOAD_SCRIPT_FILE_NAME)
+			preload: path.join(__dirname, WINDOW_CONFIG.preloadScriptFileName)
 		}
 	});
 

@@ -1,7 +1,8 @@
 import path from 'node:path';
+import { STORAGE_CONFIG } from 'src/config/AppConfig';
 import { spotLogger } from 'src/main/logging/SpotLogger';
 import { executeTaskCommandOnDatabase } from 'src/main/storage/TaskCommandExecutor';
-import { DATABASE_FILE_NAME, openSpotDatabase, type SpotDatabase } from 'src/main/storage/SpotDatabase';
+import { openSpotDatabase, type SpotDatabase } from 'src/main/storage/SpotDatabase';
 import { readTasksFromDatabase } from 'src/main/storage/TaskRepository';
 import { isInvalidTaskChangeError } from 'src/main/storage/TaskRowMapping';
 import type { LoadTasksResult, StorageDatabaseStatus, StorageFailure, StorageStatus, TaskStorageCommand, TaskStorageCommandName, TaskStorageCommandResult } from 'src/types/TaskStorageTypes';
@@ -67,7 +68,7 @@ const createConfiguredStorageStatus = (
 	return {
 		database,
 		storageDirectory,
-		databasePath: path.join(storageDirectory, DATABASE_FILE_NAME)
+		databasePath: path.join(storageDirectory, STORAGE_CONFIG.databaseFileName)
 	};
 };
 

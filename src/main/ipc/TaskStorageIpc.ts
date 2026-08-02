@@ -1,11 +1,11 @@
 import path from 'node:path';
 import type { App, IpcMain } from 'electron';
+import { STORAGE_CONFIG } from 'src/config/AppConfig';
 import { spotLogger } from 'src/main/logging/SpotLogger';
 import { createTaskStorage, type CreateTaskStorageOptions, type TaskStorage } from 'src/main/storage/TaskStorage';
 import { SPOT_STORAGE_IPC_CHANNELS } from 'src/types/TaskStorageIpcChannels';
 import type { StorageStatus, TaskStorageCommand, TaskStorageCommandResult } from 'src/types/TaskStorageTypes';
 
-export const SPOT_STORAGE_DIRECTORY_NAME = 'storage';
 export const TASK_STORAGE_SHUTDOWN_MESSAGE = 'Task storage is shutting down.';
 export { SPOT_STORAGE_IPC_CHANNELS } from 'src/types/TaskStorageIpcChannels';
 
@@ -29,7 +29,7 @@ export interface RegisterTaskStorageIpcHandlersOptions {
 }
 
 export const resolveSpotStorageDirectory = (app: Pick<App, 'getPath'>): string => {
-	return path.join(app.getPath('userData'), SPOT_STORAGE_DIRECTORY_NAME);
+	return path.join(app.getPath('userData'), STORAGE_CONFIG.directoryName);
 };
 
 const createShutdownStorageStatus = (): StorageStatus => {

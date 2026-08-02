@@ -2,11 +2,8 @@ import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
 import type { DatabaseSync, SQLInputValue } from 'node:sqlite';
+import { STORAGE_CONFIG } from 'src/config/AppConfig';
 import { spotLogger } from 'src/main/logging/SpotLogger';
-
-export const DATABASE_FILE_NAME = 'spot.sqlite';
-
-export const CURRENT_SCHEMA_VERSION = 1;
 
 interface OpenSpotDatabaseOptions {
 	storageDirectory: string;
@@ -209,7 +206,7 @@ const applyVersionOneMigration = (spotDatabase: SpotDatabase, appliedAt: Date): 
 		`;
 
 		spotDatabase.execQuery(createTasksQuery);
-		spotDatabase.runQuery(insertMigrationQuery, CURRENT_SCHEMA_VERSION, appliedAt.toISOString());
+		spotDatabase.runQuery(insertMigrationQuery, STORAGE_CONFIG.currentSchemaVersion, appliedAt.toISOString());
 	});
 };
 
@@ -218,13 +215,13 @@ const migrateSpotDatabase = (spotDatabase: SpotDatabase, now: () => Date): void 
 
 	const appliedVersions = spotDatabase.getAppliedMigrationVersions();
 	const futureVersion = appliedVersions.find((version) => {
-		return version > CURRENT_SCHEMA_VERSION;
+		return version > STORAGE_CONFIG.currentSchemaVersion;
 	});
 	if(futureVersion !== undefined) {
 		throw new Error(`Unsupported SPOT database schema version ${futureVersion}.`);
 	}
 
-	if(!appliedVersions.includes(CURRENT_SCHEMA_VERSION)) {
+	if(!appliedVersions.includes(STORAGE_CONFIG.currentSchemaVersion)) {
 		applyVersionOneMigration(spotDatabase, now());
 	}
 };
@@ -234,12 +231,12 @@ export const openSpotDatabase = ({ storageDirectory, now = () => {
 } }: OpenSpotDatabaseOptions): SpotDatabase => {
 	mkdirSync(storageDirectory, { recursive: true });
 
-	const databasePath = path.join(storageDirectory, DATABASE_FILE_NAME);
+	const databasePath = path.join(storageDirectory, STORAGE_CONFIG.databaseFileName);
 	const { DatabaseSync: DatabaseSyncConstructor } = getSQLiteModule();
 	const connection = new DatabaseSyncConstructor(databasePath, {
 		enableForeignKeyConstraints: true,
 		allowExtension: false,
-		timeout: 5000
+		timeout: STORAGE_CONFIG.databaseTimeoutMs
 	});
 	const spotDatabase = createSpotDatabaseWrapper(connection, databasePath);
 

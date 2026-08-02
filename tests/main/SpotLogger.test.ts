@@ -1,7 +1,8 @@
 import { appendFileSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { EOL, tmpdir } from 'node:os';
 import path from 'node:path';
-import { createSpotLogger, initializeSpotLogger, resetSpotLoggerForTests, SPOT_LOG_FILE_NAME, SPOT_LOG_RETAINED_ARCHIVE_COUNT, SPOT_LOG_WRITE_FAILED_MESSAGE, SPOT_LOGGER_NOT_INITIALIZED_MESSAGE, spotLogger as processSpotLogger, type CreateSpotLoggerBackend, type SpotLogEntry } from 'src/main/logging/SpotLogger';
+import { LOGGING_CONFIG } from 'src/config/AppConfig';
+import { createSpotLogger, initializeSpotLogger, resetSpotLoggerForTests, SPOT_LOG_WRITE_FAILED_MESSAGE, SPOT_LOGGER_NOT_INITIALIZED_MESSAGE, spotLogger as processSpotLogger, type CreateSpotLoggerBackend, type SpotLogEntry } from 'src/main/logging/SpotLogger';
 
 const makeTempStorageDirectory = (): string => {
 	return mkdtempSync(path.join(tmpdir(), 'spot-logger-'));
@@ -35,7 +36,7 @@ const waitForExpectation = async(expectation: () => void): Promise<void> => {
 };
 
 const readSpotLogEntries = (storageDirectory: string): SpotLogEntry[] => {
-	const content = readFileSync(path.join(storageDirectory, SPOT_LOG_FILE_NAME), 'utf8').trim();
+	const content = readFileSync(path.join(storageDirectory, LOGGING_CONFIG.fileName), 'utf8').trim();
 
 	if(!content) {
 		return [];
@@ -276,16 +277,16 @@ describe('SpotLogger', () => {
 		});
 
 		expect(configuration.maximumFileSizeBytes).toBe(180);
-		expect(configuration.retainedArchiveCount).toBe(SPOT_LOG_RETAINED_ARCHIVE_COUNT);
-		expect(logFiles).toContain(SPOT_LOG_FILE_NAME);
+		expect(configuration.retainedArchiveCount).toBe(LOGGING_CONFIG.retainedArchiveCount);
+		expect(logFiles).toContain(LOGGING_CONFIG.fileName);
 		expect(logFiles).toContain('spot-logs.old.ndjson');
-		expect(logFiles.length).toBeLessThanOrEqual(SPOT_LOG_RETAINED_ARCHIVE_COUNT + 1);
+		expect(logFiles.length).toBeLessThanOrEqual(LOGGING_CONFIG.retainedArchiveCount + 1);
 	});
 
 	test('retries a failed write until a later attempt reaches the file', async() => {
 		const storageDirectory = makeTempStorageDirectory();
 		tempStorageDirectories.push(storageDirectory);
-		const spotLogPath = path.join(storageDirectory, SPOT_LOG_FILE_NAME);
+		const spotLogPath = path.join(storageDirectory, LOGGING_CONFIG.fileName);
 		let attempts = 0;
 		const backendFactory = createFakeBackendFactory((message) => {
 			attempts += 1;
@@ -322,7 +323,7 @@ describe('SpotLogger', () => {
 	test('flushes pending retry writes before resolving', async() => {
 		const storageDirectory = makeTempStorageDirectory();
 		tempStorageDirectories.push(storageDirectory);
-		const spotLogPath = path.join(storageDirectory, SPOT_LOG_FILE_NAME);
+		const spotLogPath = path.join(storageDirectory, LOGGING_CONFIG.fileName);
 		let attempts = 0;
 		const backendFactory = createFakeBackendFactory((message) => {
 			attempts += 1;

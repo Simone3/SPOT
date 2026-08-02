@@ -1,8 +1,9 @@
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { initializeSpotLogger, resetSpotLoggerForTests, SPOT_LOG_FILE_NAME, spotLogger as processSpotLogger, type SpotLogEntry } from 'src/main/logging/SpotLogger';
-import { CURRENT_SCHEMA_VERSION, DATABASE_FILE_NAME, openSpotDatabase } from 'src/main/storage/SpotDatabase';
+import { LOGGING_CONFIG, STORAGE_CONFIG } from 'src/config/AppConfig';
+import { initializeSpotLogger, resetSpotLoggerForTests, spotLogger as processSpotLogger, type SpotLogEntry } from 'src/main/logging/SpotLogger';
+import { openSpotDatabase } from 'src/main/storage/SpotDatabase';
 
 interface TableColumnRow {
 	name: string;
@@ -21,7 +22,7 @@ const makeTempStorageDirectory = (): string => {
 };
 
 const readSpotLogEntries = (storageDirectory: string): SpotLogEntry[] => {
-	const content = readFileSync(path.join(storageDirectory, SPOT_LOG_FILE_NAME), 'utf8').trim();
+	const content = readFileSync(path.join(storageDirectory, LOGGING_CONFIG.fileName), 'utf8').trim();
 
 	if(!content) {
 		return [];
@@ -58,9 +59,9 @@ describe('SpotDatabase', () => {
 		});
 
 		try {
-			expect(spotDatabase.databasePath).toBe(path.join(storageDirectory, DATABASE_FILE_NAME));
+			expect(spotDatabase.databasePath).toBe(path.join(storageDirectory, STORAGE_CONFIG.databaseFileName));
 			expect(existsSync(spotDatabase.databasePath)).toBe(true);
-			expect(spotDatabase.getAppliedMigrationVersions()).toEqual([ CURRENT_SCHEMA_VERSION ]);
+			expect(spotDatabase.getAppliedMigrationVersions()).toEqual([ STORAGE_CONFIG.currentSchemaVersion ]);
 
 			const taskColumns = spotDatabase.getAllQueryRows<TableColumnRow>('PRAGMA table_info(tasks)');
 			expect(taskColumns.map((column) => {
@@ -89,7 +90,7 @@ describe('SpotDatabase', () => {
 				FROM schema_migrations
 			`);
 			expect(migration).toEqual({
-				version: CURRENT_SCHEMA_VERSION,
+				version: STORAGE_CONFIG.currentSchemaVersion,
 				applied_at: appliedAt.toISOString()
 			});
 		}
@@ -125,7 +126,7 @@ describe('SpotDatabase', () => {
 			`);
 			expect(migrations).toEqual([
 				{
-					version: CURRENT_SCHEMA_VERSION,
+					version: STORAGE_CONFIG.currentSchemaVersion,
 					applied_at: firstAppliedAt.toISOString()
 				}
 			]);

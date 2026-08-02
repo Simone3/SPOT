@@ -2,16 +2,7 @@ import { closeSync, existsSync, mkdirSync, openSync, readFileSync } from 'node:f
 import os from 'node:os';
 import path from 'node:path';
 import electronLog from 'electron-log';
-
-export const SPOT_LOG_FILE_NAME = 'spot-logs.ndjson';
-
-export const SPOT_LOG_MAX_FILE_SIZE_BYTES = 1024 * 1024;
-
-export const SPOT_LOG_RETAINED_ARCHIVE_COUNT = 1;
-
-export const SPOT_LOG_MAX_WRITE_ATTEMPTS = 3;
-
-export const SPOT_LOG_RETRY_DELAY_MS = 25;
+import { LOGGING_CONFIG } from 'src/config/AppConfig';
 
 export const SPOT_LOG_WRITE_FAILED_MESSAGE = 'SPOT logging is unavailable.';
 
@@ -261,19 +252,19 @@ const getStartupFailureMessage = (storageDirectory: string, filePath: string): s
 
 export const createSpotLogger = ({
 	storageDirectory,
-	maximumFileSizeBytes = SPOT_LOG_MAX_FILE_SIZE_BYTES,
-	maximumWriteAttempts = SPOT_LOG_MAX_WRITE_ATTEMPTS,
-	retryDelayMs = SPOT_LOG_RETRY_DELAY_MS,
+	maximumFileSizeBytes = LOGGING_CONFIG.maximumFileSizeBytes,
+	maximumWriteAttempts = LOGGING_CONFIG.maximumWriteAttempts,
+	retryDelayMs = LOGGING_CONFIG.retryDelayMs,
 	backendFactory = createElectronLoggerBackend,
 	now = () => {
 		return new Date();
 	}
 }: CreateSpotLoggerOptions): SpotLogger => {
 	const configuration: SpotLoggerConfiguration = {
-		filePath: path.join(storageDirectory, SPOT_LOG_FILE_NAME),
-		fileName: SPOT_LOG_FILE_NAME,
+		filePath: path.join(storageDirectory, LOGGING_CONFIG.fileName),
+		fileName: LOGGING_CONFIG.fileName,
 		maximumFileSizeBytes,
-		retainedArchiveCount: SPOT_LOG_RETAINED_ARCHIVE_COUNT,
+		retainedArchiveCount: LOGGING_CONFIG.retainedArchiveCount,
 		maximumWriteAttempts,
 		retryDelayMs
 	};

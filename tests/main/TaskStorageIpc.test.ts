@@ -1,8 +1,9 @@
 import path from 'node:path';
 import type { App, IpcMain, IpcMainInvokeEvent } from 'electron';
 import { makeTask } from '../testUtils';
+import { STORAGE_CONFIG } from 'src/config/AppConfig';
 import { resetSpotLoggerForTests, spotLogger } from 'src/main/logging/SpotLogger';
-import { registerTaskStorageIpcHandlers, resolveSpotStorageDirectory, SPOT_STORAGE_DIRECTORY_NAME, SPOT_STORAGE_IPC_CHANNELS, TASK_STORAGE_SHUTDOWN_MESSAGE } from 'src/main/ipc/TaskStorageIpc';
+import { registerTaskStorageIpcHandlers, resolveSpotStorageDirectory, SPOT_STORAGE_IPC_CHANNELS, TASK_STORAGE_SHUTDOWN_MESSAGE } from 'src/main/ipc/TaskStorageIpc';
 import type { TaskStorage } from 'src/main/storage/TaskStorage';
 import type { LoadTasksResult, StorageStatus, TaskStorageCommand, TaskStorageCommandResult } from 'src/types/TaskStorageTypes';
 
@@ -131,7 +132,7 @@ describe('TaskStorageIpc', () => {
 			})
 		} as unknown as Pick<App, 'getPath'>;
 
-		expect(resolveSpotStorageDirectory(app)).toBe(path.join(userDataPath, SPOT_STORAGE_DIRECTORY_NAME));
+		expect(resolveSpotStorageDirectory(app)).toBe(path.join(userDataPath, STORAGE_CONFIG.directoryName));
 		expect(app.getPath).toHaveBeenCalledWith('userData');
 	});
 
@@ -184,7 +185,7 @@ describe('TaskStorageIpc', () => {
 		});
 
 		expect(createStorage).toHaveBeenCalledWith({
-			storageDirectory: path.join(userDataPath, SPOT_STORAGE_DIRECTORY_NAME)
+			storageDirectory: path.join(userDataPath, STORAGE_CONFIG.directoryName)
 		});
 	});
 

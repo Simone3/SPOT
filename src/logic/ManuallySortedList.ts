@@ -1,4 +1,4 @@
-const SORT_POSITION_STEP = 1000;
+import { TASKS_CONFIG } from 'src/config/AppConfig';
 
 export interface ManuallySortedItem {
 	sortPosition: number;
@@ -47,7 +47,7 @@ const fixSortPositionsInUnsortedSection = <TElement extends ManuallySortedItem>(
 
 	// We reached the end of the list without closing the "unsorted section": reload all trailing elements with the default step
 	for(let j = unsortedStartIndex; j < list.length; j++) {
-		setSortPosition(list, j, list[j - 1].sortPosition + SORT_POSITION_STEP, cloneElement);
+		setSortPosition(list, j, list[j - 1].sortPosition + TASKS_CONFIG.sortPositionStep, cloneElement);
 	}
 	return i;
 };
@@ -77,14 +77,14 @@ export const insertIntoManuallySortedList = <TElement extends ManuallySortedItem
 	// Add at the start of the list: position is the current first element minus the step
 	if(index <= 0) {
 		list.unshift(element);
-		setSortPosition(list, 0, list[1].sortPosition - SORT_POSITION_STEP, cloneElement);
+		setSortPosition(list, 0, list[1].sortPosition - TASKS_CONFIG.sortPositionStep, cloneElement);
 		return list;
 	}
 
 	// Add at the end of the list: position is the current last element plus the step
 	if(index >= list.length) {
 		list.push(element);
-		setSortPosition(list, list.length - 1, list[list.length - 2].sortPosition + SORT_POSITION_STEP, cloneElement);
+		setSortPosition(list, list.length - 1, list[list.length - 2].sortPosition + TASKS_CONFIG.sortPositionStep, cloneElement);
 		return list;
 	}
 
