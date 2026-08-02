@@ -50,7 +50,8 @@ npm run make
 
 ## Repository Map
 
-- `AGENTS.md` contains contributor and automation instructions. Keep it aligned with this document.
+- `CLAUDE.md` contains contributor and coding-agent instructions. Keep it aligned with this document.
+- `.claude/` contains Claude Code configuration: shared tool permissions and repeatable slash commands.
 - `README.md` intentionally stays minimal.
 - `DOCUMENTATION.md` is this detailed project reference.
 - `eslint.config.js` contains the flat ESLint configuration used by `npm run lint`.
@@ -496,17 +497,12 @@ Future testing priorities:
 
 ## Development Rules
 
+`CLAUDE.md` is the single source of truth for contributor and agent rules: hard constraints, code conventions, testing expectations, and the commit workflow. It is intentionally short so it can be read in full before any change. Do not restate those rules here; update `CLAUDE.md` instead and keep this document aligned with it.
+
+The two rules that govern this document itself:
+
 - Keep `README.md` minimal.
-- Keep this document detailed and current.
-- Keep `AGENTS.md` and this document aligned.
-- Use plain React with TypeScript and CSS.
-- Do not add frameworks such as Vite or Next.js.
-- Do not add dependencies unless they clearly reduce work or risk.
-- Keep dependency versions exact in `package.json`.
-- Prefer existing component and logic patterns.
-- Define types in their owning file whenever practical. Shared cross-owner types live in semantic files under `src/types`.
-- Keep tests minimal but meaningful.
-- Run `npm run lint`, `npm run typecheck`, and `npm test` before closing a feature or fix.
+- Keep this document detailed and current, and aligned with `CLAUDE.md`.
 
 ## Near-Term Work
 
