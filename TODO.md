@@ -3,6 +3,10 @@
 
 are we opening and closing the database at each query? "That said, once this is wired into the running Electron app, I’d revisit it."
 
+logger configs to centralized configs - also timeouts etc.
+
+also user-chosen db path, persisted in settings - choose database path (default temp folder for dev) - startup only - folder for both db and logs
+
 move createSpotLogger() from TaskStorage to a more generic class that starts both - "global" logger like Spring
 and remove "logger?" and "logger!" stuff, it will always be there
 
@@ -20,6 +24,9 @@ test persistence
 	check logs
 	check database
 	does closing the program while typing save the latest value? considering both state update on blur and/or delayed disk save, if implemented
+
+extract ark modules for other apps like pfm
+
 
 
 
