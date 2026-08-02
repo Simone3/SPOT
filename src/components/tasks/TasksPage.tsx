@@ -1,7 +1,8 @@
 import 'src/components/tasks/TasksPage.css';
-import { useState, useEffect, useRef, type ReactElement } from 'react';
+import { useState, useEffect, useRef, useContext, type ReactElement } from 'react';
 import { Page } from 'src/components/common/Page';
 import { Pane } from 'src/components/common/Pane';
+import { DatabaseLocationContext } from 'src/contexts/DatabaseLocationContext';
 import { getInitialTaskState, addTaskToTaskState, refreshVisibleTasksInTaskState, deleteTaskFromTaskState, changeFiltersInTaskState, loadTasksIntoTaskState, resetFiltersTaskState, updateTaskInTaskState, sortTasksByImportanceInTaskState, moveActiveTaskInTaskState, type TaskStateContainer } from 'src/logic/TaskStateLogic';
 import type { PersistedTask, PersistedTaskChange, Task, TaskChange, TasksContainer } from 'src/types/TaskTypes';
 import type { TaskFilterChange } from 'src/types/FilterTypes';
@@ -201,6 +202,7 @@ const TasksPage = (): ReactElement => {
 	const [ taskStorageWarning, setTaskStorageWarning ] = useState<string | undefined>();
 	const [ taskStorageStatus, setTaskStorageStatus ] = useState<StorageStatus | undefined>();
 	const taskStateRef = useRef(taskState);
+	const databaseDirectory = useContext(DatabaseLocationContext)?.location?.directory;
 
 	const commitTaskState = (nextTaskState: TaskStateContainer): void => {
 		taskStateRef.current = nextTaskState;
@@ -273,8 +275,12 @@ const TasksPage = (): ReactElement => {
 		}
 	};
 
+	// Tasks are also reloaded from scratch when the user selects another task database folder
 	useEffect(() => {
 		let didCancelStartupLoad = false;
+
+		setTaskStartupState({ state: 'loading' });
+		setTaskStorageWarning(undefined);
 
 		const loadStartupTasks = async(): Promise<void> => {
 			const spotStorage = window.spotStorage as SpotStorageApi | undefined;
@@ -341,7 +347,7 @@ const TasksPage = (): ReactElement => {
 		return () => {
 			didCancelStartupLoad = true;
 		};
-	}, []);
+	}, [ databaseDirectory ]);
 
 	const onFilterChange = (changedFilters: TaskFilterChange): void => {
 		commitTaskState(changeFiltersInTaskState(taskStateRef.current, changedFilters));

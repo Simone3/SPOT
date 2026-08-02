@@ -71,7 +71,7 @@ export interface SpotLoggerUnavailableStatus {
 export type SpotLoggerStatus = SpotLoggerHealthyStatus | SpotLoggerUnavailableStatus;
 
 export interface CreateSpotLoggerOptions {
-	storageDirectory: string;
+	logDirectory: string;
 	maximumFileSizeBytes?: number;
 	maximumWriteAttempts?: number;
 	retryDelayMs?: number;
@@ -148,8 +148,8 @@ export const spotLogger: SpotLogger = {
 	}
 };
 
-const createSpotLogId = (storageDirectory: string): string => {
-	return `spot-logger-${storageDirectory.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
+const createSpotLogId = (logDirectory: string): string => {
+	return `spot-logger-${logDirectory.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
 };
 
 const sleep = (durationMs: number): Promise<void> => {
@@ -229,8 +229,8 @@ const assertCurrentLogEndsWithLine = (filePath: string, line: string): void => {
 	}
 };
 
-const assertLogFileWritable = (storageDirectory: string, filePath: string): void => {
-	mkdirSync(storageDirectory, { recursive: true });
+const assertLogFileWritable = (logDirectory: string, filePath: string): void => {
+	mkdirSync(logDirectory, { recursive: true });
 
 	const fileDescriptor = openSync(filePath, 'a');
 	closeSync(fileDescriptor);
@@ -240,9 +240,9 @@ const createStartupFailureMessage = (filePath: string, error: unknown): string =
 	return `${SPOT_LOG_WRITE_FAILED_MESSAGE} Could not open "${filePath}" for appending. ${getErrorMessage(error)}`;
 };
 
-const getStartupFailureMessage = (storageDirectory: string, filePath: string): string | undefined => {
+const getStartupFailureMessage = (logDirectory: string, filePath: string): string | undefined => {
 	try {
-		assertLogFileWritable(storageDirectory, filePath);
+		assertLogFileWritable(logDirectory, filePath);
 		return undefined;
 	}
 	catch(error) {
@@ -251,7 +251,7 @@ const getStartupFailureMessage = (storageDirectory: string, filePath: string): s
 };
 
 export const createSpotLogger = ({
-	storageDirectory,
+	logDirectory,
 	maximumFileSizeBytes = LOGGING_CONFIG.maximumFileSizeBytes,
 	maximumWriteAttempts = LOGGING_CONFIG.maximumWriteAttempts,
 	retryDelayMs = LOGGING_CONFIG.retryDelayMs,
@@ -261,18 +261,18 @@ export const createSpotLogger = ({
 	}
 }: CreateSpotLoggerOptions): SpotLogger => {
 	const configuration: SpotLoggerConfiguration = {
-		filePath: path.join(storageDirectory, LOGGING_CONFIG.fileName),
+		filePath: path.join(logDirectory, LOGGING_CONFIG.fileName),
 		fileName: LOGGING_CONFIG.fileName,
 		maximumFileSizeBytes,
 		retainedArchiveCount: LOGGING_CONFIG.retainedArchiveCount,
 		maximumWriteAttempts,
 		retryDelayMs
 	};
-	const backend = backendFactory(createSpotLogId(storageDirectory));
+	const backend = backendFactory(createSpotLogId(logDirectory));
 	const pendingWrites = new Set<Promise<void>>();
 
 	configureLoggerBackend(backend, configuration);
-	const startupFailureMessage = getStartupFailureMessage(storageDirectory, configuration.filePath);
+	const startupFailureMessage = getStartupFailureMessage(logDirectory, configuration.filePath);
 
 	const getStatus = (): SpotLoggerStatus => {
 		if(startupFailureMessage) {

@@ -1,9 +1,7 @@
-import path from 'node:path';
 import type { App, IpcMain, IpcMainInvokeEvent } from 'electron';
 import { makeTask } from '../testUtils';
-import { STORAGE_CONFIG } from 'src/config/AppConfig';
 import { resetSpotLoggerForTests, spotLogger } from 'src/main/logging/SpotLogger';
-import { registerTaskStorageIpcHandlers, resolveSpotStorageDirectory, SPOT_STORAGE_IPC_CHANNELS, TASK_STORAGE_SHUTDOWN_MESSAGE } from 'src/main/ipc/TaskStorageIpc';
+import { registerTaskStorageIpcHandlers, SPOT_STORAGE_IPC_CHANNELS, TASK_STORAGE_SHUTDOWN_MESSAGE } from 'src/main/ipc/TaskStorageIpc';
 import type { TaskStorage } from 'src/main/storage/TaskStorage';
 import type { LoadTasksResult, StorageStatus, TaskStorageCommand, TaskStorageCommandResult } from 'src/types/TaskStorageTypes';
 
@@ -45,21 +43,18 @@ const createMockIpcMain = (): {
 	};
 };
 
-const createMockApp = (userDataPath = path.join('/tmp', 'spot-user-data')): {
-	app: Pick<App, 'getPath' | 'on' | 'quit'>;
+const createMockApp = (): {
+	app: Pick<App, 'on' | 'quit'>;
 	handlers: Map<string, RegisteredAppHandler>;
 } => {
 	const handlers = new Map<string, RegisteredAppHandler>();
 	const app = {
-		getPath: jest.fn(() => {
-			return userDataPath;
-		}),
 		on: jest.fn((eventName: string, handler: RegisteredAppHandler) => {
 			handlers.set(eventName, handler);
 			return undefined;
 		}),
 		quit: jest.fn()
-	} as unknown as Pick<App, 'getPath' | 'on' | 'quit'>;
+	} as unknown as Pick<App, 'on' | 'quit'>;
 
 	return {
 		app,
@@ -124,18 +119,6 @@ describe('TaskStorageIpc', () => {
 		resetSpotLoggerForTests();
 	});
 
-	test('resolves the Electron storage directory from app userData', () => {
-		const userDataPath = path.join('/tmp', 'spot-user-data');
-		const app = {
-			getPath: jest.fn(() => {
-				return userDataPath;
-			})
-		} as unknown as Pick<App, 'getPath'>;
-
-		expect(resolveSpotStorageDirectory(app)).toBe(path.join(userDataPath, STORAGE_CONFIG.directoryName));
-		expect(app.getPath).toHaveBeenCalledWith('userData');
-	});
-
 	test('registers storage handlers on the narrow IPC channels', async() => {
 		const { handlers, ipcMain } = createMockIpcMain();
 		const { commandResult, loadTasksResult, status, taskStorage } = createMockTaskStorage();
@@ -167,26 +150,6 @@ describe('TaskStorageIpc', () => {
 		expect(taskStorage.loadTasks).toHaveBeenCalledTimes(1);
 		expect(taskStorage.executeTaskCommand).toHaveBeenCalledWith(command);
 		expect(taskStorage.getStorageStatus).toHaveBeenCalledTimes(1);
-	});
-
-	test('creates configured task storage when no storage instance is injected', () => {
-		const { ipcMain } = createMockIpcMain();
-		const { taskStorage } = createMockTaskStorage();
-		const userDataPath = path.join('/tmp', 'spot-user-data');
-		const { app } = createMockApp(userDataPath);
-		const createStorage = jest.fn(() => {
-			return taskStorage;
-		});
-
-		registerTaskStorageIpcHandlers({
-			ipcMain,
-			app,
-			createStorage
-		});
-
-		expect(createStorage).toHaveBeenCalledWith({
-			storageDirectory: path.join(userDataPath, STORAGE_CONFIG.directoryName)
-		});
 	});
 
 	test('waits for in-flight task commands and prepares storage before quitting', async() => {
@@ -276,5 +239,54 @@ describe('TaskStorageIpc', () => {
 		});
 		expect(taskStorage.executeTaskCommand).not.toHaveBeenCalled();
 		expect(taskStorage.getStorageStatus).toHaveBeenCalledTimes(1);
+	});
+	test('finalizes in-flight task commands before a storage folder change and queues later commands', async() => {
+		const { handlers, ipcMain } = createMockIpcMain();
+		const { commandResult, taskStorage } = createMockTaskStorage();
+		const firstCommandDeferred = createDeferred<TaskStorageCommandResult>();
+		const executionOrder: string[] = [];
+		taskStorage.executeTaskCommand = jest.fn((command: TaskStorageCommand) => {
+			const { taskId } = command.payload as { taskId: string };
+			executionOrder.push(`command-${taskId}`);
+
+			return taskId === 'first' ? firstCommandDeferred.promise : Promise.resolve(commandResult);
+		});
+		const event = {} as IpcMainInvokeEvent;
+		const createUpdateCommand = (taskId: string): TaskStorageCommand => {
+			return {
+				command: 'task.update',
+				payload: {
+					taskId,
+					change: {
+						text: `Update ${taskId}`
+					}
+				}
+			};
+		};
+
+		const { runExclusively } = registerTaskStorageIpcHandlers({
+			ipcMain,
+			taskStorage
+		});
+		const executeTaskCommandHandler = handlers.get(SPOT_STORAGE_IPC_CHANNELS.executeTaskCommand)!;
+
+		const firstCommandPromise = executeTaskCommandHandler(event, createUpdateCommand('first')) as Promise<TaskStorageCommandResult>;
+		const storageChangePromise = runExclusively(() => {
+			executionOrder.push('storage-change');
+
+			return Promise.resolve('changed');
+		});
+		const secondCommandPromise = executeTaskCommandHandler(event, createUpdateCommand('second')) as Promise<TaskStorageCommandResult>;
+
+		await waitForQueuedWork();
+
+		expect(executionOrder).toEqual([ 'command-first' ]);
+
+		firstCommandDeferred.resolve(commandResult);
+
+		await expect(storageChangePromise).resolves.toBe('changed');
+		await expect(firstCommandPromise).resolves.toBe(commandResult);
+		await expect(secondCommandPromise).resolves.toBe(commandResult);
+		expect(executionOrder).toEqual([ 'command-first', 'storage-change', 'command-second' ]);
 	});
 });

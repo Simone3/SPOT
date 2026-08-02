@@ -4,7 +4,7 @@ import path from 'node:path';
 import { LOGGING_CONFIG } from 'src/config/AppConfig';
 import { createSpotLogger, initializeSpotLogger, resetSpotLoggerForTests, SPOT_LOG_WRITE_FAILED_MESSAGE, SPOT_LOGGER_NOT_INITIALIZED_MESSAGE, spotLogger as processSpotLogger, type CreateSpotLoggerBackend, type SpotLogEntry } from 'src/main/logging/SpotLogger';
 
-const makeTempStorageDirectory = (): string => {
+const makeTempLogDirectory = (): string => {
 	return mkdtempSync(path.join(tmpdir(), 'spot-logger-'));
 };
 
@@ -35,8 +35,8 @@ const waitForExpectation = async(expectation: () => void): Promise<void> => {
 	throw new Error(String(lastError));
 };
 
-const readSpotLogEntries = (storageDirectory: string): SpotLogEntry[] => {
-	const content = readFileSync(path.join(storageDirectory, LOGGING_CONFIG.fileName), 'utf8').trim();
+const readSpotLogEntries = (logDirectory: string): SpotLogEntry[] => {
+	const content = readFileSync(path.join(logDirectory, LOGGING_CONFIG.fileName), 'utf8').trim();
 
 	if(!content) {
 		return [];
@@ -110,12 +110,12 @@ describe('SpotLogger', () => {
 
 	test('exposes initialized logging through a stable process-wide utility', () => {
 		const processLogger = processSpotLogger;
-		const storageDirectory = makeTempStorageDirectory();
-		tempStorageDirectories.push(storageDirectory);
+		const logDirectory = makeTempLogDirectory();
+		tempStorageDirectories.push(logDirectory);
 		const createdAt = new Date('2026-06-06T12:00:00.000Z');
 
 		initializeSpotLogger({
-			storageDirectory,
+			logDirectory,
 			retryDelayMs: 0,
 			now: () => {
 				return createdAt;
@@ -127,7 +127,7 @@ describe('SpotLogger', () => {
 			type: 'main.startup'
 		});
 
-		expect(readSpotLogEntries(storageDirectory)).toEqual([
+		expect(readSpotLogEntries(logDirectory)).toEqual([
 			{
 				createdAt: createdAt.toISOString(),
 				level: 'info',
@@ -138,11 +138,11 @@ describe('SpotLogger', () => {
 	});
 
 	test('writes structured newline-delimited JSON entries for public log levels', () => {
-		const storageDirectory = makeTempStorageDirectory();
-		tempStorageDirectories.push(storageDirectory);
+		const logDirectory = makeTempLogDirectory();
+		tempStorageDirectories.push(logDirectory);
 		const createdAt = new Date('2026-06-06T12:00:00.000Z');
 		const spotLogger = createSpotLogger({
-			storageDirectory,
+			logDirectory,
 			retryDelayMs: 0,
 			now: () => {
 				return createdAt;
@@ -164,7 +164,7 @@ describe('SpotLogger', () => {
 			type: 'storage.debug'
 		});
 
-		expect(readSpotLogEntries(storageDirectory)).toEqual([
+		expect(readSpotLogEntries(logDirectory)).toEqual([
 			{
 				createdAt: createdAt.toISOString(),
 				level: 'info',
@@ -198,12 +198,12 @@ describe('SpotLogger', () => {
 	});
 
 	test('creates the log directory before checking startup writability', () => {
-		const parentDirectory = makeTempStorageDirectory();
+		const parentDirectory = makeTempLogDirectory();
 		tempStorageDirectories.push(parentDirectory);
-		const storageDirectory = path.join(parentDirectory, 'storage');
+		const logDirectory = path.join(parentDirectory, 'storage');
 		const createdAt = new Date('2026-06-06T12:00:00.000Z');
 		const spotLogger = createSpotLogger({
-			storageDirectory,
+			logDirectory,
 			retryDelayMs: 0,
 			now: () => {
 				return createdAt;
@@ -217,7 +217,7 @@ describe('SpotLogger', () => {
 		expect(spotLogger.getStatus()).toEqual({
 			state: 'healthy'
 		});
-		expect(readSpotLogEntries(storageDirectory)).toEqual([
+		expect(readSpotLogEntries(logDirectory)).toEqual([
 			{
 				createdAt: createdAt.toISOString(),
 				level: 'info',
@@ -228,13 +228,13 @@ describe('SpotLogger', () => {
 	});
 
 	test('reports unavailable startup logging when the log file cannot be opened', () => {
-		const parentDirectory = makeTempStorageDirectory();
+		const parentDirectory = makeTempLogDirectory();
 		tempStorageDirectories.push(parentDirectory);
-		const storageDirectory = path.join(parentDirectory, 'not-a-directory');
-		writeFileSync(storageDirectory, 'file', 'utf8');
+		const logDirectory = path.join(parentDirectory, 'not-a-directory');
+		writeFileSync(logDirectory, 'file', 'utf8');
 
 		const spotLogger = createSpotLogger({
-			storageDirectory,
+			logDirectory,
 			maximumWriteAttempts: 1,
 			backendFactory: createFakeBackendFactory(() => {
 				return undefined;
@@ -256,10 +256,10 @@ describe('SpotLogger', () => {
 	});
 
 	test('configures size-based rolling with bounded retention', () => {
-		const storageDirectory = makeTempStorageDirectory();
-		tempStorageDirectories.push(storageDirectory);
+		const logDirectory = makeTempLogDirectory();
+		tempStorageDirectories.push(logDirectory);
 		const spotLogger = createSpotLogger({
-			storageDirectory,
+			logDirectory,
 			maximumFileSizeBytes: 180,
 			retryDelayMs: 0
 		});
@@ -272,7 +272,7 @@ describe('SpotLogger', () => {
 		}
 
 		const configuration = spotLogger.getConfiguration();
-		const logFiles = readdirSync(storageDirectory).filter((fileName) => {
+		const logFiles = readdirSync(logDirectory).filter((fileName) => {
 			return fileName.startsWith('spot-logs');
 		});
 
@@ -284,9 +284,9 @@ describe('SpotLogger', () => {
 	});
 
 	test('retries a failed write until a later attempt reaches the file', async() => {
-		const storageDirectory = makeTempStorageDirectory();
-		tempStorageDirectories.push(storageDirectory);
-		const spotLogPath = path.join(storageDirectory, LOGGING_CONFIG.fileName);
+		const logDirectory = makeTempLogDirectory();
+		tempStorageDirectories.push(logDirectory);
+		const spotLogPath = path.join(logDirectory, LOGGING_CONFIG.fileName);
 		let attempts = 0;
 		const backendFactory = createFakeBackendFactory((message) => {
 			attempts += 1;
@@ -296,7 +296,7 @@ describe('SpotLogger', () => {
 			}
 		});
 		const spotLogger = createSpotLogger({
-			storageDirectory,
+			logDirectory,
 			maximumWriteAttempts: 3,
 			retryDelayMs: 0,
 			backendFactory
@@ -309,7 +309,7 @@ describe('SpotLogger', () => {
 
 		await waitForExpectation(() => {
 			expect(attempts).toBe(2);
-			expect(readSpotLogEntries(storageDirectory)).toEqual([
+			expect(readSpotLogEntries(logDirectory)).toEqual([
 				expect.objectContaining({
 					level: 'info',
 					message: 'Storage SQL query completed',
@@ -321,9 +321,9 @@ describe('SpotLogger', () => {
 	});
 
 	test('flushes pending retry writes before resolving', async() => {
-		const storageDirectory = makeTempStorageDirectory();
-		tempStorageDirectories.push(storageDirectory);
-		const spotLogPath = path.join(storageDirectory, LOGGING_CONFIG.fileName);
+		const logDirectory = makeTempLogDirectory();
+		tempStorageDirectories.push(logDirectory);
+		const spotLogPath = path.join(logDirectory, LOGGING_CONFIG.fileName);
 		let attempts = 0;
 		const backendFactory = createFakeBackendFactory((message) => {
 			attempts += 1;
@@ -333,7 +333,7 @@ describe('SpotLogger', () => {
 			}
 		});
 		const spotLogger = createSpotLogger({
-			storageDirectory,
+			logDirectory,
 			maximumWriteAttempts: 3,
 			retryDelayMs: 0,
 			backendFactory
@@ -347,7 +347,7 @@ describe('SpotLogger', () => {
 		await spotLogger.flush();
 
 		expect(attempts).toBe(2);
-		expect(readSpotLogEntries(storageDirectory)).toEqual([
+		expect(readSpotLogEntries(logDirectory)).toEqual([
 			expect.objectContaining({
 				level: 'info',
 				message: 'Storage SQL query completed',
@@ -358,14 +358,14 @@ describe('SpotLogger', () => {
 	});
 
 	test('ignores failed writes without changing startup logging status', async() => {
-		const storageDirectory = makeTempStorageDirectory();
-		tempStorageDirectories.push(storageDirectory);
+		const logDirectory = makeTempLogDirectory();
+		tempStorageDirectories.push(logDirectory);
 		let attempts = 0;
 		const backendFactory = createFakeBackendFactory(() => {
 			attempts += 1;
 		});
 		const spotLogger = createSpotLogger({
-			storageDirectory,
+			logDirectory,
 			maximumWriteAttempts: 2,
 			retryDelayMs: 0,
 			backendFactory
@@ -388,14 +388,14 @@ describe('SpotLogger', () => {
 	});
 
 	test('flush abandons failed writes after the bounded retry attempts', async() => {
-		const storageDirectory = makeTempStorageDirectory();
-		tempStorageDirectories.push(storageDirectory);
+		const logDirectory = makeTempLogDirectory();
+		tempStorageDirectories.push(logDirectory);
 		let attempts = 0;
 		const backendFactory = createFakeBackendFactory(() => {
 			attempts += 1;
 		});
 		const spotLogger = createSpotLogger({
-			storageDirectory,
+			logDirectory,
 			maximumWriteAttempts: 2,
 			retryDelayMs: 0,
 			backendFactory

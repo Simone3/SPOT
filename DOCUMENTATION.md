@@ -7,10 +7,11 @@ SPOT is the Simple Planner & Organizer Tool: a small Electron + React task manag
 - The React renderer is the primary working surface and is considered done for now.
 - Task data loads through `window.spotStorage.loadTasks()` in Electron. If the renderer is opened without the Electron preload API, the task page reports storage as unavailable.
 - Task changes are applied optimistically in React state. Add, edit, delete, complete, restore, manual reorder, and importance sort send storage commands through `window.spotStorage.executeTaskCommand()`.
-- Main-process storage modules exist under `src/main/storage`. Configured storage initializes SQLite at the Electron user-data storage path, owns one lazy database connection per storage instance, loads task rows, executes task write commands, writes through the process-wide operational logger, reports database health, and closes the database during shutdown. Electron exposes that boundary through storage IPC and `window.spotStorage`; React uses it for startup loading, task mutations, and non-healthy database status feedback.
+- Main-process storage modules exist under `src/main/storage`. Configured storage initializes SQLite in the selected task database folder, owns one lazy database connection per storage instance, loads task rows, executes task write commands, writes through the process-wide operational logger, reports database health, reopens the database when the folder changes, and closes the database during shutdown. Electron exposes that boundary through storage IPC and `window.spotStorage`; React uses it for startup loading, task mutations, and non-healthy database status feedback.
+- The task database folder is chosen by the user. The first startup blocks on a folder setup screen, later startups reuse the saved folder, and the Settings page can change it at any time. Configuration and log files always stay in the Electron user-data folder.
 - Electron main and preload TypeScript sources are bundled by `scripts/build-electron.js` into ignored `dist/electron` files before Electron starts or packages. The bundling step uses exact-version `esbuild` to remove the former custom runtime TypeScript/module resolver.
 - Electron loads the built React `build/index.html` file in both development and packaged mode. `package.json` sets CRA's `homepage` to `.` so production asset URLs stay relative under file loading.
-- The Notes, Tags, and Settings routes exist as placeholder pages.
+- The Notes and Tags routes exist as placeholder pages. The Settings route owns the task database folder settings.
 - The implemented persistence architecture is one SQLite database as the source of truth plus one append-only rolled `spot-logs.ndjson` operational log.
 - The implemented persistence behavior is documented below. Startup loading, task mutations, shutdown draining, packaged React loading, and user-facing database health feedback are wired in Electron.
 
@@ -60,22 +61,29 @@ npm run make
 - `src/index.tsx` mounts the React app and defines routes.
 - `src/index.css` defines global layout and theme variables.
 - `src/config/AppConfig.ts` holds the app-wide configuration constants shared by the Electron main process and the React renderer.
-- `src/main/Main.ts` initializes the process-wide logger, creates the Electron `BrowserWindow`, loads the built React renderer, and registers IPC handlers.
+- `src/main/Main.ts` resolves the runtime paths, initializes the process-wide logger, creates the task storage, registers IPC handlers, resolves the task database folder, and creates the Electron `BrowserWindow` that loads the built React renderer.
 - `src/main/preload/Preload.ts` exposes the narrow renderer APIs through Electron's context bridge.
+- `src/main/config/SpotRuntimePaths.ts` resolves the fixed application paths inside the Electron user-data folder and gives development runs their own root folder.
+- `src/main/config/SpotConfigStore.ts` reads and writes the JSON application configuration file that stores the selected task database folder.
+- `src/main/config/DatabaseLocationManager.ts` owns the task database folder: startup resolution, validation, the development override, the folder switch on task storage, and configuration persistence.
 - `src/main/logging/SpotLogger.ts` configures `electron-log` behind a generic factory-created logger and exports the process-wide `spotLogger` utility with `info`, `warn`, `error`, `debug`, and `flush` methods, newline-delimited JSON output, size-based rolling, and one retained archive.
-- `src/main/ipc/TaskStorageIpc.ts` registers the narrow Electron IPC surface for storage loading, task write commands, database health reporting, and shutdown draining for in-flight task commands.
-- `src/main/storage/TaskStorage.ts` defines the Electron main-process storage contract, configured SQLite task loading and write commands through a storage-owned database connection, database health reporting, and shutdown preparation.
+- `src/main/ipc/TaskStorageIpc.ts` registers the narrow Electron IPC surface for storage loading, task write commands, database health reporting, shutdown draining for in-flight task commands, and the exclusive-access helper used while the task database folder changes.
+- `src/main/ipc/DatabaseLocationIpc.ts` registers the task database folder IPC surface and opens the native folder dialog.
+- `src/main/storage/TaskStorage.ts` defines the Electron main-process storage contract, configured SQLite task loading and write commands through a storage-owned database connection, database health reporting, folder switching, and shutdown preparation.
+- `src/main/storage/DatabaseDirectory.ts` validates a task database folder, detects an existing `spot.sqlite` file, and creates default folders.
 - `src/main/storage/TaskCommandExecutor.ts` maps task storage commands to the task repository operations and keeps each command inside one transaction.
 - `src/main/storage/SpotDatabase.ts` opens `spot.sqlite`, applies schema migrations, currently creates schema version `1`, exposes a small internal query wrapper, and emits SQL query log records through the process-wide logger.
 - `src/main/storage/TaskRowMapping.ts` maps between SQLite task rows and React `Task` objects and owns the shared task field to SQLite column mapping used by storage queries.
 - `src/main/storage/TaskRepository.ts` owns SQLite task queries and task repository helpers that can run against an existing SPOT database wrapper or a short scoped repository session.
 - `src/main/window/WindowLoadTarget.ts` resolves the built React `build/index.html` file from the Electron app root.
-- `src/types` contains shared TypeScript types and constants split into semantic files for tasks, task storage, task-storage IPC channels, domains, filters, and dates. Types that have one clear owner stay in the owning `.ts` or `.tsx` file instead.
-- `src/react-app-env.d.ts` contains the React Scripts TypeScript reference plus renderer-side declarations for `window.versions` and `window.spotStorage`.
+- `src/types` contains shared TypeScript types and constants split into semantic files for tasks, task storage, task-storage IPC channels, database location, database-location IPC channels, domains, filters, and dates. Types that have one clear owner stay in the owning `.ts` or `.tsx` file instead.
+- `src/react-app-env.d.ts` contains the React Scripts TypeScript reference plus renderer-side declarations for `window.versions`, `window.spotStorage`, and `window.spotDatabaseLocation`.
 - `src/components/common` contains layout and shared UI primitives.
 - `src/components/inputs` contains reusable inputs.
 - `src/components/tasks` contains the current task-management UI.
-- `src/components/notes`, `src/components/tags`, and `src/components/settings` contain placeholder route pages.
+- `src/components/notes` and `src/components/tags` contain placeholder route pages.
+- `src/components/settings` contains the Settings route page.
+- `src/components/storage` contains the task database folder UI: the startup gate, the first-startup setup screen, and the Settings section.
 - `src/contexts` contains app-level React contexts.
 - `src/logic` contains state and domain logic.
 - `src/utils` contains general utilities.
@@ -92,8 +100,9 @@ React source files use absolute imports rooted at `src/...`, including local CSS
 The exported groups are:
 
 - `WINDOW_CONFIG`: `BrowserWindow` size, the preload script file name, and the built React index path segments.
-- `STORAGE_CONFIG`: the storage directory name, the SQLite database file name, the current schema version, and the SQLite connection timeout.
-- `LOGGING_CONFIG`: the operational log file name, maximum file size, retained archive count, maximum write attempts, and retry delay.
+- `STORAGE_CONFIG`: the default storage directory name, the SQLite database file name, the current schema version, and the SQLite connection timeout.
+- `APP_CONFIG_FILE`: the development root directory name and the application configuration file name.
+- `LOGGING_CONFIG`: the log directory name, the operational log file name, maximum file size, retained archive count, maximum write attempts, and retry delay.
 - `TASKS_CONFIG`: the task flush delay, the task state change delay, and the manual sort position step.
 
 Each group is declared `as const`, so consumers that pass a value to a widened parameter may need an explicit type annotation. User-facing and error message strings are not configuration and stay in the module that owns them.
@@ -103,6 +112,8 @@ Each group is declared `as const`, so consumers that pass a value to a widened p
 `src/index.tsx` renders:
 
 - `DatesContextProvider`
+- `DatabaseLocationContextProvider`
+- `DatabaseLocationGate`
 - `HashRouter`
 - `Sidebar`
 - `MainContent`
@@ -115,6 +126,8 @@ Routes:
 - `/tags` renders `TagsPage`
 - `/settings` renders `SettingsPage`
 
+`DatabaseLocationGate` renders the rest of the app only when a usable task database folder is configured. While the folder is missing or unavailable it renders `DatabaseLocationSetup` instead, so a first startup or an unreachable folder can never fall back to another database.
+
 The page layout is a fixed-height flex app:
 
 - `#root` is a horizontal flex container.
@@ -126,9 +139,9 @@ The page layout is a fixed-height flex app:
 
 `package.json` points Electron at `dist/electron/main.js`, which is generated from `src/main/Main.ts` by `npm run build-electron`. The build script bundles `src/main/Main.ts` and `src/main/preload/Preload.ts` with `esbuild`, preserving external Electron and `electron-log` imports while resolving in-repository `src/...` imports at build time.
 
-`src/main/Main.ts` initializes `spotLogger` as soon as Electron is ready and the user-data path is available, then creates a `BrowserWindow`. It uses `resolveWindowLoadTarget()` from `src/main/window/WindowLoadTarget.ts` to load the built React `build/index.html` file through `loadFile()` in both development and packaged mode. It registers a sample `ping` IPC handler and the storage IPC handlers from `src/main/ipc/TaskStorageIpc.ts`, which also attach the storage shutdown drain to Electron's `before-quit` event.
+`src/main/Main.ts` resolves the runtime paths with `resolveSpotRuntimePaths()` and initializes `spotLogger` as soon as Electron is ready. It then creates the task storage, registers a sample `ping` IPC handler, the storage IPC handlers from `src/main/ipc/TaskStorageIpc.ts`, which also attach the storage shutdown drain to Electron's `before-quit` event, and the database location handlers from `src/main/ipc/DatabaseLocationIpc.ts`. It resolves the task database folder through `DatabaseLocationManager.initialize()` before creating the `BrowserWindow`. It uses `resolveWindowLoadTarget()` from `src/main/window/WindowLoadTarget.ts` to load the built React `build/index.html` file through `loadFile()` in both development and packaged mode.
 
-`src/main/preload/Preload.ts` exposes a `window.versions` API with Node, Chrome, Electron, and `ping` helpers. It also exposes the narrow `window.spotStorage` API documented in the Persistence section. It does not expose raw `ipcRenderer`, filesystem, or SQLite objects. Shared storage IPC channel names live in `src/types/TaskStorageIpcChannels.ts` so preload and main-process handlers cannot drift.
+`src/main/preload/Preload.ts` exposes a `window.versions` API with Node, Chrome, Electron, and `ping` helpers. It also exposes the narrow `window.spotStorage` and `window.spotDatabaseLocation` APIs documented in the Persistence section. It does not expose raw `ipcRenderer`, filesystem, SQLite, or dialog objects. Shared IPC channel names live in `src/types/TaskStorageIpcChannels.ts` and `src/types/DatabaseLocationIpcChannels.ts` so preload and main-process handlers cannot drift.
 
 Known Electron work still pending:
 
@@ -136,29 +149,58 @@ Known Electron work still pending:
 
 ## Persistence
 
-SPOT persists tasks only in Electron runtime. The Electron main process owns durable storage, operational logging, and database health, while React owns the responsive in-memory task state used by the UI. The renderer requires `window.spotStorage` on startup; opening the React build outside Electron reports storage as unavailable.
+SPOT persists tasks only in Electron runtime. The Electron main process owns durable storage, operational logging, and database health, while React owns the responsive in-memory task state used by the UI. The renderer requires `window.spotStorage` and `window.spotDatabaseLocation` on startup; opening the React build outside Electron reports storage as unavailable.
 
 SQLite is the source of truth for task reads and writes. The append-only operational log is a diagnostic trace of storage commands and SQL activity; startup never rebuilds task state from the log. Google Drive or similar filesystem sync should be treated as backup or cross-device handoff, not live collaborative database replication.
 
 ### Storage Files
 
-In Electron runtime, `src/main/ipc/TaskStorageIpc.ts` resolves the storage directory to:
-
-```ts
-path.join(app.getPath('userData'), 'storage')
-```
-
-That directory contains:
+The task database folder is chosen by the user and can be any readable and writable folder, including a Google Drive, OneDrive, or Dropbox synced folder. It contains only:
 
 - `spot.sqlite`: the canonical task database.
+
+Application configuration and logs never follow that folder. `src/main/config/SpotRuntimePaths.ts` keeps them inside the Electron user-data folder:
+
+| Path | Packaged run | Development run |
+| --- | --- | --- |
+| Configuration file | `<userData>/spot-config.json` | `<userData>/dev/spot-config.json` |
+| Log directory | `<userData>/logs` | `<userData>/dev/logs` |
+| Default database folder | `<userData>/storage` | `<userData>/dev/storage` |
+
+The log directory contains:
+
 - `spot-logs.ndjson`: newline-delimited operational log entries.
 - `spot-logs.old.ndjson`: the single retained rolled log archive.
 
-Without a configured storage directory, `createTaskStorage()` reports the database as `not-configured`. A later settings feature can allow the user to choose a Google Drive, OneDrive, Dropbox, or other synced folder.
+Without a configured database folder, `createTaskStorage()` reports the database as `not-configured`, and the renderer blocks on the folder setup screen instead of loading tasks.
+
+### Task Database Folder
+
+`src/main/config/DatabaseLocationManager.ts` owns the selected folder and reports it as a `DatabaseLocation` with `state`, `directory`, `defaultDirectory`, `isDevelopment`, and an optional `message`.
+
+Startup resolution:
+
+- A packaged run reads `databaseDirectory` from the configuration file. A saved folder that exists and is readable and writable is opened without asking the user again.
+- A packaged run with no saved folder, or with a saved folder that no longer exists or cannot be used, reports `unconfigured`, and the folder that failed is explained in `message`. A missing folder is never recreated silently.
+- A development run always restarts on `<userData>/dev/storage`, creating it when needed and ignoring the folder saved during a previous development session. Changing the folder from Settings still works for testing, and it is written to the development configuration file only.
+
+Changing the folder, from the setup screen or from Settings:
+
+1. The folder is validated. The native folder dialog is opened by `src/main/ipc/DatabaseLocationIpc.ts` with `openDirectory` and `createDirectory`, and it reports whether the folder already contains `spot.sqlite`.
+2. `runExclusively()` from the storage IPC controller finalizes the task write commands already running on the old database. Commands received during the switch wait for the new database instead of racing it.
+3. `TaskStorage.openStorageDirectory()` closes the old SQLite connection and opens the new one, creating an empty database when the folder has no `spot.sqlite` file.
+4. The new folder is saved in the configuration file, and React reloads all tasks from the new database. When the new folder cannot be opened, the previous folder is reopened, the configuration is left untouched, and the failure message is shown.
+
+The renderer uses the narrow `window.spotDatabaseLocation` API:
+
+- `getDatabaseLocation()` returns the current `DatabaseLocation`.
+- `chooseDatabaseDirectory()` opens the native folder dialog and returns the chosen folder, whether it already contains a database, or a cancelled or invalid result.
+- `setDatabaseDirectory(directory)` applies and saves a folder.
+- `setDefaultDatabaseDirectory()` creates the default folder if needed, then applies and saves it.
 
 ### SQLite Schema
 
-`src/main/storage/SpotDatabase.ts` opens or creates `spot.sqlite` using Electron's bundled Node `node:sqlite` support. No external SQLite dependency is used. The raw SQLite connection stays private to `SpotDatabase.ts`; task storage uses wrapper methods for SQL execution, row reads, and transactions. `createTaskStorage({ storageDirectory })` owns one lazy database wrapper, opens it on the first status, load, or write operation, reuses it across storage calls, and closes it from `prepareForShutdown()`.
+`src/main/storage/SpotDatabase.ts` opens or creates `spot.sqlite` using Electron's bundled Node `node:sqlite` support. No external SQLite dependency is used. The raw SQLite connection stays private to `SpotDatabase.ts`; task storage uses wrapper methods for SQL execution, row reads, and transactions. `createTaskStorage({ storageDirectory })` owns one lazy database wrapper, opens it on the first status, load, or write operation, reuses it across storage calls, replaces it on `openStorageDirectory()`, and closes it from `prepareForShutdown()`.
 
 Schema version `1` creates `schema_migrations` and `tasks`:
 
@@ -201,13 +243,13 @@ Each configured task write command runs in exactly one SQLite transaction on the
 
 ### Renderer Behavior
 
-React calls `loadTasks()` through `window.spotStorage` on startup and calls `executeTaskCommand()` for task mutations. It updates optimistically for normal task changes, keeps the latest renderer-facing `StorageStatus`, stays quiet while the database is healthy, shows startup storage failures before rendering task lists, and shows a prominent save warning when writes fail.
+React calls `loadTasks()` through `window.spotStorage` on startup, and again whenever the selected task database folder changes, and calls `executeTaskCommand()` for task mutations. It updates optimistically for normal task changes, keeps the latest renderer-facing `StorageStatus`, stays quiet while the database is healthy, shows startup storage failures before rendering task lists, and shows a prominent save warning when writes fail.
 
 `StorageStatus` reports the database state as `not-configured`, `healthy`, or `unavailable`, plus the configured `storageDirectory` and `databasePath` when available. Storage failures use `not-implemented`, `database-error`, `invalid-command`, or `shutdown`.
 
 ### Operational Logging
 
-`src/main/logging/SpotLogger.ts` uses `electron-log` version `5.4.4` to write newline-delimited JSON entries to `spot-logs.ndjson`. The dependency is wrapped by `createSpotLogger()`, while `initializeSpotLogger()` installs the concrete logger behind the process-wide `spotLogger` utility. Main-process code can call `spotLogger.info`, `spotLogger.warn`, `spotLogger.error`, `spotLogger.debug`, and `spotLogger.flush` without depending on `electron-log` directly or constructing a logger itself.
+`src/main/logging/SpotLogger.ts` uses `electron-log` version `5.4.4` to write newline-delimited JSON entries to `spot-logs.ndjson` inside the log directory of the current run. The dependency is wrapped by `createSpotLogger()`, while `initializeSpotLogger()` installs the concrete logger behind the process-wide `spotLogger` utility. Main-process code can call `spotLogger.info`, `spotLogger.warn`, `spotLogger.error`, `spotLogger.debug`, and `spotLogger.flush` without depending on `electron-log` directly or constructing a logger itself.
 
 The main process logs every incoming React storage command and every SQL query run by the storage layer, including `SELECT` queries. SQL log entries include the query text, `elapsedMillis`, and success or failure. Query parameters should be logged only when they are useful for debugging and safe to write to disk.
 
@@ -344,6 +386,17 @@ Active list actions:
 - displays the selected priority icon and color bar
 - opens a priority picker on click
 - flushes changes when the picker closes
+
+## Settings
+
+`SettingsPage` renders `DatabaseLocationSettings` from `src/components/storage`. That section shows the current task database folder, a development-run notice when the run is not packaged, and two actions:
+
+- Change folder, which opens the native folder dialog.
+- Use default folder, which selects the default folder of the current run.
+
+Both actions open a `ConfirmModal` that names the current folder, the new folder, whether that folder already contains a SPOT database, and what happens to pending task changes. The change is applied only after confirmation, and its outcome is reported in place.
+
+`DatabaseLocationSetup` reuses the same two actions on the blocking first-startup screen, without the confirmation step, and shows the reason why a previously saved folder could not be used.
 
 ## Filtering
 
@@ -490,7 +543,11 @@ Current test coverage includes focused regression checks for:
 - date comparison and display formatting
 - smoke coverage for task filters and task list interactions
 - SQLite storage setup, task row mapping, command execution, transaction rollback, and optional operational logging behavior
-- storage IPC handler registration, channel delegation, default Electron storage directory resolution, shutdown drain, and post-shutdown command failure behavior
+- storage IPC handler registration, channel delegation, shutdown drain, post-shutdown command failure behavior, and exclusive storage-folder switching that finalizes in-flight commands and queues later ones
+- runtime path resolution for packaged and development runs
+- task database folder resolution at startup, saved-folder reuse, re-prompting on an unavailable folder, the development folder override, folder changes with configuration persistence, and fallback to the previous folder when the new one cannot be opened
+- database location IPC registration, cancelled folder dialogs, and existing-database detection
+- smoke coverage for the blocking first-startup folder setup and for the confirmed folder change in Settings
 - Electron window load-target resolution for local built React loading
 - React task-page startup loading, Electron preload API requirement, persisted Electron loading, and startup-error rendering
 - React task-page storage commands for create, update, delete, complete, restore, manual reorder, and importance sort, plus write-failure warning, storage-health feedback, and reconciliation behavior
@@ -527,4 +584,4 @@ The most important remaining work is:
 - Continue polishing drag-and-drop feedback as the task interaction model settles.
 - Make `DatesContextProvider` refresh date labels after midnight.
 - Continue polishing reload feedback.
-- Finish Notes, Tags, and Settings pages when their scope is clear.
+- Finish Notes and Tags pages, and the rest of the Settings page, when their scope is clear.

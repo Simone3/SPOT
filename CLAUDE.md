@@ -6,7 +6,7 @@ Instructions for Claude Code when working in this repository.
 
 ## Project
 
-SPOT (Simple Planner & Organizer Tool) is an Electron + React task manager for macOS, Windows, and Linux, meant to manage tasks in a simple and direct way (no frills). Work in progress: the React renderer is considered done for now, and the Electron persistence layer is wired for startup loading, task mutations, shutdown draining, and packaged loading. Standalone browser mode is not a supported runtime.
+SPOT (Simple Planner & Organizer Tool) is an Electron + React task manager for macOS, Windows, and Linux, meant to manage tasks in a simple and direct way (no frills). Work in progress: the React renderer is considered done for now, and the Electron persistence layer is wired for startup loading, task mutations, shutdown draining, packaged loading, and the user-selected task database folder. Standalone browser mode is not a supported runtime.
 
 ## Commands
 
@@ -44,6 +44,7 @@ npm test -- tests/logic/SomeFile.spec.ts
 - Match the existing code style exactly, including spacing and newline conventions. Read a neighboring file before writing a new one.
 - Preserve the storage command names: `task.create`, `task.update`, `task.delete`, `tasks.updateMany`.
 - Database failures are user-facing: surface task-save feedback on write failure and reconcile state. Operational-log failures are best-effort and ignored by React when SQLite succeeds.
+- Only `spot.sqlite` lives in the user-selected task database folder. Configuration and log files always stay in the Electron user-data folder, and development runs keep their own root folder there.
 
 ## Testing
 

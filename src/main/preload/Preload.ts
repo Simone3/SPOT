@@ -1,6 +1,23 @@
 import { contextBridge, ipcRenderer } from 'electron';
+import { SPOT_DATABASE_LOCATION_IPC_CHANNELS } from 'src/types/DatabaseLocationIpcChannels';
+import type { SpotDatabaseLocationApi } from 'src/types/DatabaseLocationTypes';
 import { SPOT_STORAGE_IPC_CHANNELS } from 'src/types/TaskStorageIpcChannels';
 import type { SpotStorageApi } from 'src/types/TaskStorageTypes';
+
+const spotDatabaseLocation: SpotDatabaseLocationApi = {
+	getDatabaseLocation: () => {
+		return ipcRenderer.invoke(SPOT_DATABASE_LOCATION_IPC_CHANNELS.getDatabaseLocation);
+	},
+	chooseDatabaseDirectory: () => {
+		return ipcRenderer.invoke(SPOT_DATABASE_LOCATION_IPC_CHANNELS.chooseDatabaseDirectory);
+	},
+	setDatabaseDirectory: (directory) => {
+		return ipcRenderer.invoke(SPOT_DATABASE_LOCATION_IPC_CHANNELS.setDatabaseDirectory, directory);
+	},
+	setDefaultDatabaseDirectory: () => {
+		return ipcRenderer.invoke(SPOT_DATABASE_LOCATION_IPC_CHANNELS.setDefaultDatabaseDirectory);
+	}
+};
 
 const spotStorage: SpotStorageApi = {
 	loadTasks: () => {
@@ -30,3 +47,4 @@ contextBridge.exposeInMainWorld('versions', {
 });
 
 contextBridge.exposeInMainWorld('spotStorage', spotStorage);
+contextBridge.exposeInMainWorld('spotDatabaseLocation', spotDatabaseLocation);

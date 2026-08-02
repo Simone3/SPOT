@@ -1,9 +1,15 @@
 import path from 'node:path';
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import { WINDOW_CONFIG } from 'src/config/AppConfig';
-import { registerTaskStorageIpcHandlers, resolveSpotStorageDirectory } from 'src/main/ipc/TaskStorageIpc';
+import { createDatabaseLocationManager } from 'src/main/config/DatabaseLocationManager';
+import { resolveSpotRuntimePaths } from 'src/main/config/SpotRuntimePaths';
+import { registerDatabaseLocationIpcHandlers } from 'src/main/ipc/DatabaseLocationIpc';
+import { registerTaskStorageIpcHandlers } from 'src/main/ipc/TaskStorageIpc';
 import { initializeSpotLogger } from 'src/main/logging/SpotLogger';
+import { createTaskStorage } from 'src/main/storage/TaskStorage';
 import { resolveWindowLoadTarget } from 'src/main/window/WindowLoadTarget';
+
+let mainWindow: BrowserWindow | undefined;
 
 const createWindow = (): void => {
 	const win = new BrowserWindow({
@@ -20,21 +26,50 @@ const createWindow = (): void => {
 		appRootDirectory: app.getAppPath()
 	});
 
+	mainWindow = win;
+	win.on('closed', () => {
+		if(mainWindow === win) {
+			mainWindow = undefined;
+		}
+	});
+
 	void win.loadFile(loadTarget.value);
 };
 
-void app.whenReady().then(() => {
+void app.whenReady().then(async() => {
+	const runtimePaths = resolveSpotRuntimePaths(app);
+
 	initializeSpotLogger({
-		storageDirectory: resolveSpotStorageDirectory(app)
+		logDirectory: runtimePaths.logDirectory
 	});
+
+	const taskStorage = createTaskStorage();
 
 	ipcMain.handle('ping', () => {
 		return 'pong';
 	});
-	registerTaskStorageIpcHandlers({
+
+	const { runExclusively } = registerTaskStorageIpcHandlers({
 		app,
-		ipcMain
+		ipcMain,
+		taskStorage
 	});
+	const databaseLocationManager = createDatabaseLocationManager({
+		runtimePaths,
+		taskStorage,
+		runExclusively
+	});
+
+	registerDatabaseLocationIpcHandlers({
+		ipcMain,
+		dialog,
+		databaseLocationManager,
+		getParentWindow: () => {
+			return mainWindow;
+		}
+	});
+
+	await databaseLocationManager.initialize();
 
 	createWindow();
 

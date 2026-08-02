@@ -141,7 +141,7 @@ describe('SpotDatabase', () => {
 		tempStorageDirectories.push(storageDirectory);
 		const appliedAt = new Date('2026-06-06T12:00:00.000Z');
 		initializeSpotLogger({
-			storageDirectory,
+			logDirectory: storageDirectory,
 			retryDelayMs: 0,
 			now: () => {
 				return appliedAt;

@@ -1,8 +1,6 @@
-import path from 'node:path';
 import type { App, IpcMain } from 'electron';
-import { STORAGE_CONFIG } from 'src/config/AppConfig';
 import { spotLogger } from 'src/main/logging/SpotLogger';
-import { createTaskStorage, type CreateTaskStorageOptions, type TaskStorage } from 'src/main/storage/TaskStorage';
+import type { TaskStorage } from 'src/main/storage/TaskStorage';
 import { SPOT_STORAGE_IPC_CHANNELS } from 'src/types/TaskStorageIpcChannels';
 import type { StorageStatus, TaskStorageCommand, TaskStorageCommandResult } from 'src/types/TaskStorageTypes';
 
@@ -11,26 +9,23 @@ export { SPOT_STORAGE_IPC_CHANNELS } from 'src/types/TaskStorageIpcChannels';
 
 type TaskStorageIpcMain = Pick<IpcMain, 'handle'>;
 
-type TaskStorageIpcApp = Pick<App, 'getPath'> & Partial<Pick<App, 'on' | 'quit'>>;
+type TaskStorageIpcApp = Partial<Pick<App, 'on' | 'quit'>>;
 
 type TaskStorageIpcApi = Pick<TaskStorage, 'loadTasks' | 'executeTaskCommand' | 'getStorageStatus'> & Partial<Pick<TaskStorage, 'prepareForShutdown'>>;
-
-type TaskStorageFactory = (options: CreateTaskStorageOptions) => TaskStorageIpcApi;
 
 interface BeforeQuitEvent {
 	preventDefault: () => void;
 }
 
-export interface RegisterTaskStorageIpcHandlersOptions {
-	ipcMain: TaskStorageIpcMain;
-	app?: TaskStorageIpcApp;
-	taskStorage?: TaskStorageIpcApi;
-	createStorage?: TaskStorageFactory;
+export interface TaskStorageCommandController {
+	runExclusively: <TResult>(operation: () => Promise<TResult>) => Promise<TResult>;
 }
 
-export const resolveSpotStorageDirectory = (app: Pick<App, 'getPath'>): string => {
-	return path.join(app.getPath('userData'), STORAGE_CONFIG.directoryName);
-};
+export interface RegisterTaskStorageIpcHandlersOptions {
+	ipcMain: TaskStorageIpcMain;
+	taskStorage: TaskStorageIpcApi;
+	app?: TaskStorageIpcApp;
+}
 
 const createShutdownStorageStatus = (): StorageStatus => {
 	return {
@@ -59,14 +54,15 @@ const createShutdownCommandResult = async(taskStorage: TaskStorageIpcApi): Promi
 	};
 };
 
-const createTaskStorageCommandShutdownController = (
+const createTaskStorageCommandController = (
 	taskStorage: TaskStorageIpcApi,
 	app?: TaskStorageIpcApp
-): Pick<TaskStorageIpcApi, 'executeTaskCommand'> => {
+): Pick<TaskStorageIpcApi, 'executeTaskCommand'> & TaskStorageCommandController => {
 	const pendingCommands = new Set<Promise<unknown>>();
 	let isShuttingDown = false;
 	let isQuitAllowed = false;
 	let shutdownPromise: Promise<void> | undefined;
+	let exclusiveOperation: Promise<void> | undefined;
 
 	const prepareForShutdown = async(): Promise<void> => {
 		await Promise.allSettled(Array.from(pendingCommands));
@@ -104,52 +100,71 @@ const createTaskStorageCommandShutdownController = (
 		requestShutdown();
 	});
 
+	const trackPendingCommand = (commandPromise: Promise<TaskStorageCommandResult>): Promise<TaskStorageCommandResult> => {
+		pendingCommands.add(commandPromise);
+
+		return commandPromise.finally(() => {
+			pendingCommands.delete(commandPromise);
+		});
+	};
+
+	// Lets the storage folder change finalize the commands already running on the old database, while later commands wait for the new database instead of racing the switch
+	const runExclusively = async<TResult>(operation: () => Promise<TResult>): Promise<TResult> => {
+		const commandsToDrain = Array.from(pendingCommands);
+		let releaseExclusiveOperation: (() => void) | undefined;
+		exclusiveOperation = new Promise<void>((resolve) => {
+			releaseExclusiveOperation = resolve;
+		});
+
+		try {
+			await Promise.allSettled(commandsToDrain);
+
+			return await operation();
+		}
+		finally {
+			exclusiveOperation = undefined;
+			releaseExclusiveOperation?.();
+		}
+	};
+
 	return {
 		executeTaskCommand: (command) => {
 			if(isShuttingDown) {
 				return createShutdownCommandResult(taskStorage);
 			}
 
-			const pendingCommand = taskStorage.executeTaskCommand(command);
-			pendingCommands.add(pendingCommand);
+			if(exclusiveOperation) {
+				return trackPendingCommand(exclusiveOperation.then(() => {
+					return taskStorage.executeTaskCommand(command);
+				}));
+			}
 
-			return pendingCommand.finally(() => {
-				pendingCommands.delete(pendingCommand);
-			});
-		}
+			return trackPendingCommand(taskStorage.executeTaskCommand(command));
+		},
+		runExclusively
 	};
-};
-
-const createDefaultTaskStorage = ({
-	app,
-	createStorage = createTaskStorage
-}: Pick<RegisterTaskStorageIpcHandlersOptions, 'app' | 'createStorage'>): TaskStorageIpcApi => {
-	if(!app) {
-		return createStorage({});
-	}
-
-	return createStorage({
-		storageDirectory: resolveSpotStorageDirectory(app)
-	});
 };
 
 export const registerTaskStorageIpcHandlers = ({
 	ipcMain,
-	app,
-	createStorage,
-	taskStorage = createDefaultTaskStorage({ app, createStorage })
-}: RegisterTaskStorageIpcHandlersOptions): void => {
-	const shutdownController = createTaskStorageCommandShutdownController(taskStorage, app);
+	taskStorage,
+	app
+}: RegisterTaskStorageIpcHandlersOptions): TaskStorageCommandController => {
+	const commandController = createTaskStorageCommandController(taskStorage, app);
 
 	ipcMain.handle(SPOT_STORAGE_IPC_CHANNELS.loadTasks, () => {
 		return taskStorage.loadTasks();
 	});
 
 	ipcMain.handle(SPOT_STORAGE_IPC_CHANNELS.executeTaskCommand, (_event, command: TaskStorageCommand) => {
-		return shutdownController.executeTaskCommand(command);
+		return commandController.executeTaskCommand(command);
 	});
 
 	ipcMain.handle(SPOT_STORAGE_IPC_CHANNELS.getStorageStatus, () => {
 		return taskStorage.getStorageStatus();
 	});
+
+	return {
+		runExclusively: commandController.runExclusively
+	};
 };

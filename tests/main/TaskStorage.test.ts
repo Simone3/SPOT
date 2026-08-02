@@ -126,7 +126,7 @@ const createNoopBackendFactory = (): CreateSpotLoggerBackend => {
 };
 
 type CreateTrackedTaskStorageOptions = CreateTaskStorageOptions & {
-	logger?: Omit<CreateSpotLoggerOptions, 'storageDirectory'>;
+	logger?: Omit<CreateSpotLoggerOptions, 'logDirectory'>;
 };
 
 describe('TaskStorage', () => {
@@ -138,7 +138,7 @@ describe('TaskStorage', () => {
 
 		if(taskStorageOptions.storageDirectory) {
 			initializeSpotLogger({
-				storageDirectory: taskStorageOptions.storageDirectory,
+				logDirectory: taskStorageOptions.storageDirectory,
 				now: taskStorageOptions.now,
 				...logger
 			});

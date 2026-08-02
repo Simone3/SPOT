@@ -39,6 +39,8 @@ export interface TaskStorage {
 	executeTaskCommand: (command: TaskStorageCommand) => Promise<TaskStorageCommandResult>;
 	writeOperationalLogLine: (entry: OperationalLogEntry) => Promise<OperationalLogWriteResult>;
 	getStorageStatus: () => Promise<StorageStatus>;
+	getStorageDirectory: () => string | undefined;
+	openStorageDirectory: (storageDirectory: string) => Promise<StorageStatus>;
 	prepareForShutdown: () => Promise<void>;
 }
 
@@ -221,38 +223,35 @@ const getConfiguredStorageStatus = (
 };
 
 export const createTaskStorage = (options: CreateTaskStorageOptions = {}): TaskStorage => {
-	let database: ConfiguredTaskStorageDatabase | undefined;
-
-	if(options.storageDirectory) {
-		database = createConfiguredTaskStorageDatabase(options.storageDirectory, options.now);
-	}
+	let storageDirectory = options.storageDirectory;
+	let database = storageDirectory ? createConfiguredTaskStorageDatabase(storageDirectory, options.now) : undefined;
 
 	const getStorageStatus = (): Promise<StorageStatus> => {
-		if(!options.storageDirectory) {
+		if(!storageDirectory || !database) {
 			return Promise.resolve(createUnwiredStorageStatus());
 		}
 
-		return Promise.resolve(getConfiguredStorageStatus(options.storageDirectory, database!));
+		return Promise.resolve(getConfiguredStorageStatus(storageDirectory, database));
 	};
 
 	const loadTasks = async(): Promise<LoadTasksResult> => {
-		if(!options.storageDirectory) {
+		if(!storageDirectory || !database) {
 			return createNotImplementedFailure(await getStorageStatus());
 		}
 
-		return loadConfiguredTasks(options.storageDirectory, database!);
+		return loadConfiguredTasks(storageDirectory, database);
 	};
 
 	const executeTaskCommand = async(command: TaskStorageCommand): Promise<TaskStorageCommandResult> => {
-		if(!options.storageDirectory) {
+		if(!storageDirectory || !database) {
 			return createNotImplementedFailure(await getStorageStatus());
 		}
 
-		return executeConfiguredTaskCommand(options.storageDirectory, options.now, database!, command);
+		return executeConfiguredTaskCommand(storageDirectory, options.now, database, command);
 	};
 
 	const writeOperationalLogLine = async(entry: OperationalLogEntry): Promise<OperationalLogWriteResult> => {
-		if(!options.storageDirectory) {
+		if(!storageDirectory) {
 			return createNotImplementedFailure(await getStorageStatus());
 		}
 
@@ -261,8 +260,17 @@ export const createTaskStorage = (options: CreateTaskStorageOptions = {}): TaskS
 
 		return {
 			ok: true,
-			status: createConfiguredStorageStatus(options.storageDirectory, { state: 'healthy' })
+			status: createConfiguredStorageStatus(storageDirectory, { state: 'healthy' })
 		};
+	};
+
+	// Closes the current database before switching folders, so the previous SQLite file is released and the new one is opened right away
+	const openStorageDirectory = (nextStorageDirectory: string): Promise<StorageStatus> => {
+		database?.close();
+		storageDirectory = nextStorageDirectory;
+		database = createConfiguredTaskStorageDatabase(nextStorageDirectory, options.now);
+
+		return getStorageStatus();
 	};
 
 	const prepareForShutdown = (): Promise<void> => {
@@ -276,6 +284,10 @@ export const createTaskStorage = (options: CreateTaskStorageOptions = {}): TaskS
 		executeTaskCommand,
 		writeOperationalLogLine,
 		getStorageStatus,
+		getStorageDirectory: () => {
+			return storageDirectory;
+		},
+		openStorageDirectory,
 		prepareForShutdown
 	};
 };

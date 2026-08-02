@@ -18,7 +18,13 @@ export const STORAGE_CONFIG = {
 	databaseTimeoutMs: 5000
 } as const;
 
+export const APP_CONFIG_FILE = {
+	developmentDirectoryName: 'dev',
+	fileName: 'spot-config.json'
+} as const;
+
 export const LOGGING_CONFIG = {
+	directoryName: 'logs',
 	fileName: 'spot-logs.ndjson',
 	maximumFileSizeBytes: 1024 * 1024,
 	retainedArchiveCount: 1,
