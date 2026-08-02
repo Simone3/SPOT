@@ -1,0 +1,52 @@
+CLAUDE.md
+  s_983b6c169781b0::t_afa25ff11bdf24 43
+DOCUMENTATION.md
+  s_983b6c169781b0::t_39cd94e040b833 62,88-100
+src/components/tasks/Task.tsx
+  s_983b6c169781b0::t_55ee164f70b73a 4,82,108,144
+src/config/AppConfig.ts
+  s_983b6c169781b0::t_bedda7214faa66 1-33
+src/logic/ManuallySortedList.ts
+  s_983b6c169781b0::t_ef8277356cad12 1,50,80,87
+src/main/Main.ts
+  s_983b6c169781b0::t_766e18f15133ee 3,10-11,15
+src/main/ipc/TaskStorageIpc.ts
+  s_983b6c169781b0::t_57f9b16a92d901 3,32
+src/main/logging/SpotLogger.ts
+  s_983b6c169781b0::t_704d5d6b07fb0e 5,255-257,264-265,267
+src/main/storage/SpotDatabase.ts
+  s_983b6c169781b0::t_e88b6ad9ec7f47 5,209,218,224,234,239
+src/main/storage/TaskStorage.ts
+  s_983b6c169781b0::t_91f33159f0136d 2,5,71
+src/main/window/WindowLoadTarget.ts
+  s_983b6c169781b0::t_8f5b42f2881699 2,4
+tests/main/SpotDatabase.test.ts
+  s_983b6c169781b0::t_2715632770e059 4-6,25,62,64,93,129
+tests/main/SpotLogger.test.ts
+  s_983b6c169781b0::t_9817f54ae48630 4-5,39,280-281,283,289,326
+tests/main/TaskStorage.test.ts
+  s_983b6c169781b0::t_bf6c277a715305 4-6,75,231,234,249,251,322,444
+tests/main/TaskStorageIpc.test.ts
+  s_983b6c169781b0::t_8e3b738ed34ba6 4,6,135,188
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "e28b9cef9912be5904ecc22cc5c9a1323ff1b41c",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_983b6c169781b0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f5acc01f-c253-4b98-99fd-b98258b51257",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
