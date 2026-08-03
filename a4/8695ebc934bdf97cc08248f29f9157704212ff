@@ -1,0 +1,52 @@
+DOCUMENTATION.md
+  s_3912cd70328a9e::t_e01eb0c499189e 70,88,107,233-234,277-286,378,566-567,575
+src/components/tasks/Task.tsx
+  s_3912cd70328a9e::t_a459c66010760d 5,191-195
+src/components/tasks/TasksPage.tsx
+  s_3912cd70328a9e::t_1c9db538cda9b8 6,275-276
+src/config/AppConfig.ts
+  s_3912cd70328a9e::t_af7cf447f0fb20 40-43
+src/index.tsx
+  s_3912cd70328a9e::t_f59920b6a968b4 16-19
+src/logic/PendingTaskChanges.ts
+  s_3912cd70328a9e::t_1d57b37d0fb2f6 1-67
+src/main/Main.ts
+  s_3912cd70328a9e::t_f1b559ae87c1f6 55-58
+src/main/ipc/TaskStorageIpc.ts
+  s_3912cd70328a9e::t_a56786afba6ce5 2,21-25,34,66-70,76,88-102,104-125,130-142,202-205,212-213,215,229-232
+src/main/preload/Preload.ts
+  s_3912cd70328a9e::t_de9983ec67285b 31-44
+src/types/TaskStorageIpcChannels.ts
+  s_3912cd70328a9e::t_e85aead1ea0103 4-6
+src/types/TaskStorageTypes.ts
+  s_3912cd70328a9e::t_03cad5315ef4e5 74-79
+tests/components/TaskEditDurability.test.tsx
+  s_3912cd70328a9e::t_f7dbdbd4b582f6 4,236-252
+tests/components/TasksPage.test.tsx
+  s_3912cd70328a9e::t_db825700816740 4,159-164,440-476
+tests/logic/PendingTaskChanges.test.ts
+  s_3912cd70328a9e::t_09e918f47e8242 1-127
+tests/main/TaskStorageIpc.test.ts
+  s_3912cd70328a9e::t_0f3930b5dae79b 3,119,143,147-148,246-388
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "a48695ebc934bdf97cc08248f29f9157704212ff",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_3912cd70328a9e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b7873cc7-ec5b-45b7-a4df-48f0225762ae",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
