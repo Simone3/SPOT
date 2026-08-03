@@ -46,4 +46,14 @@ describe('DateUtils', () => {
 		expect(DateUtils.toStandardYearMonthDay(undefined)).toBe('');
 		expect(DateUtils.toStandardYearMonthDay(null)).toBe('');
 	});
+
+	// Stored due dates must be parsed at local midnight: the native Date constructor reads YYYY-MM-DD as UTC midnight, which shows the previous day in negative UTC offsets
+	test('parses stored YYYY-MM-DD strings as local dates', () => {
+		expect(DateUtils.fromStandardYearMonthDay('2026-08-03')!.getTime()).toBe(new Date(2026, 7, 3).getTime());
+		expect(DateUtils.toStandardYearMonthDay(DateUtils.fromStandardYearMonthDay('2026-08-03'))).toBe('2026-08-03');
+		expect(DateUtils.fromStandardYearMonthDay('')).toBeUndefined();
+		expect(DateUtils.fromStandardYearMonthDay(undefined)).toBeUndefined();
+		expect(DateUtils.fromStandardYearMonthDay(null)).toBeUndefined();
+		expect(DateUtils.fromStandardYearMonthDay('not a date')).toBeUndefined();
+	});
 });

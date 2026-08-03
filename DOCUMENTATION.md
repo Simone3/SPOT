@@ -271,6 +271,8 @@ Operational-log failures are not renderer-facing. Startup log file open failures
 
 `src/main/ipc/TaskStorageIpc.ts` registers a `before-quit` drain. The first quit request waits for in-flight task write commands, calls `prepareForShutdown()` so the SQLite connection closes, flushes the process-wide logger so pending log retries can settle or be abandoned according to the bounded retry policy, and then resumes quitting. New write commands after shutdown begins return a `shutdown` failure instead of being enqueued behind the quit drain.
 
+React flushes its buffered task edits when the renderer is torn down, on unmount and on the window `pagehide` event, so closing the window while the application keeps running still saves what the user typed. The quit drain does not ask the renderer to flush before it starts, so task edits buffered when the user quits the application can still reach the main process after shutdown began and be rejected with a `shutdown` failure.
+
 ## Task Data Model
 
 The current task shape is defined as a TypeScript interface in `src/types/TaskTypes.ts`:
@@ -361,7 +363,10 @@ Active list actions:
 
 - keeps an internal copy of its task while the user edits
 - buffers changed fields in a ref
-- flushes content and metadata changes after 5 seconds, on blur, or on unmount
+- flushes content and metadata changes after 5 seconds, on blur, on unmount, or when the window fires `pagehide`
+- adopts the task values coming from the parent whenever the parent replaces the task object, keeping the buffered changes the user has not saved yet on top of them, so a reload or a bulk update can never leave the inputs showing values that are not in the state
+- commits the tag still sitting in the trailing tag input when it flushes on unmount or `pagehide`, because that input is not part of the buffered changes until it loses focus
+- discards its buffered changes when the user deletes the task, so the deletion is not followed by an update on a task row that no longer exists
 - fades out for 3 seconds before flushing a state change from the completion checkbox; while fading, other task controls are disabled, and changing the checkbox back before the fade completes cancels the state flush and restores full opacity
 - owns the generic task value setter and passes field-specific setters to task chips
 - renders priority, text, owner, due date, tags, and a vertical action column with drag, completion, and delete controls
@@ -482,7 +487,9 @@ Completed tasks are sorted by `completionDate` descending, then by ID.
 
 - day-level date comparison
 - smart date labels for task chips and filters
-- `YYYY-MM-DD` conversion for stored due dates
+- `YYYY-MM-DD` conversion for stored due dates, in both directions
+
+Stored due dates are always parsed with `DateUtils.fromStandardYearMonthDay()`. The native `Date` constructor reads `YYYY-MM-DD` as UTC midnight, which shows and stores the previous day in negative UTC offsets, so it must not be used on stored due dates.
 
 Known limitation: the date context does not currently update at midnight.
 
@@ -551,6 +558,7 @@ Current test coverage includes focused regression checks for:
 - Electron window load-target resolution for local built React loading
 - React task-page startup loading, Electron preload API requirement, persisted Electron loading, and startup-error rendering
 - React task-page storage commands for create, update, delete, complete, restore, manual reorder, and importance sort, plus write-failure warning, storage-health feedback, and reconciliation behavior
+- task edit durability corner cases: buffered edits discarded on delete, parent task values adopted after a reconciled write failure, buffered edits preserved across a bulk update, the trailing tag input saved when the task disappears, and buffered edits saved when the page is being closed
 - generic SPOT logging success, public log levels, startup file-open failures, bounded retry failures, retry recovery, shutdown flush behavior, and size-based rolling with bounded retention
 
 Validation commands:
@@ -579,6 +587,7 @@ The two rules that govern this document itself:
 
 The most important remaining work is:
 
+- Make the quit drain ask the renderer to flush its buffered task edits, and wait for that flush, before it starts closing the database.
 - Add persistence and Electron-shell integration tests for runtime startup, mutation, shutdown, and packaged loading flows.
 - Improve accessibility and focus behavior in reusable inputs and clickables.
 - Continue polishing drag-and-drop feedback as the task interaction model settles.

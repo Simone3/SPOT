@@ -69,7 +69,7 @@ const TaskFilters = ({ domains, filters, onFilterChange, onResetDefaultFilters }
 							return onFilterChange({ dueDates: value as string[] });
 						}}
 						options={domains.dueDates.map((dueDateDomain) => {
-							return { ...dueDateDomain, label: !dueDateDomain.value ? dueDateDomain.label : DateUtils.toSmartString(new Date(dueDateDomain.value), currentDates) };
+							return { ...dueDateDomain, label: !dueDateDomain.value ? dueDateDomain.label : DateUtils.toSmartString(DateUtils.fromStandardYearMonthDay(dueDateDomain.value), currentDates) };
 						})
 						}/>
 				}

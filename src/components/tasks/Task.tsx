@@ -36,11 +36,15 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFrom
 		priority
 	} = internalTask;
 
-	// Temporary state for new tags
-	const [ newTag, setNewTag ] = useState('');
+	// Temporary state for new tags (the ref mirrors it for the unmount callbacks)
+	const [ newTag, setNewTagState ] = useState('');
+	const newTagRef = useRef('');
 
 	// Ref with the changed task values (a ref is required for the timer/unmount callbacks because state may not be completely updated)
 	const changedValuesRef = useRef<TaskChange>({});
+
+	// Set when the task is deleted, so that buffered changes are discarded instead of being saved on a task that no longer exists
+	const isDiscardedRef = useRef(false);
 
 	// Ref with the latest version of onSave callback (same reason as above)
 	const onSaveRef = useRef(onSaveFromProps);
@@ -71,12 +75,27 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFrom
 	// Helper to flush any change to the parent component (main state)
 	const flushTaskChanges = useCallback((): void => {
 		clearFlushTimer();
-		if(Object.keys(changedValuesRef.current).length !== 0) {
+		if(!isDiscardedRef.current && Object.keys(changedValuesRef.current).length !== 0) {
 			const changesToFlush = changedValuesRef.current;
 			changedValuesRef.current = {};
 			onSaveRef.current(changesToFlush);
 		}
 	}, [ clearFlushTimer ]);
+
+	// Helper to save everything the user typed when the task is going away (unmount) or the window is closing:
+	// the tag that is still in the "new tag" input was never committed to the task, so it would be lost otherwise
+	const flushTaskChangesOnTeardown = useCallback((): void => {
+		const pendingNewTag = newTagRef.current.trim();
+		if(pendingNewTag && !isDiscardedRef.current) {
+			newTagRef.current = '';
+			const currentTask = internalTaskRef.current;
+			const newTags = [ ...currentTask.tags, pendingNewTag ];
+			internalTaskRef.current = { ...currentTask, tags: newTags };
+			changedValuesRef.current = { ...changedValuesRef.current, tags: newTags };
+		}
+
+		flushTaskChanges();
+	}, [ flushTaskChanges ]);
 
 	// Helper to (re)start the flush timer
 	const restartFlushTimer = useCallback((flushDelayMs: number = TASKS_CONFIG.flushDelayMs): void => {
@@ -124,10 +143,49 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFrom
 		setTaskValue('tags', changeTags, flush);
 	};
 
-	// On component unmount, flush any pending changes
+	const setNewTag = (value: string): void => {
+		newTagRef.current = value;
+		setNewTagState(value);
+	};
+
+	// Buffered changes are meaningless once the task is deleted, and saving them would fail on a task row that no longer exists
+	const discardTaskChangesAndDelete = (): void => {
+		isDiscardedRef.current = true;
+		changedValuesRef.current = {};
+		newTagRef.current = '';
+		clearFlushTimer();
+		onDelete();
+	};
+
+	// When the parent replaces the task (e.g. a bulk update or a reload from the database), adopt its values but keep any change the user did not save yet
+	const lastTaskFromPropsRef = useRef(taskFromProps);
 	useEffect(() => {
-		return flushTaskChanges;
-	}, [ flushTaskChanges ]);
+		if(lastTaskFromPropsRef.current === taskFromProps) {
+			return;
+		}
+
+		lastTaskFromPropsRef.current = taskFromProps;
+		const newTask = {
+			...taskFromProps,
+			...changedValuesRef.current
+		};
+		internalTaskRef.current = newTask;
+		setInternalTask(newTask);
+	}, [ taskFromProps ]);
+
+	// On component unmount, flush any pending change
+	useEffect(() => {
+		return flushTaskChangesOnTeardown;
+	}, [ flushTaskChangesOnTeardown ]);
+
+	// The renderer is destroyed without unmounting when the window is closed, so pending changes must be flushed here too
+	useEffect(() => {
+		window.addEventListener('pagehide', flushTaskChangesOnTeardown);
+
+		return () => {
+			window.removeEventListener('pagehide', flushTaskChangesOnTeardown);
+		};
+	}, [ flushTaskChangesOnTeardown ]);
 
 	// Dynamic container class
 	let containerClass = 'task-container';
@@ -183,7 +241,7 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFrom
 					// Change state and flush it after the exit animation unless it is reverted first
 					setTaskValue('state', state === 'ACTIVE' ? 'COMPLETED' : 'ACTIVE', false);
 				}}
-				onDelete={onDelete}
+				onDelete={discardTaskChangesAndDelete}
 				dragHandle={dragHandle}
 				disableSecondaryActions={isStateChangePending}
 			/>

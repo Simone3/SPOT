@@ -2,6 +2,7 @@ import { useId, type ReactElement } from 'react';
 import ReactDatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import 'src/components/inputs/DatePicker.css';
+import { DateUtils } from 'src/utils/DateUtils';
 
 type DatePickerProps = {
 	placeholder?: string;
@@ -18,7 +19,7 @@ const DatePicker = ({ placeholder, value, onChange, onBlur, disabled }: DatePick
 		<div className='date-picker-container'>
 			<ReactDatePicker
 				id={id}
-				selected={value ? new Date(value) : undefined}
+				selected={DateUtils.fromStandardYearMonthDay(value)}
 				onChange={(date: Date | null) => {
 					onChange(date);
 				}}

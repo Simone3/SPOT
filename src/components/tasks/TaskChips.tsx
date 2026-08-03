@@ -86,7 +86,8 @@ const TaskChips = ({ inputDomains, task, setOwner, setDueDate, setTags, flushTas
 	);
 
 	// Due date chip
-	const isOverdue = state !== 'COMPLETED' && dueDate && DateUtils.compareDay(new Date(dueDate), new Date()) <= 0;
+	const dueDateValue = DateUtils.fromStandardYearMonthDay(dueDate);
+	const isOverdue = state !== 'COMPLETED' && dueDateValue && DateUtils.compareDay(dueDateValue, new Date()) <= 0;
 	chips.push(
 		<Chip
 			key='due-date'
