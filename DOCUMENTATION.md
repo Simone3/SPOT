@@ -85,7 +85,7 @@ npm run make
 - `src/components/settings` contains the Settings route page.
 - `src/components/storage` contains the task database folder UI: the startup gate, the first-startup setup screen, and the Settings section.
 - `src/contexts` contains app-level React contexts.
-- `src/logic` contains state and domain logic, including `PendingTaskChanges.ts`, which holds the task edits the user has not saved yet and tracks the storage commands they produce.
+- `src/logic` contains state and domain logic, including `PendingTaskChanges.ts`, which holds the task edits the user has not saved yet, and `TaskStorageQueue.ts`, which writes them in order and retries the writes that fail.
 - `src/utils` contains general utilities.
 - `tests` contains Jest tests, test setup, and test-only helpers.
 
@@ -100,7 +100,7 @@ React source files use absolute imports rooted at `src/...`, including local CSS
 The exported groups are:
 
 - `WINDOW_CONFIG`: `BrowserWindow` size, the preload script file name, and the built React index path segments.
-- `STORAGE_CONFIG`: the default storage directory name, the SQLite database file name, the current schema version, and the SQLite connection timeout.
+- `STORAGE_CONFIG`: the default storage directory name, the SQLite database file name, the current schema version, the SQLite connection timeout, and the delay before a failed task write is retried.
 - `APP_CONFIG_FILE`: the development root directory name and the application configuration file name.
 - `LOGGING_CONFIG`: the log directory name, the operational log file name, maximum file size, retained archive count, maximum write attempts, and retry delay.
 - `TASKS_CONFIG`: the task flush delay, the task state change delay, and the manual sort position step.
@@ -188,7 +188,7 @@ Startup resolution:
 Changing the folder, from the setup screen or from Settings:
 
 1. The folder is validated. The native folder dialog is opened by `src/main/ipc/DatabaseLocationIpc.ts` with `openDirectory` and `createDirectory`, and it reports whether the folder already contains `spot.sqlite`.
-2. `runExclusively()` from the storage IPC controller finalizes the task write commands already running on the old database. Commands received during the switch wait for the new database instead of racing it.
+2. React writes everything it still has buffered or queued for the current database before asking for the switch, so no task command can still be on its way. `runExclusively()` from the storage IPC controller then finalizes the task write commands already running on the old database, and commands received during the switch wait for the new database instead of racing it.
 3. `TaskStorage.openStorageDirectory()` closes the old SQLite connection and opens the new one, creating an empty database when the folder has no `spot.sqlite` file.
 4. The new folder is saved in the configuration file, and React reloads all tasks from the new database. When the new folder cannot be opened, the previous folder is reopened, the configuration is left untouched, and the failure message is shown.
 
@@ -248,6 +248,18 @@ Each configured task write command runs in exactly one SQLite transaction on the
 
 React calls `loadTasks()` through `window.spotStorage` on startup, and again whenever the selected task database folder changes, and calls `executeTaskCommand()` for task mutations. It updates optimistically for normal task changes, keeps the latest renderer-facing `StorageStatus`, stays quiet while the database is healthy, shows startup storage failures before rendering task lists, and shows a prominent save warning when writes fail.
 
+### Writing Task Changes
+
+`src/logic/TaskStorageQueue.ts` owns every task write. Commands are queued and written one at a time and in order, so a write that fails cannot be overtaken by later ones.
+
+- A write that fails with `database-error`, or whose call throws, stays at the front of the queue and is retried every `STORAGE_CONFIG.writeRetryDelayMs`. A database that failed once can work again, and the change is not lost in the meantime.
+- A write refused as `invalid-command` would be refused again in exactly the same way, so it is dropped instead of retried.
+- A failed write does not touch the task state. The state holds what the user wanted, and reading the database back over it would throw that away, so React keeps it and only warns. There is no reconciliation and no reload after a write failure.
+- The warning lives as long as the change is unwritten: it is cleared when the queue drains, never by an unrelated command that happened to succeed. A dropped command keeps warning until tasks are loaded again, because that change will never be written.
+- Successful writes are silent. There is no saving or saved indicator.
+
+The renderer waits for that queue to drain before it lets the task database folder change, so a command already on its way to the main process cannot be applied to the newly opened database, where its task does not exist.
+
 ### Buffered Task Changes
 
 Task edits are not sent to the task state on every keystroke. `src/logic/PendingTaskChanges.ts` holds them in a buffer keyed by task ID, outside the component tree, so that they cannot be lost when a task component re-renders, is filtered out, or unmounts.
@@ -280,7 +292,7 @@ Logger write methods return `void`; normal callers do not await operational logg
 
 ### Failure And Shutdown
 
-Database write failures are user-facing. The SQLite transaction must not partially commit, the main process reports the failure to React, and React reconciles optimistic local state. Database read or startup failures are also user-facing; React receives a storage error state instead of silently falling back to stale persisted data.
+Database write failures are user-facing. The SQLite transaction must not partially commit and the main process reports the failure to React, which keeps the task state, retries the write, and warns the user. Database read or startup failures are also user-facing; React receives a storage error state instead of silently falling back to stale persisted data.
 
 Operational-log failures are not renderer-facing. Startup log file open failures are tracked internally by `SpotLogger`, and runtime log write failures are ignored after bounded retries when SQLite succeeds. Storage folder failures must leave persistence visibly non-healthy rather than pretending data is saved.
 
@@ -584,8 +596,9 @@ Current test coverage includes focused regression checks for:
 - smoke coverage for the blocking first-startup folder setup and for the confirmed folder change in Settings
 - Electron window load-target resolution for local built React loading
 - React task-page startup loading, Electron preload API requirement, persisted Electron loading, and startup-error rendering
-- React task-page storage commands for create, update, delete, complete, restore, manual reorder, and importance sort, plus write-failure warning, storage-health feedback, and reconciliation behavior
-- task edit durability corner cases: edits still saved after the task is filtered out of the list, never saved for a deleted task, task state values shown again after a reconciled write failure, what the user is typing kept while the parent replaces the task, the trailing tag input saved when the task disappears, and everything saved before the renderer goes away
+- React task-page storage commands for create, update, delete, complete, restore, manual reorder, and importance sort, plus the write-failure warning, storage-health feedback, and the task state being kept as it is after a rejected write
+- the task write queue: in-order writing, retrying a failed or thrown write while keeping the warning until it goes through, later commands not overtaking a failed one, dropping a refused command instead of retrying it forever, keeping a dropped command's warning through later successful writes, and database status reporting
+- task edit durability corner cases: edits still saved after the task is filtered out of the list, never saved for a deleted task, task state values shown again when the parent replaces the task, what the user is typing kept while the parent replaces the task, the trailing tag input saved when the task disappears, and everything saved before the renderer goes away
 - generic SPOT logging success, public log levels, startup file-open failures, bounded retry failures, retry recovery, shutdown flush behavior, and size-based rolling with bounded retention
 
 Validation commands:

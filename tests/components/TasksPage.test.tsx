@@ -1,7 +1,8 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { makeTask } from '../testUtils';
-import { flushPendingTaskChanges, resetPendingTaskChangesForTests, waitForPendingTaskStorage } from 'src/logic/PendingTaskChanges';
+import { flushPendingTaskChanges, resetPendingTaskChangesForTests } from 'src/logic/PendingTaskChanges';
+import { resetTaskStorageQueueForTests, waitForTaskStorageQueue } from 'src/logic/TaskStorageQueue';
 import { TasksPage } from 'src/components/tasks/TasksPage';
 import type { Task, TaskChange } from 'src/types/TaskTypes';
 import type { TaskFilterChange } from 'src/types/FilterTypes';
@@ -207,6 +208,7 @@ describe('TasksPage', () => {
 	afterEach(() => {
 		setWindowSpotStorage(originalSpotStorage);
 		resetPendingTaskChangesForTests();
+		resetTaskStorageQueueForTests();
 		jest.restoreAllMocks();
 		jest.useRealTimers();
 	});
@@ -467,7 +469,7 @@ describe('TasksPage', () => {
 
 		let didWaitSettle = false;
 		flushPendingTaskChanges();
-		const waitPromise = waitForPendingTaskStorage().then(() => {
+		const waitPromise = waitForTaskStorageQueue().then(() => {
 			didWaitSettle = true;
 		});
 
@@ -485,27 +487,21 @@ describe('TasksPage', () => {
 		expect(didWaitSettle).toBe(true);
 	});
 
-	test('shows a warning and reconciles local state when storage rejects a task command', async() => {
+	test('warns but keeps what the user changed when storage rejects a task command', async() => {
 		const persistedTask = makeTask({
 			id: 'persisted-task',
 			text: 'Persisted startup task',
 			visible: false
 		});
-		const loadTasks = jest.fn(async(): Promise<LoadTasksResult> => {
-			return {
-				ok: true,
-				tasks: [ persistedTask ],
-				status: healthyStatus
-			};
-		});
+		const loadTasks = createLoadTasks([ persistedTask ]);
 		const commandFailure: TaskStorageCommandResult = {
 			ok: false,
 			reason: 'database-error',
-			message: 'Cannot update missing task.',
+			message: 'Cannot write task changes.',
 			status: {
 				database: {
 					state: 'unavailable',
-					message: 'Cannot update missing task.'
+					message: 'Cannot write task changes.'
 				}
 			}
 		};
@@ -528,10 +524,12 @@ describe('TasksPage', () => {
 		});
 
 		const warning = await screen.findByRole('alert');
-		expect(warning).toHaveTextContent('Task storage update failed. Cannot update missing task.');
-		expect(screen.getByText('Persisted startup task')).toBeInTheDocument();
-		expect(screen.queryByText('Updated by mock')).not.toBeInTheDocument();
-		expect(loadTasks).toHaveBeenCalledTimes(2);
+		expect(warning).toHaveTextContent('Task storage update failed. Cannot write task changes.');
+
+		// The change the user made stays on screen and the database is not read back over it
+		expect(screen.getByText('Updated by mock')).toBeInTheDocument();
+		expect(screen.queryByText('Persisted startup task')).not.toBeInTheDocument();
+		expect(loadTasks).toHaveBeenCalledTimes(1);
 	});
 
 	test('shows database health when storage remains unavailable after a write failure', async() => {
@@ -548,22 +546,7 @@ describe('TasksPage', () => {
 			storageDirectory: '/tmp/spot-storage',
 			databasePath: '/tmp/spot-storage/spot.sqlite'
 		};
-		const loadTasks = jest.fn(async(): Promise<LoadTasksResult> => {
-			if(loadTasks.mock.calls.length === 1) {
-				return {
-					ok: true,
-					tasks: [ persistedTask ],
-					status: healthyStatus
-				};
-			}
-
-			return {
-				ok: false,
-				reason: 'database-error',
-				message: 'Could not reopen spot.sqlite.',
-				status: unavailableStatus
-			};
-		});
+		const loadTasks = createLoadTasks([ persistedTask ]);
 		const commandFailure: TaskStorageCommandResult = {
 			ok: false,
 			reason: 'database-error',
@@ -592,7 +575,6 @@ describe('TasksPage', () => {
 		expect(alert).toHaveTextContent('Tasks are not saved');
 		expect(alert).toHaveTextContent('Task storage update failed. Cannot write task changes.');
 		expect(alert).toHaveTextContent('Database status: unavailable. Could not reopen spot.sqlite.');
-		expect(screen.getByText('Persisted startup task')).toBeInTheDocument();
-		expect(screen.queryByText('Updated by mock')).not.toBeInTheDocument();
+		expect(screen.getByText('Updated by mock')).toBeInTheDocument();
 	});
 });

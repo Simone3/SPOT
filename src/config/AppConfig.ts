@@ -15,7 +15,8 @@ export const STORAGE_CONFIG = {
 	directoryName: 'storage',
 	databaseFileName: 'spot.sqlite',
 	currentSchemaVersion: 1,
-	databaseTimeoutMs: 5000
+	databaseTimeoutMs: 5000,
+	writeRetryDelayMs: 5000
 } as const;
 
 export const APP_CONFIG_FILE = {

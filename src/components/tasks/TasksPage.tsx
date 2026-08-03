@@ -3,7 +3,8 @@ import { useState, useEffect, useRef, useContext, type ReactElement } from 'reac
 import { Page } from 'src/components/common/Page';
 import { Pane } from 'src/components/common/Pane';
 import { DatabaseLocationContext } from 'src/contexts/DatabaseLocationContext';
-import { clearPendingTaskChanges, flushPendingTaskChanges, registerPendingTaskChangesApplier, trackPendingTaskCommand, type PendingTaskChanges } from 'src/logic/PendingTaskChanges';
+import { clearPendingTaskChanges, flushPendingTaskChanges, registerPendingTaskChangesApplier, type PendingTaskChanges } from 'src/logic/PendingTaskChanges';
+import { clearTaskStorageFailures, getTaskStorageQueueState, sendTaskStorageCommand, subscribeToTaskStorageQueue } from 'src/logic/TaskStorageQueue';
 import { findTaskById } from 'src/logic/TasksLogic';
 import { getInitialTaskState, addTaskToTaskState, refreshVisibleTasksInTaskState, deleteTaskFromTaskState, changeFiltersInTaskState, loadTasksIntoTaskState, resetFiltersTaskState, updateTaskInTaskState, sortTasksByImportanceInTaskState, moveActiveTaskInTaskState, type TaskStateContainer } from 'src/logic/TaskStateLogic';
 import type { PersistedTask, PersistedTaskChange, Task, TaskChange, TasksContainer } from 'src/types/TaskTypes';
@@ -223,70 +224,20 @@ const TasksPage = (): ReactElement => {
 		setTaskState(nextTaskState);
 	};
 
-	const reconcileAfterTaskStorageFailure = async(
-		spotStorage: SpotStorageApi,
-		message: string,
-		fallbackTaskState: TaskStateContainer
-	): Promise<void> => {
-		setTaskStorageWarning(`Task storage update failed. ${message}`);
-
-		try {
-			const loadTasksResult = await spotStorage.loadTasks();
-			setTaskStorageStatus(loadTasksResult.status);
-
-			if(loadTasksResult.ok) {
-				commitTaskState(loadTasksIntoTaskState(taskStateRef.current, loadTasksResult.tasks));
-			}
-			else {
-				commitTaskState(fallbackTaskState);
-			}
-		}
-		catch {
-			const currentStorageStatus = await tryReadTaskStorageStatus(spotStorage);
-
-			if(currentStorageStatus) {
-				setTaskStorageStatus(currentStorageStatus);
-			}
-
-			commitTaskState(fallbackTaskState);
-		}
-	};
-
-	const executeOptimisticTaskCommand = async(
-		command: TaskStorageCommand,
-		fallbackTaskState: TaskStateContainer
-	): Promise<void> => {
-		const spotStorage = window.spotStorage;
-
-		setTaskStorageWarning(undefined);
-
-		try {
-			const commandResult = await spotStorage.executeTaskCommand(command);
-			setTaskStorageStatus(commandResult.status);
-
-			if(!commandResult.ok) {
-				await reconcileAfterTaskStorageFailure(spotStorage, commandResult.message, fallbackTaskState);
-			}
-		}
-		catch(error) {
-			await reconcileAfterTaskStorageFailure(spotStorage, getErrorMessage(error), fallbackTaskState);
-		}
-	};
-
+	// A write failure leaves the task state alone: it holds what the user wanted, and reloading the database over it
+	// would throw that away. The queue keeps retrying the write and warns for as long as it has not gone through.
 	const applyOptimisticTaskCommand = (
 		createMutation: (currentTaskState: TaskStateContainer) => {
 			taskState: TaskStateContainer;
 			command?: TaskStorageCommand;
 		}
 	): void => {
-		const previousTaskState = taskStateRef.current;
-		const { taskState: nextTaskState, command } = createMutation(previousTaskState);
+		const { taskState: nextTaskState, command } = createMutation(taskStateRef.current);
 
 		commitTaskState(nextTaskState);
 
 		if(command) {
-			// Tracked so that the shutdown flush can wait for the command to reach storage
-			trackPendingTaskCommand(executeOptimisticTaskCommand(command, previousTaskState));
+			sendTaskStorageCommand(command);
 		}
 	};
 
@@ -296,6 +247,9 @@ const TasksPage = (): ReactElement => {
 
 		setTaskStartupState({ state: 'loading' });
 		setTaskStorageWarning(undefined);
+
+		// The task state is about to be replaced by what the database holds, so warnings about the old one no longer apply
+		clearTaskStorageFailures();
 
 		const loadStartupTasks = async(): Promise<void> => {
 			const spotStorage = window.spotStorage as SpotStorageApi | undefined;
@@ -486,6 +440,18 @@ const TasksPage = (): ReactElement => {
 			flushPendingTaskChanges();
 			unregisterApplier();
 		};
+	}, []);
+
+	useEffect(() => {
+		return subscribeToTaskStorageQueue(() => {
+			const queueState = getTaskStorageQueueState();
+
+			if(queueState.status) {
+				setTaskStorageStatus(queueState.status);
+			}
+
+			setTaskStorageWarning(queueState.unsavedChangesMessage);
+		});
 	}, []);
 
 	const onDeleteTask = (task: Task): void => {

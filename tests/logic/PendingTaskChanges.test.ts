@@ -11,11 +11,10 @@ import {
 	registerPendingTaskChangesApplier,
 	resetPendingTaskChangesForTests,
 	subscribeToPendingTaskChanges,
-	trackPendingTaskCommand,
-	waitForPendingTaskStorage,
 	type PendingTaskChanges
 } from 'src/logic/PendingTaskChanges';
-import type { SpotStorageApi } from 'src/types/TaskStorageTypes';
+import { resetTaskStorageQueueForTests, sendTaskStorageCommand } from 'src/logic/TaskStorageQueue';
+import type { SpotStorageApi, TaskStorageCommandResult } from 'src/types/TaskStorageTypes';
 
 type AppliedChange = [ string, PendingTaskChanges ];
 
@@ -76,9 +75,21 @@ const createMockSpotStorage = (): {
 	};
 };
 
+const originalSpotStorage = window.spotStorage;
+
+const setWindowSpotStorage = (spotStorage: SpotStorageApi | undefined): void => {
+	Object.defineProperty(window, 'spotStorage', {
+		configurable: true,
+		writable: true,
+		value: spotStorage
+	});
+};
+
 describe('PendingTaskChanges', () => {
 	afterEach(() => {
 		resetPendingTaskChangesForTests();
+		resetTaskStorageQueueForTests();
+		setWindowSpotStorage(originalSpotStorage);
 		jest.useRealTimers();
 		jest.restoreAllMocks();
 	});
@@ -294,30 +305,6 @@ describe('PendingTaskChanges', () => {
 		expect(subscriber).toHaveBeenCalledTimes(1);
 	});
 
-	test('waits for the storage commands still in flight', async() => {
-		const commandDeferred = createDeferred<void>();
-		let didWaitSettle = false;
-
-		trackPendingTaskCommand(commandDeferred.promise);
-		const waitPromise = waitForPendingTaskStorage().then(() => {
-			didWaitSettle = true;
-		});
-
-		await waitForQueuedWork();
-		expect(didWaitSettle).toBe(false);
-
-		commandDeferred.resolve();
-		await waitPromise;
-
-		expect(didWaitSettle).toBe(true);
-	});
-
-	test('still resolves when a tracked storage command fails', async() => {
-		trackPendingTaskCommand(Promise.reject(new Error('Storage is unavailable.')));
-
-		await expect(waitForPendingTaskStorage()).resolves.toBeUndefined();
-	});
-
 	test('saves buffered changes when the page is hidden', () => {
 		const task = makeTask({ text: 'Original task' });
 		const applier = registerApplier();
@@ -339,9 +326,21 @@ describe('PendingTaskChanges', () => {
 	test('reports to the main process only after the buffered changes reached storage', async() => {
 		const { spotStorage, requestFlush } = createMockSpotStorage();
 		const task = makeTask({ text: 'Original task' });
-		const commandDeferred = createDeferred<void>();
-		registerPendingTaskChangesApplier(() => {
-			trackPendingTaskCommand(commandDeferred.promise);
+		const commandDeferred = createDeferred<TaskStorageCommandResult>();
+		setWindowSpotStorage({
+			...spotStorage,
+			executeTaskCommand: jest.fn(() => {
+				return commandDeferred.promise;
+			})
+		});
+		registerPendingTaskChangesApplier((taskId, pendingChanges) => {
+			sendTaskStorageCommand({
+				command: 'task.update',
+				payload: {
+					taskId,
+					change: pendingChanges.change
+				}
+			});
 		});
 		const uninstall = installPendingTaskChangesFlushHandler(spotStorage);
 
@@ -351,7 +350,14 @@ describe('PendingTaskChanges', () => {
 
 		expect(spotStorage.notifyPendingTaskChangesFlushed).not.toHaveBeenCalled();
 
-		commandDeferred.resolve();
+		commandDeferred.resolve({
+			ok: true,
+			status: {
+				database: {
+					state: 'healthy'
+				}
+			}
+		});
 		await waitForQueuedWork();
 
 		expect(spotStorage.notifyPendingTaskChangesFlushed).toHaveBeenCalledTimes(1);

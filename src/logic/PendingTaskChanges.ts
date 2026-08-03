@@ -1,4 +1,5 @@
 import { TASKS_CONFIG } from 'src/config/AppConfig';
+import { waitForTaskStorageQueue } from 'src/logic/TaskStorageQueue';
 import type { SpotStorageApi } from 'src/types/TaskStorageTypes';
 import type { Task, TaskChange } from 'src/types/TaskTypes';
 
@@ -23,8 +24,6 @@ const pendingTaskChanges = new Map<string, PendingTaskChanges>();
 const flushTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
 
 const changeSubscribers = new Map<string, Set<() => void>>();
-
-const pendingTaskCommands = new Set<Promise<unknown>>();
 
 let applyPendingTaskChanges: PendingTaskChangesApplier | undefined;
 
@@ -232,28 +231,6 @@ export const flushPendingTaskChanges = (): void => {
 };
 
 /**
- * Tracks a storage command until it settles, so that a flush can wait for it.
- * @param commandPromise Storage command to track.
- */
-export const trackPendingTaskCommand = (commandPromise: Promise<unknown>): void => {
-	pendingTaskCommands.add(commandPromise);
-
-	void commandPromise.then(() => {
-		pendingTaskCommands.delete(commandPromise);
-	}, () => {
-		pendingTaskCommands.delete(commandPromise);
-	});
-};
-
-/**
- * Waits for the storage commands that are still in flight.
- * @returns A promise that resolves when nothing is left to save.
- */
-export const waitForPendingTaskStorage = async(): Promise<void> => {
-	await Promise.allSettled(Array.from(pendingTaskCommands));
-};
-
-/**
  * Saves every buffered task change and answers the main-process request to do so before the application quits.
  * The same flush runs on page hide, because closing the window destroys the renderer without unmounting anything.
  * Without the Electron storage API only the page hide flush is installed.
@@ -270,7 +247,7 @@ export const installPendingTaskChangesFlushHandler = (spotStorage: SpotStorageAp
 	const unsubscribeFromFlushRequests = spotStorage?.onFlushPendingTaskChanges?.(() => {
 		flushPendingTaskChanges();
 
-		void waitForPendingTaskStorage().then(() => {
+		void waitForTaskStorageQueue().then(() => {
 			return spotStorage.notifyPendingTaskChangesFlushed();
 		}, () => {
 			return spotStorage.notifyPendingTaskChangesFlushed();
@@ -293,6 +270,5 @@ export const resetPendingTaskChangesForTests = (): void => {
 	});
 	pendingTaskChanges.clear();
 	changeSubscribers.clear();
-	pendingTaskCommands.clear();
 	applyPendingTaskChanges = undefined;
 };

@@ -1,4 +1,6 @@
 import { createContext, useCallback, useEffect, useMemo, useState, type ReactElement, type ReactNode } from 'react';
+import { flushPendingTaskChanges } from 'src/logic/PendingTaskChanges';
+import { waitForTaskStorageQueue } from 'src/logic/TaskStorageQueue';
 import type { ChooseDatabaseDirectoryResult, DatabaseLocation, SetDatabaseDirectoryResult, SpotDatabaseLocationApi } from 'src/types/DatabaseLocationTypes';
 
 export const ELECTRON_DATABASE_LOCATION_API_UNAVAILABLE_MESSAGE = 'SPOT must be opened from the Electron app.';
@@ -100,6 +102,11 @@ export const DatabaseLocationContextProvider = ({ children }: DatabaseLocationCo
 				message: ELECTRON_DATABASE_LOCATION_API_UNAVAILABLE_MESSAGE
 			};
 		}
+
+		// A task command still on its way to the main process would be applied to the new database, where its task does not
+		// exist, so everything the user changed is written to the current database before the folder is allowed to change
+		flushPendingTaskChanges();
+		await waitForTaskStorageQueue();
 
 		try {
 			const result = await change(databaseLocationApi);

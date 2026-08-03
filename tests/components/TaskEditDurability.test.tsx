@@ -288,7 +288,9 @@ describe('Task edit durability', () => {
 		const { applyPendingTaskChanges } = renderTasksList([ task ]);
 
 		typeTaskText('Typed right before quitting');
-		flushPendingTaskChanges();
+		act(() => {
+			flushPendingTaskChanges();
+		});
 
 		expect(applyPendingTaskChanges).toHaveBeenCalledWith(task.id, {
 			change: {
