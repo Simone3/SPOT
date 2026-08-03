@@ -1,0 +1,26 @@
+DOCUMENTATION.md
+  s_3912cd70328a9e::t_1d888f8648fb82 389,543-546
+src/components/inputs/TextArea.tsx
+  s_3912cd70328a9e::t_7d4c8afc43095a 1-2,15-25,29
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "77db593f2692c56518e7eb3840ef998c45a34b6f",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_3912cd70328a9e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b7873cc7-ec5b-45b7-a4df-48f0225762ae",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
