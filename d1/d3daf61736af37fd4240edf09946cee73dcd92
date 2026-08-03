@@ -1,0 +1,42 @@
+src/components/tasks/TasksPage.tsx
+  s_3912cd70328a9e::t_1b135097c43f9d 6-7,227-228,235,240,251-253,445-456
+src/config/AppConfig.ts
+  s_3912cd70328a9e::t_450bf6814b18fc 18-19
+src/contexts/DatabaseLocationContext.tsx
+  s_3912cd70328a9e::t_a7f3a34495119d 2-3,106-110
+src/logic/PendingTaskChanges.ts
+  s_3912cd70328a9e::t_27992913b46c53 2,250
+tests/logic/PendingTaskChanges.test.ts
+  s_3912cd70328a9e::t_b6b4f0aa0a3b55 16-17,78-87,91-92,329-343,353-360
+DOCUMENTATION.md
+  s_3912cd70328a9e::t_6255c85da9a0e2 88,103,191,251-262,295,599-601
+src/logic/TaskStorageQueue.ts
+  s_3912cd70328a9e::t_286009a641ee55 1-253
+tests/components/TaskEditDurability.test.tsx
+  s_3912cd70328a9e::t_81ebcf9f4ad794 291-293
+tests/components/TasksPage.test.tsx
+  s_3912cd70328a9e::t_a710de00e790cc 4-5,211,472,490,496,500,504,527-532,549,578
+tests/logic/TaskStorageQueue.test.ts
+  s_3912cd70328a9e::t_c91e6ad5928586 1-244
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "d1d3daf61736af37fd4240edf09946cee73dcd92",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_3912cd70328a9e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b7873cc7-ec5b-45b7-a4df-48f0225762ae",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
