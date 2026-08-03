@@ -158,7 +158,7 @@ describe('SpotLogger', () => {
 		});
 		spotLogger.error('Storage SQL query failed', {
 			type: 'sql.query',
-			elapsedMillis: 2.5
+			elapsedMillis: 3
 		});
 		spotLogger.debug('Storage debug detail', {
 			type: 'storage.debug'
@@ -183,7 +183,7 @@ describe('SpotLogger', () => {
 				level: 'error',
 				message: 'Storage SQL query failed',
 				type: 'sql.query',
-				elapsedMillis: 2.5
+				elapsedMillis: 3
 			},
 			{
 				createdAt: createdAt.toISOString(),

@@ -73,7 +73,7 @@ const writeSqlQueryLogRecord = (record: SqlQueryLogRecord): void => {
 	spotLogger[record.result === 'failure' ? 'error' : 'info']('Storage SQL query completed', {
 		type: 'sql.query',
 		query: record.query,
-		elapsedMillis: record.durationMs,
+		elapsedMillis: Math.round(record.durationMs),
 		result: record.result,
 		error: record.error
 	});

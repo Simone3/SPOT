@@ -1,20 +1,12 @@
 
 # electron
 
-are we opening and closing the database at each query? "That said, once this is wired into the running Electron app, I’d revisit it."
-
-logger configs to centralized configs - also timeouts etc.
-
-also user-chosen db path, persisted in settings - choose database path (default temp folder for dev) - startup only - folder for both db and logs
+logged elapsedMillis should be rounded
 
 move createSpotLogger() from TaskStorage to a more generic class that starts both - "global" logger like Spring
 and remove "logger?" and "logger!" stuff, it will always be there
 
 is task page the right place for all that logic?
-
-logger configs to centralized configs - also timeouts etc.
-
-also user-chosen db path, persisted in settings - choose database path (default temp folder for dev) - startup only
 
 re-review all files created/modified after "Add hover feedback" commit
 
@@ -26,6 +18,10 @@ test persistence
 	does closing the program while typing save the latest value? considering both state update on blur and/or delayed disk save, if implemented
 
 extract ark modules for other apps like pfm
+
+moving to settings should not reset task state
+
+tests/complete review to avoid data loss (race conditions, etc.) both react and electron
 
 
 
