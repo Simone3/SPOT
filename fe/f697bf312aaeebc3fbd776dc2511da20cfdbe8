@@ -1,0 +1,38 @@
+src/components/inputs/DatePicker.tsx
+  s_3912cd70328a9e::t_cf86806d93b8a0 5,22
+src/components/tasks/TaskChips.tsx
+  s_3912cd70328a9e::t_b0d46c2228b40c 89-90
+src/components/tasks/TaskFilters.tsx
+  s_3912cd70328a9e::t_d0d63c25364676 72
+src/utils/DateUtils.ts
+  s_3912cd70328a9e::t_05d96fd1c88d9a 71-92
+tests/components/TaskEditDurability.test.tsx
+  s_3912cd70328a9e::t_e51663d633ad87 1-251
+DOCUMENTATION.md
+  s_3912cd70328a9e::t_f3e4d43527593a 274-275,366-369,490-492,561,590
+src/components/tasks/Task.tsx
+  s_3912cd70328a9e::t_de9fbf2cb4e10f 39-41,46-48,78,85-99,146-161,163-188,244
+tests/utils/DateUtils.test.ts
+  s_3912cd70328a9e::t_1d9807f89f73b7 49-58
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "fef697bf312aaeebc3fbd776dc2511da20cfdbe8",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_3912cd70328a9e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b7873cc7-ec5b-45b7-a4df-48f0225762ae",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
