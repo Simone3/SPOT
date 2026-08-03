@@ -1,9 +1,10 @@
 import type { ChangeEvent, ReactElement, ReactNode } from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { makeFormDomains, makeTask } from '../testUtils';
-import { flushPendingTaskChanges } from 'src/logic/PendingTaskChanges';
+import { TASKS_CONFIG } from 'src/config/AppConfig';
+import { clearPendingTaskChanges, flushPendingTaskChanges, registerPendingTaskChangesApplier, resetPendingTaskChangesForTests, type PendingTaskChanges } from 'src/logic/PendingTaskChanges';
 import { TasksList } from 'src/components/tasks/TasksList';
-import type { Task, TaskChange } from 'src/types/TaskTypes';
+import type { Task } from 'src/types/TaskTypes';
 
 jest.mock('src/components/inputs/TextArea', () => {
 	type MockTextAreaProps = {
@@ -63,14 +64,16 @@ jest.mock('@dnd-kit/react/sortable', () => {
 
 interface RenderedTasksList {
 	container: HTMLElement;
-	onUpdateTask: jest.Mock<void, [ Task, TaskChange ]>;
+	applyPendingTaskChanges: jest.Mock<void, [ string, PendingTaskChanges ]>;
 	onDeleteTask: jest.Mock<void, [ Task ]>;
 	rerenderTasks: (nextTasks: Task[]) => void;
 }
 
 const renderTasksList = (tasks: Task[]): RenderedTasksList => {
-	const onUpdateTask = jest.fn<void, [ Task, TaskChange ]>();
+	const applyPendingTaskChanges = jest.fn<void, [ string, PendingTaskChanges ]>();
 	const onDeleteTask = jest.fn<void, [ Task ]>();
+
+	registerPendingTaskChangesApplier(applyPendingTaskChanges);
 
 	const createTasksListElement = (currentTasks: Task[]): ReactElement => {
 		return (
@@ -82,7 +85,6 @@ const renderTasksList = (tasks: Task[]): RenderedTasksList => {
 				onMoveTask={jest.fn()}
 				onSortTasksByImportance={jest.fn()}
 				onAddNewTask={jest.fn()}
-				onUpdateTask={onUpdateTask}
 				onDeleteTask={onDeleteTask}
 				showActions={true}
 			/>
@@ -93,7 +95,7 @@ const renderTasksList = (tasks: Task[]): RenderedTasksList => {
 
 	return {
 		container,
-		onUpdateTask,
+		applyPendingTaskChanges,
 		onDeleteTask,
 		rerenderTasks: (nextTasks) => {
 			rerender(createTasksListElement(nextTasks));
@@ -137,17 +139,48 @@ describe('Task edit durability', () => {
 	});
 
 	afterEach(() => {
+		resetPendingTaskChangesForTests();
 		jest.useRealTimers();
 		jest.restoreAllMocks();
 	});
 
-	test('does not send an update for a task that the user just deleted', () => {
+	test('keeps saving what the user typed after the task disappears from the list', () => {
 		jest.useFakeTimers();
 		const task = makeTask({
 			text: 'Original task',
 			visible: true
 		});
-		const { container, onUpdateTask, onDeleteTask } = renderTasksList([ task ]);
+		const { applyPendingTaskChanges, rerenderTasks } = renderTasksList([ task ]);
+
+		typeTaskText('Edited and then filtered out');
+
+		// The task is filtered out while its changes are still buffered
+		rerenderTasks([]);
+
+		expect(applyPendingTaskChanges).not.toHaveBeenCalled();
+
+		act(() => {
+			jest.advanceTimersByTime(TASKS_CONFIG.flushDelayMs);
+		});
+
+		expect(applyPendingTaskChanges).toHaveBeenCalledWith(task.id, {
+			change: {
+				text: 'Edited and then filtered out'
+			},
+			newTag: ''
+		});
+	});
+
+	test('never saves the buffered changes of a task that was deleted', () => {
+		jest.useFakeTimers();
+		const task = makeTask({
+			text: 'Original task',
+			visible: true
+		});
+		const { container, applyPendingTaskChanges, onDeleteTask } = renderTasksList([ task ]);
+		onDeleteTask.mockImplementation((deletedTask) => {
+			clearPendingTaskChanges(deletedTask.id);
+		});
 
 		typeTaskText('Edited and then deleted');
 
@@ -159,14 +192,13 @@ describe('Task edit durability', () => {
 		fireEvent.click(deleteButton);
 		fireEvent.click(screen.getByRole('button', { name: 'Delete Task' }));
 
-		expect(onDeleteTask).toHaveBeenCalledWith(task);
-		expect(onUpdateTask).not.toHaveBeenCalled();
-
 		act(() => {
-			jest.advanceTimersByTime(5000);
+			jest.advanceTimersByTime(TASKS_CONFIG.flushDelayMs);
 		});
+		flushPendingTaskChanges();
 
-		expect(onUpdateTask).not.toHaveBeenCalled();
+		expect(onDeleteTask).toHaveBeenCalledWith(task);
+		expect(applyPendingTaskChanges).not.toHaveBeenCalled();
 	});
 
 	test('shows the task values coming from the parent state after a rejected change is reconciled', () => {
@@ -174,12 +206,17 @@ describe('Task edit durability', () => {
 			text: 'Original task',
 			visible: true
 		});
-		const { rerenderTasks, onUpdateTask } = renderTasksList([ task ]);
+		const { rerenderTasks, applyPendingTaskChanges } = renderTasksList([ task ]);
 
 		typeTaskText('Locally edited task');
 		fireEvent.blur(getTaskTextInput());
 
-		expect(onUpdateTask).toHaveBeenCalledWith(task, { text: 'Locally edited task' });
+		expect(applyPendingTaskChanges).toHaveBeenCalledWith(task.id, {
+			change: {
+				text: 'Locally edited task'
+			},
+			newTag: ''
+		});
 
 		// The write failed and the parent reloaded the task from the database
 		rerenderTasks([ makeTask({
@@ -192,28 +229,35 @@ describe('Task edit durability', () => {
 		expect(getTaskTextInput()).toHaveValue('Original task');
 	});
 
-	test('sends only the fields the user changed after the parent replaced the task', () => {
+	test('keeps showing what the user is typing while the parent replaces the task', () => {
 		const task = makeTask({
 			text: 'Original task',
 			priority: 'NORMAL',
 			visible: true
 		});
-		const { rerenderTasks, onUpdateTask } = renderTasksList([ task ]);
+		const { rerenderTasks, applyPendingTaskChanges } = renderTasksList([ task ]);
 
-		// An importance sort replaced the task object in the parent state
-		const sortedTask = makeTask({
+		typeTaskText('Still being typed');
+
+		// An importance sort replaced the task object in the parent state while the user was typing
+		rerenderTasks([ makeTask({
 			id: task.id,
 			text: 'Original task',
 			priority: 'NORMAL',
 			sortPosition: 5000,
 			visible: true
-		});
-		rerenderTasks([ sortedTask ]);
+		}) ]);
 
-		typeTaskText('Edited after the bulk update');
+		expect(getTaskTextInput()).toHaveValue('Still being typed');
+
 		fireEvent.blur(getTaskTextInput());
 
-		expect(onUpdateTask).toHaveBeenCalledWith(sortedTask, { text: 'Edited after the bulk update' });
+		expect(applyPendingTaskChanges).toHaveBeenCalledWith(task.id, {
+			change: {
+				text: 'Still being typed'
+			},
+			newTag: ''
+		});
 	});
 
 	test('saves a tag that the user typed but never blurred before the task disappeared', () => {
@@ -221,49 +265,36 @@ describe('Task edit durability', () => {
 			text: 'Original task',
 			visible: true
 		});
-		const { onUpdateTask, rerenderTasks } = renderTasksList([ task ]);
+		const { applyPendingTaskChanges, rerenderTasks } = renderTasksList([ task ]);
 
 		typeNewTag('urgent-tag');
 
 		// The task is filtered out of the list without the tag input ever losing focus
 		rerenderTasks([]);
+		flushPendingTaskChanges();
 
-		expect(onUpdateTask).toHaveBeenCalledWith(task, expect.objectContaining({
-			tags: [ 'urgent-tag' ]
-		}));
+		expect(applyPendingTaskChanges).toHaveBeenCalledWith(task.id, {
+			change: {},
+			newTag: 'urgent-tag'
+		});
 	});
 
-	test('saves buffered edits when the main process asks for them before quitting', async() => {
+	test('saves buffered edits when everything is flushed before the renderer goes away', () => {
 		jest.useFakeTimers();
 		const task = makeTask({
 			text: 'Original task',
 			visible: true
 		});
-		const { onUpdateTask } = renderTasksList([ task ]);
+		const { applyPendingTaskChanges } = renderTasksList([ task ]);
 
 		typeTaskText('Typed right before quitting');
+		flushPendingTaskChanges();
 
-		await act(async() => {
-			await flushPendingTaskChanges();
+		expect(applyPendingTaskChanges).toHaveBeenCalledWith(task.id, {
+			change: {
+				text: 'Typed right before quitting'
+			},
+			newTag: ''
 		});
-
-		expect(onUpdateTask).toHaveBeenCalledWith(task, { text: 'Typed right before quitting' });
-	});
-
-	test('saves buffered edits when the page is being closed', () => {
-		jest.useFakeTimers();
-		const task = makeTask({
-			text: 'Original task',
-			visible: true
-		});
-		const { onUpdateTask } = renderTasksList([ task ]);
-
-		typeTaskText('Typed right before closing the window');
-
-		act(() => {
-			window.dispatchEvent(new Event('pagehide'));
-		});
-
-		expect(onUpdateTask).toHaveBeenCalledWith(task, { text: 'Typed right before closing the window' });
 	});
 });

@@ -15,7 +15,7 @@ import { DatabaseLocationContextProvider } from 'src/contexts/DatabaseLocationCo
 import { DatesContextProvider } from 'src/contexts/DatesContext';
 import { installPendingTaskChangesFlushHandler } from 'src/logic/PendingTaskChanges';
 
-// Answers the main-process shutdown flush request for the whole lifetime of the renderer, no matter which route is open
+// Saves buffered task changes when the window closes and when the main process asks for them, for the whole lifetime of the renderer
 installPendingTaskChangesFlushHandler();
 
 const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);

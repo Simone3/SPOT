@@ -85,7 +85,7 @@ npm run make
 - `src/components/settings` contains the Settings route page.
 - `src/components/storage` contains the task database folder UI: the startup gate, the first-startup setup screen, and the Settings section.
 - `src/contexts` contains app-level React contexts.
-- `src/logic` contains state and domain logic, including `PendingTaskChanges.ts`, the renderer-side coordinator that flushes buffered task changes and tracks the storage commands they dispatch.
+- `src/logic` contains state and domain logic, including `PendingTaskChanges.ts`, which holds the task edits the user has not saved yet and tracks the storage commands they produce.
 - `src/utils` contains general utilities.
 - `tests` contains Jest tests, test setup, and test-only helpers.
 
@@ -248,6 +248,18 @@ Each configured task write command runs in exactly one SQLite transaction on the
 
 React calls `loadTasks()` through `window.spotStorage` on startup, and again whenever the selected task database folder changes, and calls `executeTaskCommand()` for task mutations. It updates optimistically for normal task changes, keeps the latest renderer-facing `StorageStatus`, stays quiet while the database is healthy, shows startup storage failures before rendering task lists, and shows a prominent save warning when writes fail.
 
+### Buffered Task Changes
+
+Task edits are not sent to the task state on every keystroke. `src/logic/PendingTaskChanges.ts` holds them in a buffer keyed by task ID, outside the component tree, so that they cannot be lost when a task component re-renders, is filtered out, or unmounts.
+
+- Task components read the buffer through `useSyncExternalStore` and render the task state merged with it. The rendered value is derived from both on every render, so the inputs and the task state can never drift apart.
+- Only the components of the edited task re-render while the user types, because subscribers are registered per task ID.
+- A buffered change is saved after `TASKS_CONFIG.flushDelayMs`, or after the shorter `TASKS_CONFIG.stateChangeDelayMs` when it is a pending state change. Every new change restarts the delay, and a value brought back to the one already in the task state is dropped from the buffer.
+- `TasksPage` registers the single applier that saves buffered changes. It looks the task up by ID in the current task state, so changes are always applied to the task as it is at save time, and a task that no longer exists is skipped.
+- `TasksPage` clears the buffer of a deleted task, and saves everything still buffered when it unmounts, before unregistering the applier.
+- The trailing tag input is buffered as `newTag` and is not a task change until it is committed. Delayed and explicit saves leave it alone, because the user may still be typing; only the final flush of the whole buffer turns it into a tag.
+- Buffered changes are never dropped when no applier is registered: they stay buffered until one is.
+
 `StorageStatus` reports the database state as `not-configured`, `healthy`, or `unavailable`, plus the configured `storageDirectory` and `databasePath` when available. Storage failures use `not-implemented`, `database-error`, `invalid-command`, or `shutdown`.
 
 ### Operational Logging
@@ -278,12 +290,12 @@ React buffers task edits for a few seconds, so the quit drain would close the da
 
 1. The main process sends `spot-storage:flush-pending-task-changes` to the window and waits.
 2. Task write commands keep being accepted during that wait, because refusing them is exactly what would lose the buffered edits.
-3. React flushes every buffered task change, waits for the resulting storage commands, and invokes `spot-storage:pending-task-changes-flushed`.
+3. React saves every buffered task change, waits for the resulting storage commands, and invokes `spot-storage:pending-task-changes-flushed`.
 4. Only then does the main process refuse further commands, drain the in-flight ones, close the database, and flush the logger.
 
 The wait is bounded by `SHUTDOWN_CONFIG.rendererFlushTimeoutMs`, so an unresponsive or already destroyed renderer delays the quit by at most that timeout. When no renderer is wired at all, shutdown starts immediately and later commands are refused right away.
 
-React also flushes its buffered task edits when the renderer is torn down without quitting, on component unmount and on the window `pagehide` event, so closing the window while the application keeps running still saves what the user typed.
+`installPendingTaskChangesFlushHandler()`, installed once when the renderer starts, answers that request and also saves the whole buffer on the window `pagehide` event, so closing the window while the application keeps running still saves what the user typed.
 
 ## Task Data Model
 
@@ -373,13 +385,10 @@ Active list actions:
 
 `Task`:
 
-- keeps an internal copy of its task while the user edits
-- buffers changed fields in a ref
-- flushes content and metadata changes after 5 seconds, on blur, on unmount, when the window fires `pagehide`, and when the main process asks for pending changes before quitting
-- adopts the task values coming from the parent whenever the parent replaces the task object, keeping the buffered changes the user has not saved yet on top of them, so a reload or a bulk update can never leave the inputs showing values that are not in the state
-- commits the tag still sitting in the trailing tag input when it flushes on unmount or `pagehide`, because that input is not part of the buffered changes until it loses focus
-- discards its buffered changes when the user deletes the task, so the deletion is not followed by an update on a task row that no longer exists
-- fades out for 3 seconds before flushing a state change from the completion checkbox; while fading, other task controls are disabled, and changing the checkbox back before the fade completes cancels the state flush and restores full opacity
+- owns no buffering state of its own: it renders the task from the state merged with the buffered changes held by `src/logic/PendingTaskChanges.ts`, and subscribes to them through `useSyncExternalStore`
+- has no timers, refs or lifecycle effects, so what the user typed cannot outlive or drift away from the component that shows it
+- writes every edit into the buffer, and asks for an immediate save on blur and when a picker closes
+- fades out for 3 seconds before the buffered state change from the completion checkbox is saved; while fading, other task controls are disabled, and changing the checkbox back before the fade completes cancels the state change and restores full opacity
 - owns the generic task value setter and passes field-specific setters to task chips
 - renders priority, text, owner, due date, tags, and a vertical action column with drag, completion, and delete controls
 
@@ -564,7 +573,7 @@ Current test coverage includes focused regression checks for:
 - SQLite storage setup, task row mapping, command execution, transaction rollback, and optional operational logging behavior
 - storage IPC handler registration, channel delegation, shutdown drain, post-shutdown command failure behavior, and exclusive storage-folder switching that finalizes in-flight commands and queues later ones
 - the shutdown flush handshake: buffered renderer changes saved before the database is closed, commands refused only after the renderer reported, and a bounded wait when the renderer never reports
-- the renderer flush coordinator: listener registration and removal, waiting for the dispatched storage commands, surviving failed commands, and reporting to the main process only once storage caught up
+- the buffered task changes: save delays and their restart, immediate saves, forgetting a reverted value, the shorter state change delay, updater-form changes, dropping the buffer of a deleted task, committing the trailing tag input only on the final save, keeping changes when no applier is registered, per-task subscriber notification with stable snapshots, page hide saving, waiting for in-flight storage commands, and reporting to the main process only once storage caught up
 - runtime path resolution for packaged and development runs
 - task database folder resolution at startup, saved-folder reuse, re-prompting on an unavailable folder, the development folder override, folder changes with configuration persistence, and fallback to the previous folder when the new one cannot be opened
 - database location IPC registration, cancelled folder dialogs, and existing-database detection
@@ -572,7 +581,7 @@ Current test coverage includes focused regression checks for:
 - Electron window load-target resolution for local built React loading
 - React task-page startup loading, Electron preload API requirement, persisted Electron loading, and startup-error rendering
 - React task-page storage commands for create, update, delete, complete, restore, manual reorder, and importance sort, plus write-failure warning, storage-health feedback, and reconciliation behavior
-- task edit durability corner cases: buffered edits discarded on delete, parent task values adopted after a reconciled write failure, buffered edits preserved across a bulk update, the trailing tag input saved when the task disappears, and buffered edits saved when the page is being closed or when the main process asks for them before quitting
+- task edit durability corner cases: edits still saved after the task is filtered out of the list, never saved for a deleted task, task state values shown again after a reconciled write failure, what the user is typing kept while the parent replaces the task, the trailing tag input saved when the task disappears, and everything saved before the renderer goes away
 - generic SPOT logging success, public log levels, startup file-open failures, bounded retry failures, retry recovery, shutdown flush behavior, and size-based rolling with bounded retention
 
 Validation commands:

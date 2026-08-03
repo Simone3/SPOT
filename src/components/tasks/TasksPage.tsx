@@ -3,7 +3,8 @@ import { useState, useEffect, useRef, useContext, type ReactElement } from 'reac
 import { Page } from 'src/components/common/Page';
 import { Pane } from 'src/components/common/Pane';
 import { DatabaseLocationContext } from 'src/contexts/DatabaseLocationContext';
-import { trackPendingTaskCommand } from 'src/logic/PendingTaskChanges';
+import { clearPendingTaskChanges, flushPendingTaskChanges, registerPendingTaskChangesApplier, trackPendingTaskCommand, type PendingTaskChanges } from 'src/logic/PendingTaskChanges';
+import { findTaskById } from 'src/logic/TasksLogic';
 import { getInitialTaskState, addTaskToTaskState, refreshVisibleTasksInTaskState, deleteTaskFromTaskState, changeFiltersInTaskState, loadTasksIntoTaskState, resetFiltersTaskState, updateTaskInTaskState, sortTasksByImportanceInTaskState, moveActiveTaskInTaskState, type TaskStateContainer } from 'src/logic/TaskStateLogic';
 import type { PersistedTask, PersistedTaskChange, Task, TaskChange, TasksContainer } from 'src/types/TaskTypes';
 import type { TaskFilterChange } from 'src/types/FilterTypes';
@@ -124,6 +125,18 @@ const createPersistedTaskChange = (previousTask: Task, nextTask: Task): Persiste
 
 const hasPersistedTaskChange = (change: PersistedTaskChange): boolean => {
 	return Object.keys(change).length > 0;
+};
+
+// The tag still sitting in the trailing tag input becomes a real tag only when the buffered changes are saved
+const createChangedTaskValues = (oldTask: Task, pendingChanges: PendingTaskChanges): TaskChange => {
+	if(!pendingChanges.newTag) {
+		return pendingChanges.change;
+	}
+
+	return {
+		...pendingChanges.change,
+		tags: [ ...pendingChanges.change.tags ?? oldTask.tags, pendingChanges.newTag ]
+	};
 };
 
 const createStorageStatusMessage = (storageStatus: StorageStatus): string | undefined => {
@@ -419,8 +432,26 @@ const TasksPage = (): ReactElement => {
 		});
 	};
 
-	const onUpdateTask = (oldTask: Task, changedValues: TaskChange): void => {
+	// Buffered task changes are applied against the task as it is now, not as it was when the user started editing it
+	const onApplyPendingTaskChanges = (taskId: string, pendingChanges: PendingTaskChanges): void => {
 		applyOptimisticTaskCommand((currentTaskState) => {
+			const oldTask = findTaskById(currentTaskState.tasksContainer, taskId);
+
+			// The task was deleted while its changes were buffered, so there is nothing left to update
+			if(!oldTask) {
+				return {
+					taskState: currentTaskState
+				};
+			}
+
+			const changedValues = createChangedTaskValues(oldTask, pendingChanges);
+
+			if(Object.keys(changedValues).length === 0) {
+				return {
+					taskState: currentTaskState
+				};
+			}
+
 			const result = updateTaskInTaskState(currentTaskState, oldTask, changedValues);
 			const change = createPersistedTaskChange(oldTask, result.task);
 
@@ -430,7 +461,7 @@ const TasksPage = (): ReactElement => {
 					{
 						command: 'task.update',
 						payload: {
-							taskId: oldTask.id,
+							taskId,
 							change
 						}
 					} :
@@ -439,7 +470,26 @@ const TasksPage = (): ReactElement => {
 		});
 	};
 
+	// The applier is registered once, so it reaches the latest render through a ref
+	const applyPendingTaskChangesRef = useRef(onApplyPendingTaskChanges);
+	useEffect(() => {
+		applyPendingTaskChangesRef.current = onApplyPendingTaskChanges;
+	});
+
+	useEffect(() => {
+		const unregisterApplier = registerPendingTaskChangesApplier((taskId, pendingChanges) => {
+			applyPendingTaskChangesRef.current(taskId, pendingChanges);
+		});
+
+		return () => {
+			// Leaving the page removes the only applier, so anything still buffered must be saved before unregistering it
+			flushPendingTaskChanges();
+			unregisterApplier();
+		};
+	}, []);
+
 	const onDeleteTask = (task: Task): void => {
+		clearPendingTaskChanges(task.id);
 		applyOptimisticTaskCommand((currentTaskState) => {
 			return {
 				taskState: deleteTaskFromTaskState(currentTaskState, task),
@@ -504,7 +554,6 @@ const TasksPage = (): ReactElement => {
 					title='Tasks'
 					tasks={taskState.tasksContainer.active}
 					inputDomains={taskState.domainsContainer.form}
-					onUpdateTask={onUpdateTask}
 					onDeleteTask={onDeleteTask}
 					showActions={true}
 					onRefreshTasks={onRefreshTasks}
@@ -517,7 +566,6 @@ const TasksPage = (): ReactElement => {
 						title='Completed Tasks'
 						tasks={taskState.tasksContainer.completed}
 						inputDomains={taskState.domainsContainer.form}
-						onUpdateTask={onUpdateTask}
 						onDeleteTask={onDeleteTask}
 						showActions={false}
 					/>

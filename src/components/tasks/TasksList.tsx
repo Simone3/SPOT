@@ -7,7 +7,7 @@ import { RefreshIcon } from 'src/components/icons/RefreshIcon';
 import { SortIcon } from 'src/components/icons/SortIcon';
 import { Header, type HeaderAction } from 'src/components/common/Header';
 import type { FormDomains } from 'src/types/DomainTypes';
-import type { Task as TaskType, TaskChange } from 'src/types/TaskTypes';
+import type { Task as TaskType } from 'src/types/TaskTypes';
 import { Task } from 'src/components/tasks/Task';
 
 type TasksListProps = {
@@ -18,12 +18,11 @@ type TasksListProps = {
 	onMoveTask?: (fromIndex: number, toIndex: number) => void;
 	onSortTasksByImportance?: () => void;
 	onAddNewTask?: () => void;
-	onUpdateTask: (oldTask: TaskType, changedValues: TaskChange) => void;
 	onDeleteTask: (task: TaskType) => void;
 	showActions: boolean;
 };
 
-const TasksList = ({ title, tasks, inputDomains, onRefreshTasks, onMoveTask, onSortTasksByImportance, onAddNewTask, onUpdateTask, onDeleteTask, showActions }: TasksListProps): ReactElement => {
+const TasksList = ({ title, tasks, inputDomains, onRefreshTasks, onMoveTask, onSortTasksByImportance, onAddNewTask, onDeleteTask, showActions }: TasksListProps): ReactElement => {
 	const visibleTasks: TaskType[] = [];
 	const originalIndices: number[] = [];
 	for(let i = 0; i < tasks.length; i++) {
@@ -82,9 +81,6 @@ const TasksList = ({ title, tasks, inputDomains, onRefreshTasks, onMoveTask, onS
 						task={task}
 						inputDomains={inputDomains}
 						showDragHandle={Boolean(onMoveTask)}
-						onSave={(changedValues: TaskChange) => {
-							onUpdateTask(task, changedValues);
-						}}
 						onDelete={() => {
 							onDeleteTask(task);
 						}}

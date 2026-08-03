@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { makeTask } from '../testUtils';
-import { flushPendingTaskChanges } from 'src/logic/PendingTaskChanges';
+import { flushPendingTaskChanges, resetPendingTaskChangesForTests, waitForPendingTaskStorage } from 'src/logic/PendingTaskChanges';
 import { TasksPage } from 'src/components/tasks/TasksPage';
 import type { Task, TaskChange } from 'src/types/TaskTypes';
 import type { TaskFilterChange } from 'src/types/FilterTypes';
@@ -42,13 +42,22 @@ jest.mock('src/components/tasks/TasksList', () => {
 		title: string;
 		tasks: Task[];
 		onAddNewTask?: () => void;
-		onUpdateTask: (oldTask: Task, changedValues: TaskChange) => void;
 		onDeleteTask: (task: Task) => void;
 		onMoveTask?: (fromIndex: number, toIndex: number) => void;
 		onSortTasksByImportance?: () => void;
 	};
 
-	const MockTasksList = ({ title, tasks, onAddNewTask, onUpdateTask, onDeleteTask, onMoveTask, onSortTasksByImportance }: MockTasksListProps): ReactElement => {
+	// Task components buffer their changes outside the component tree, so the mocked list edits tasks the same way
+	const onUpdateTask = (task: Task, changedValues: TaskChange): void => {
+		const { changePendingTaskValue, flushPendingTaskChangesForTask } = jest.requireActual('src/logic/PendingTaskChanges') as typeof import('src/logic/PendingTaskChanges');
+
+		Object.entries(changedValues).forEach(([ key, value ]) => {
+			changePendingTaskValue(task, key as keyof Task, value as Task[keyof Task], false);
+		});
+		flushPendingTaskChangesForTask(task.id);
+	};
+
+	const MockTasksList = ({ title, tasks, onAddNewTask, onDeleteTask, onMoveTask, onSortTasksByImportance }: MockTasksListProps): ReactElement => {
 		const React = jest.requireActual('react') as typeof import('react');
 		const children = [
 			React.createElement('h3', { key: 'title' }, title),
@@ -197,6 +206,7 @@ const createDeferred = <T,>(): { promise: Promise<T>; resolve: (value: T) => voi
 describe('TasksPage', () => {
 	afterEach(() => {
 		setWindowSpotStorage(originalSpotStorage);
+		resetPendingTaskChangesForTests();
 		jest.restoreAllMocks();
 		jest.useRealTimers();
 	});
@@ -455,23 +465,24 @@ describe('TasksPage', () => {
 
 		fireEvent.click(screen.getByRole('button', { name: 'Tasks update' }));
 
-		let didFlushSettle = false;
-		const flushPromise = flushPendingTaskChanges().then(() => {
-			didFlushSettle = true;
+		let didWaitSettle = false;
+		flushPendingTaskChanges();
+		const waitPromise = waitForPendingTaskStorage().then(() => {
+			didWaitSettle = true;
 		});
 
 		await act(async() => {
 			await Promise.resolve();
 		});
 
-		expect(didFlushSettle).toBe(false);
+		expect(didWaitSettle).toBe(false);
 
 		await act(async() => {
 			commandDeferred.resolve(createSuccessfulCommandResult());
-			await flushPromise;
+			await waitPromise;
 		});
 
-		expect(didFlushSettle).toBe(true);
+		expect(didWaitSettle).toBe(true);
 	});
 
 	test('shows a warning and reconciles local state when storage rejects a task command', async() => {

@@ -1,6 +1,7 @@
 import type { ChangeEvent, ReactElement, ReactNode } from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { makeFormDomains, makeTask } from '../testUtils';
+import { registerPendingTaskChangesApplier, resetPendingTaskChangesForTests, type PendingTaskChanges } from 'src/logic/PendingTaskChanges';
 import { TasksList } from 'src/components/tasks/TasksList';
 import type { Task } from 'src/types/TaskTypes';
 
@@ -73,16 +74,19 @@ const renderTasksList = (tasks: Task[]) => {
 		onMoveTask: jest.fn(),
 		onSortTasksByImportance: jest.fn(),
 		onAddNewTask: jest.fn(),
-		onUpdateTask: jest.fn(),
 		onDeleteTask: jest.fn(),
 		showActions: true
 	};
+	const applyPendingTaskChanges = jest.fn<void, [ string, PendingTaskChanges ]>();
+
+	registerPendingTaskChangesApplier(applyPendingTaskChanges);
 
 	const rendered = render(<TasksList {...props}/>);
 
 	return {
 		...rendered,
-		props
+		props,
+		applyPendingTaskChanges
 	};
 };
 
@@ -97,6 +101,7 @@ describe('TasksList', () => {
 	});
 
 	afterEach(() => {
+		resetPendingTaskChangesForTests();
 		jest.useRealTimers();
 		getUseSortableMock().mockClear();
 		jest.restoreAllMocks();
@@ -134,7 +139,7 @@ describe('TasksList', () => {
 			text: 'Original task',
 			visible: true
 		});
-		const { container, props } = renderTasksList([ task ]);
+		const { container, applyPendingTaskChanges } = renderTasksList([ task ]);
 
 		const taskText = screen.getByLabelText('Add content...');
 		fireEvent.change(taskText, {
@@ -148,12 +153,17 @@ describe('TasksList', () => {
 			throw Error('Task container not found');
 		}
 
-		expect(props.onUpdateTask).not.toHaveBeenCalled();
+		expect(applyPendingTaskChanges).not.toHaveBeenCalled();
 
 		fireEvent.blur(taskText);
 
-		expect(props.onUpdateTask).toHaveBeenCalledWith(task, { text: 'Updated task' });
-		props.onUpdateTask.mockClear();
+		expect(applyPendingTaskChanges).toHaveBeenCalledWith(task.id, {
+			change: {
+				text: 'Updated task'
+			},
+			newTag: ''
+		});
+		applyPendingTaskChanges.mockClear();
 
 		const completionCheckbox = screen.getByRole('checkbox');
 		const priorityPicker = taskContainer.querySelector('.task-priority-picker-option');
@@ -179,7 +189,7 @@ describe('TasksList', () => {
 		expect(deleteButton).toHaveAttribute('aria-disabled', 'true');
 		fireEvent.click(deleteButton);
 		expect(screen.queryByRole('button', { name: 'Delete Task' })).not.toBeInTheDocument();
-		expect(props.onUpdateTask).not.toHaveBeenCalled();
+		expect(applyPendingTaskChanges).not.toHaveBeenCalled();
 
 		fireEvent.click(completionCheckbox);
 
@@ -197,7 +207,7 @@ describe('TasksList', () => {
 		act(() => {
 			jest.advanceTimersByTime(3000);
 		});
-		expect(props.onUpdateTask).not.toHaveBeenCalled();
+		expect(applyPendingTaskChanges).not.toHaveBeenCalled();
 
 		fireEvent.click(completionCheckbox);
 
@@ -205,11 +215,16 @@ describe('TasksList', () => {
 		act(() => {
 			jest.advanceTimersByTime(2999);
 		});
-		expect(props.onUpdateTask).not.toHaveBeenCalled();
+		expect(applyPendingTaskChanges).not.toHaveBeenCalled();
 		act(() => {
 			jest.advanceTimersByTime(1);
 		});
-		expect(props.onUpdateTask).toHaveBeenCalledWith(task, { state: 'COMPLETED' });
+		expect(applyPendingTaskChanges).toHaveBeenCalledWith(task.id, {
+			change: {
+				state: 'COMPLETED'
+			},
+			newTag: ''
+		});
 		expect(consoleErrorSpy.mock.calls.some((call) => {
 			return call.some((value) => {
 				return String(value).includes('Cannot update a component');

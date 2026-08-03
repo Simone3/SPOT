@@ -246,6 +246,22 @@ const replaceTaskInList = (taskList: Task[], oldTask: Task, newTask: Task): void
 };
 
 /**
+ * Looks a task up by ID in both task lists.
+ * @param tasksContainer Task lists to search.
+ * @param taskId Task ID to look for.
+ * @returns The task, or undefined when it is not in the lists anymore.
+ */
+export const findTaskById = (tasksContainer: TasksContainer, taskId: string): Task | undefined => {
+	const findInList = (taskList: Task[]): Task | undefined => {
+		return taskList.find((task) => {
+			return task.id === taskId;
+		});
+	};
+
+	return findInList(tasksContainer.active) ?? findInList(tasksContainer.completed);
+};
+
+/**
  * Removes a task from its task list.
  * @param tasksContainer Task lists to update.
  * @param task Task to remove.
