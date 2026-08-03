@@ -386,7 +386,7 @@ Active list actions:
 `Task`:
 
 - owns no buffering state of its own: it renders the task from the state merged with the buffered changes held by `src/logic/PendingTaskChanges.ts`, and subscribes to them through `useSyncExternalStore`
-- has no timers, refs or lifecycle effects, so what the user typed cannot outlive or drift away from the component that shows it
+- has no timers or lifecycle effects, so what the user typed cannot outlive or drift away from the component that shows it
 - writes every edit into the buffer, and asks for an immediate save on blur and when a picker closes
 - fades out for 3 seconds before the buffered state change from the completion checkbox is saved; while fading, other task controls are disabled, and changing the checkbox back before the fade completes cancels the state change and restores full opacity
 - owns the generic task value setter and passes field-specific setters to task chips
@@ -539,6 +539,10 @@ Input components:
 - `TextInput`
 
 `ButtonsSelect` and `FreeSelectInput` are string-valued input components. They accept simple option objects instead of app-specific domain types.
+
+`TextArea` wraps `MDXEditor`, which reads its `markdown` property only when it mounts and ignores every later change to it. `TextArea` therefore keeps an editor reference and pushes a new value in with `setMarkdown()` when the editor does not already hold it. Without that, an editor would keep showing content that is in no task state and in no database, for instance after tasks are reloaded following a failed write. The comparison against `getMarkdown()` is what keeps the editor untouched while the user types, because the value coming back from the task state is then the one the editor just produced.
+
+`MDXEditor` version `4.0.0` is ESM-only and cannot be loaded by the Jest version that React Scripts `5.0.1` provides, so tests replace `TextArea` with a plain `textarea` mock and this behavior is not covered by the automated tests.
 
 Icons are local React components under `src/components/icons`.
 
