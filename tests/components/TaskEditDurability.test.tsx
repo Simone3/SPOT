@@ -1,6 +1,7 @@
 import type { ChangeEvent, ReactElement, ReactNode } from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { makeFormDomains, makeTask } from '../testUtils';
+import { flushPendingTaskChanges } from 'src/logic/PendingTaskChanges';
 import { TasksList } from 'src/components/tasks/TasksList';
 import type { Task, TaskChange } from 'src/types/TaskTypes';
 
@@ -230,6 +231,23 @@ describe('Task edit durability', () => {
 		expect(onUpdateTask).toHaveBeenCalledWith(task, expect.objectContaining({
 			tags: [ 'urgent-tag' ]
 		}));
+	});
+
+	test('saves buffered edits when the main process asks for them before quitting', async() => {
+		jest.useFakeTimers();
+		const task = makeTask({
+			text: 'Original task',
+			visible: true
+		});
+		const { onUpdateTask } = renderTasksList([ task ]);
+
+		typeTaskText('Typed right before quitting');
+
+		await act(async() => {
+			await flushPendingTaskChanges();
+		});
+
+		expect(onUpdateTask).toHaveBeenCalledWith(task, { text: 'Typed right before quitting' });
 	});
 
 	test('saves buffered edits when the page is being closed', () => {

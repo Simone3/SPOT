@@ -37,3 +37,7 @@ export const TASKS_CONFIG = {
 	stateChangeDelayMs: 3000,
 	sortPositionStep: 1000
 } as const;
+
+export const SHUTDOWN_CONFIG = {
+	rendererFlushTimeoutMs: 3000
+} as const;

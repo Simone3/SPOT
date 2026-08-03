@@ -52,7 +52,10 @@ void app.whenReady().then(async() => {
 	const { runExclusively } = registerTaskStorageIpcHandlers({
 		app,
 		ipcMain,
-		taskStorage
+		taskStorage,
+		getRendererFlushTarget: () => {
+			return mainWindow?.webContents;
+		}
 	});
 	const databaseLocationManager = createDatabaseLocationManager({
 		runtimePaths,

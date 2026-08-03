@@ -2,6 +2,7 @@ import 'src/components/tasks/Task.css';
 import { useState, useRef, useEffect, useCallback, type CSSProperties, type ReactElement } from 'react';
 import { useSortable } from '@dnd-kit/react/sortable';
 import { TASKS_CONFIG } from 'src/config/AppConfig';
+import { registerPendingTaskChangesFlushListener } from 'src/logic/PendingTaskChanges';
 import { TextArea } from 'src/components/inputs/TextArea';
 import type { FormDomains } from 'src/types/DomainTypes';
 import type { Task as TaskType, TaskChange } from 'src/types/TaskTypes';
@@ -185,6 +186,11 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onSave: onSaveFrom
 		return () => {
 			window.removeEventListener('pagehide', flushTaskChangesOnTeardown);
 		};
+	}, [ flushTaskChangesOnTeardown ]);
+
+	// The main process asks for pending changes before it closes the database on quit
+	useEffect(() => {
+		return registerPendingTaskChangesFlushListener(flushTaskChangesOnTeardown);
 	}, [ flushTaskChangesOnTeardown ]);
 
 	// Dynamic container class

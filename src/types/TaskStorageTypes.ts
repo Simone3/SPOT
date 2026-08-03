@@ -71,4 +71,10 @@ export interface SpotStorageApi {
 	loadTasks: () => Promise<LoadTasksResult>;
 	executeTaskCommand: (command: TaskStorageCommand) => Promise<TaskStorageCommandResult>;
 	getStorageStatus: () => Promise<StorageStatus>;
+
+	// Subscribes to the main-process request to save the task changes still buffered in the renderer, and returns the unsubscribe callback
+	onFlushPendingTaskChanges: (listener: () => void) => () => void;
+
+	// Tells the main process that the buffered task changes reached storage, so that shutdown can continue
+	notifyPendingTaskChangesFlushed: () => Promise<void>;
 }

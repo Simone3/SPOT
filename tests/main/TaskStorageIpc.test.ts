@@ -1,5 +1,6 @@
 import type { App, IpcMain, IpcMainInvokeEvent } from 'electron';
 import { makeTask } from '../testUtils';
+import { SHUTDOWN_CONFIG } from 'src/config/AppConfig';
 import { resetSpotLoggerForTests, spotLogger } from 'src/main/logging/SpotLogger';
 import { registerTaskStorageIpcHandlers, SPOT_STORAGE_IPC_CHANNELS, TASK_STORAGE_SHUTDOWN_MESSAGE } from 'src/main/ipc/TaskStorageIpc';
 import type { TaskStorage } from 'src/main/storage/TaskStorage';
@@ -115,6 +116,7 @@ const createMockTaskStorage = (): {
 
 describe('TaskStorageIpc', () => {
 	afterEach(() => {
+		jest.useRealTimers();
 		jest.restoreAllMocks();
 		resetSpotLoggerForTests();
 	});
@@ -138,11 +140,12 @@ describe('TaskStorageIpc', () => {
 			taskStorage
 		});
 
-		expect(ipcMain.handle).toHaveBeenCalledTimes(3);
+		expect(ipcMain.handle).toHaveBeenCalledTimes(4);
 		expect(Array.from(handlers.keys())).toEqual([
 			SPOT_STORAGE_IPC_CHANNELS.loadTasks,
 			SPOT_STORAGE_IPC_CHANNELS.executeTaskCommand,
-			SPOT_STORAGE_IPC_CHANNELS.getStorageStatus
+			SPOT_STORAGE_IPC_CHANNELS.getStorageStatus,
+			SPOT_STORAGE_IPC_CHANNELS.pendingTaskChangesFlushed
 		]);
 		await expect(handlers.get(SPOT_STORAGE_IPC_CHANNELS.loadTasks)!(event)).resolves.toBe(loadTasksResult);
 		await expect(handlers.get(SPOT_STORAGE_IPC_CHANNELS.executeTaskCommand)!(event, command)).resolves.toBe(commandResult);
@@ -240,6 +243,149 @@ describe('TaskStorageIpc', () => {
 		expect(taskStorage.executeTaskCommand).not.toHaveBeenCalled();
 		expect(taskStorage.getStorageStatus).toHaveBeenCalledTimes(1);
 	});
+	test('saves the task changes still buffered in the renderer before closing the database', async() => {
+		const { handlers, ipcMain } = createMockIpcMain();
+		const { app, handlers: appHandlers } = createMockApp();
+		const { commandResult, taskStorage } = createMockTaskStorage();
+		const shutdownOrder: string[] = [];
+		taskStorage.executeTaskCommand = jest.fn(async() => {
+			shutdownOrder.push('buffered-command');
+
+			return commandResult;
+		});
+		const prepareForShutdown = jest.fn(async() => {
+			shutdownOrder.push('prepare-for-shutdown');
+
+			return undefined;
+		});
+		jest.spyOn(spotLogger, 'flush').mockResolvedValue(undefined);
+		const flushTarget = {
+			send: jest.fn(),
+			isDestroyed: () => {
+				return false;
+			}
+		};
+		const event = {} as IpcMainInvokeEvent;
+		const beforeQuitEvent = {
+			preventDefault: jest.fn()
+		};
+		const bufferedCommand: TaskStorageCommand = {
+			command: 'task.update',
+			payload: {
+				taskId: 'stored-task',
+				change: {
+					text: 'Typed right before quitting'
+				}
+			}
+		};
+
+		registerTaskStorageIpcHandlers({
+			app,
+			ipcMain,
+			taskStorage: {
+				...taskStorage,
+				prepareForShutdown
+			},
+			getRendererFlushTarget: () => {
+				return flushTarget;
+			}
+		});
+
+		appHandlers.get('before-quit')!(beforeQuitEvent);
+
+		expect(beforeQuitEvent.preventDefault).toHaveBeenCalledTimes(1);
+		expect(flushTarget.send).toHaveBeenCalledWith(SPOT_STORAGE_IPC_CHANNELS.flushPendingTaskChanges);
+		expect(prepareForShutdown).not.toHaveBeenCalled();
+
+		// The renderer flushes what the user typed and only then reports that it is done
+		await expect(handlers.get(SPOT_STORAGE_IPC_CHANNELS.executeTaskCommand)!(event, bufferedCommand)).resolves.toBe(commandResult);
+		await handlers.get(SPOT_STORAGE_IPC_CHANNELS.pendingTaskChangesFlushed)!(event);
+		await waitForQueuedWork();
+
+		expect(shutdownOrder).toEqual([ 'buffered-command', 'prepare-for-shutdown' ]);
+		expect(app.quit).toHaveBeenCalledTimes(1);
+	});
+
+	test('refuses task commands once the renderer reported its buffered changes', async() => {
+		const { handlers, ipcMain } = createMockIpcMain();
+		const { app, handlers: appHandlers } = createMockApp();
+		const { status, taskStorage } = createMockTaskStorage();
+		jest.spyOn(spotLogger, 'flush').mockResolvedValue(undefined);
+		const flushTarget = {
+			send: jest.fn()
+		};
+		const event = {} as IpcMainInvokeEvent;
+		const command: TaskStorageCommand = {
+			command: 'task.update',
+			payload: {
+				taskId: 'stored-task',
+				change: {
+					text: 'Too late'
+				}
+			}
+		};
+
+		registerTaskStorageIpcHandlers({
+			app,
+			ipcMain,
+			taskStorage,
+			getRendererFlushTarget: () => {
+				return flushTarget;
+			}
+		});
+
+		appHandlers.get('before-quit')!({ preventDefault: jest.fn() });
+		await handlers.get(SPOT_STORAGE_IPC_CHANNELS.pendingTaskChangesFlushed)!(event);
+		await waitForQueuedWork();
+
+		await expect(handlers.get(SPOT_STORAGE_IPC_CHANNELS.executeTaskCommand)!(event, command)).resolves.toEqual({
+			ok: false,
+			reason: 'shutdown',
+			message: TASK_STORAGE_SHUTDOWN_MESSAGE,
+			status
+		});
+		expect(taskStorage.executeTaskCommand).not.toHaveBeenCalled();
+	});
+
+	test('does not wait forever when the renderer never reports its buffered changes', async() => {
+		jest.useFakeTimers();
+		const { ipcMain } = createMockIpcMain();
+		const { app, handlers: appHandlers } = createMockApp();
+		const { taskStorage } = createMockTaskStorage();
+		const prepareForShutdown = jest.fn(async() => {
+			return undefined;
+		});
+		const quitDeferred = createDeferred<void>();
+		(app.quit as jest.Mock).mockImplementation(() => {
+			quitDeferred.resolve();
+		});
+		jest.spyOn(spotLogger, 'flush').mockResolvedValue(undefined);
+
+		registerTaskStorageIpcHandlers({
+			app,
+			ipcMain,
+			taskStorage: {
+				...taskStorage,
+				prepareForShutdown
+			},
+			getRendererFlushTarget: () => {
+				return {
+					send: jest.fn()
+				};
+			}
+		});
+
+		appHandlers.get('before-quit')!({ preventDefault: jest.fn() });
+
+		expect(prepareForShutdown).not.toHaveBeenCalled();
+
+		jest.advanceTimersByTime(SHUTDOWN_CONFIG.rendererFlushTimeoutMs);
+		await quitDeferred.promise;
+
+		expect(prepareForShutdown).toHaveBeenCalledTimes(1);
+		expect(app.quit).toHaveBeenCalledTimes(1);
+	});
+
 	test('finalizes in-flight task commands before a storage folder change and queues later commands', async() => {
 		const { handlers, ipcMain } = createMockIpcMain();
 		const { commandResult, taskStorage } = createMockTaskStorage();

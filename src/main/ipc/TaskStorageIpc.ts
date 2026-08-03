@@ -1,4 +1,5 @@
 import type { App, IpcMain } from 'electron';
+import { SHUTDOWN_CONFIG } from 'src/config/AppConfig';
 import { spotLogger } from 'src/main/logging/SpotLogger';
 import type { TaskStorage } from 'src/main/storage/TaskStorage';
 import { SPOT_STORAGE_IPC_CHANNELS } from 'src/types/TaskStorageIpcChannels';
@@ -17,6 +18,11 @@ interface BeforeQuitEvent {
 	preventDefault: () => void;
 }
 
+export interface RendererFlushTarget {
+	send: (channel: string) => void;
+	isDestroyed?: () => boolean;
+}
+
 export interface TaskStorageCommandController {
 	runExclusively: <TResult>(operation: () => Promise<TResult>) => Promise<TResult>;
 }
@@ -25,6 +31,7 @@ export interface RegisterTaskStorageIpcHandlersOptions {
 	ipcMain: TaskStorageIpcMain;
 	taskStorage: TaskStorageIpcApi;
 	app?: TaskStorageIpcApp;
+	getRendererFlushTarget?: () => RendererFlushTarget | undefined;
 }
 
 const createShutdownStorageStatus = (): StorageStatus => {
@@ -56,13 +63,17 @@ const createShutdownCommandResult = async(taskStorage: TaskStorageIpcApi): Promi
 
 const createTaskStorageCommandController = (
 	taskStorage: TaskStorageIpcApi,
-	app?: TaskStorageIpcApp
-): Pick<TaskStorageIpcApi, 'executeTaskCommand'> & TaskStorageCommandController => {
+	app?: TaskStorageIpcApp,
+	getRendererFlushTarget?: () => RendererFlushTarget | undefined
+): Pick<TaskStorageIpcApi, 'executeTaskCommand'> & TaskStorageCommandController & {
+	notifyPendingTaskChangesFlushed: () => void;
+} => {
 	const pendingCommands = new Set<Promise<unknown>>();
 	let isShuttingDown = false;
 	let isQuitAllowed = false;
 	let shutdownPromise: Promise<void> | undefined;
 	let exclusiveOperation: Promise<void> | undefined;
+	let finishRendererFlush: (() => void) | undefined;
 
 	const prepareForShutdown = async(): Promise<void> => {
 		await Promise.allSettled(Array.from(pendingCommands));
@@ -74,14 +85,61 @@ const createTaskStorageCommandController = (
 		}
 	};
 
-	const requestShutdown = (): void => {
-		isShuttingDown = true;
+	// React buffers task edits for a few seconds, so the renderer gets a bounded chance to save them before the database is closed.
+	// Task commands are still accepted while this runs: rejecting them here is exactly what would lose the buffered edits.
+	const requestRendererFlush = (): Promise<void> | undefined => {
+		const flushTarget = getRendererFlushTarget?.();
 
+		if(!flushTarget || flushTarget.isDestroyed?.()) {
+			return undefined;
+		}
+
+		return new Promise<void>((resolve) => {
+			let flushTimeout: ReturnType<typeof setTimeout> | undefined;
+			const finishFlush = (): void => {
+				if(!finishRendererFlush) {
+					return;
+				}
+
+				finishRendererFlush = undefined;
+				clearTimeout(flushTimeout);
+				resolve();
+			};
+
+			flushTimeout = setTimeout(finishFlush, SHUTDOWN_CONFIG.rendererFlushTimeoutMs);
+			finishRendererFlush = finishFlush;
+
+			try {
+				flushTarget.send(SPOT_STORAGE_IPC_CHANNELS.flushPendingTaskChanges);
+			}
+			catch(error) {
+				spotLogger.warn('Could not ask the renderer to flush pending task changes', {
+					type: 'storage.shutdown',
+					error: error instanceof Error ? error.message : String(error)
+				});
+				finishFlush();
+			}
+		});
+	};
+
+	const requestShutdown = (): void => {
 		if(shutdownPromise) {
 			return;
 		}
 
-		shutdownPromise = prepareForShutdown()
+		const rendererFlushPromise = requestRendererFlush();
+
+		// Without a renderer to wait for, shutdown starts right away and later commands are refused immediately
+		if(!rendererFlushPromise) {
+			isShuttingDown = true;
+		}
+
+		shutdownPromise = (rendererFlushPromise ?? Promise.resolve())
+			.then(() => {
+				isShuttingDown = true;
+
+				return prepareForShutdown();
+			})
 			.catch(() => {
 				return undefined;
 			})
@@ -141,16 +199,20 @@ const createTaskStorageCommandController = (
 
 			return trackPendingCommand(taskStorage.executeTaskCommand(command));
 		},
-		runExclusively
+		runExclusively,
+		notifyPendingTaskChangesFlushed: () => {
+			finishRendererFlush?.();
+		}
 	};
 };
 
 export const registerTaskStorageIpcHandlers = ({
 	ipcMain,
 	taskStorage,
-	app
+	app,
+	getRendererFlushTarget
 }: RegisterTaskStorageIpcHandlersOptions): TaskStorageCommandController => {
-	const commandController = createTaskStorageCommandController(taskStorage, app);
+	const commandController = createTaskStorageCommandController(taskStorage, app, getRendererFlushTarget);
 
 	ipcMain.handle(SPOT_STORAGE_IPC_CHANNELS.loadTasks, () => {
 		return taskStorage.loadTasks();
@@ -162,6 +224,10 @@ export const registerTaskStorageIpcHandlers = ({
 
 	ipcMain.handle(SPOT_STORAGE_IPC_CHANNELS.getStorageStatus, () => {
 		return taskStorage.getStorageStatus();
+	});
+
+	ipcMain.handle(SPOT_STORAGE_IPC_CHANNELS.pendingTaskChangesFlushed, () => {
+		commandController.notifyPendingTaskChangesFlushed();
 	});
 
 	return {

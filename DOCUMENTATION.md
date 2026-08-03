@@ -67,7 +67,7 @@ npm run make
 - `src/main/config/SpotConfigStore.ts` reads and writes the JSON application configuration file that stores the selected task database folder.
 - `src/main/config/DatabaseLocationManager.ts` owns the task database folder: startup resolution, validation, the development override, the folder switch on task storage, and configuration persistence.
 - `src/main/logging/SpotLogger.ts` configures `electron-log` behind a generic factory-created logger and exports the process-wide `spotLogger` utility with `info`, `warn`, `error`, `debug`, and `flush` methods, newline-delimited JSON output, size-based rolling, and one retained archive.
-- `src/main/ipc/TaskStorageIpc.ts` registers the narrow Electron IPC surface for storage loading, task write commands, database health reporting, shutdown draining for in-flight task commands, and the exclusive-access helper used while the task database folder changes.
+- `src/main/ipc/TaskStorageIpc.ts` registers the narrow Electron IPC surface for storage loading, task write commands, database health reporting, the shutdown flush handshake and drain for buffered and in-flight task commands, and the exclusive-access helper used while the task database folder changes.
 - `src/main/ipc/DatabaseLocationIpc.ts` registers the task database folder IPC surface and opens the native folder dialog.
 - `src/main/storage/TaskStorage.ts` defines the Electron main-process storage contract, configured SQLite task loading and write commands through a storage-owned database connection, database health reporting, folder switching, and shutdown preparation.
 - `src/main/storage/DatabaseDirectory.ts` validates a task database folder, detects an existing `spot.sqlite` file, and creates default folders.
@@ -85,7 +85,7 @@ npm run make
 - `src/components/settings` contains the Settings route page.
 - `src/components/storage` contains the task database folder UI: the startup gate, the first-startup setup screen, and the Settings section.
 - `src/contexts` contains app-level React contexts.
-- `src/logic` contains state and domain logic.
+- `src/logic` contains state and domain logic, including `PendingTaskChanges.ts`, the renderer-side coordinator that flushes buffered task changes and tracks the storage commands they dispatch.
 - `src/utils` contains general utilities.
 - `tests` contains Jest tests, test setup, and test-only helpers.
 
@@ -104,6 +104,7 @@ The exported groups are:
 - `APP_CONFIG_FILE`: the development root directory name and the application configuration file name.
 - `LOGGING_CONFIG`: the log directory name, the operational log file name, maximum file size, retained archive count, maximum write attempts, and retry delay.
 - `TASKS_CONFIG`: the task flush delay, the task state change delay, and the manual sort position step.
+- `SHUTDOWN_CONFIG`: the bounded time the main process waits for the renderer to flush its buffered task changes before quitting.
 
 Each group is declared `as const`, so consumers that pass a value to a widened parameter may need an explicit type annotation. User-facing and error message strings are not configuration and stay in the module that owns them.
 
@@ -229,6 +230,8 @@ The preload API is deliberately narrow and does not expose raw `ipcRenderer`, fi
 - `window.spotStorage.loadTasks()` invokes `spot-storage:load-tasks` and returns `{ ok: true, tasks, status }` or a storage failure.
 - `window.spotStorage.executeTaskCommand(command)` invokes `spot-storage:execute-task-command` and returns `{ ok: true, status }` or a storage failure.
 - `window.spotStorage.getStorageStatus()` invokes `spot-storage:get-storage-status` and returns the latest database status.
+- `window.spotStorage.onFlushPendingTaskChanges(listener)` subscribes to the main-process shutdown flush request on `spot-storage:flush-pending-task-changes` and returns the unsubscribe callback.
+- `window.spotStorage.notifyPendingTaskChangesFlushed()` invokes `spot-storage:pending-task-changes-flushed` to report that the buffered task changes reached storage.
 
 Supported write commands are:
 
@@ -271,7 +274,16 @@ Operational-log failures are not renderer-facing. Startup log file open failures
 
 `src/main/ipc/TaskStorageIpc.ts` registers a `before-quit` drain. The first quit request waits for in-flight task write commands, calls `prepareForShutdown()` so the SQLite connection closes, flushes the process-wide logger so pending log retries can settle or be abandoned according to the bounded retry policy, and then resumes quitting. New write commands after shutdown begins return a `shutdown` failure instead of being enqueued behind the quit drain.
 
-React flushes its buffered task edits when the renderer is torn down, on unmount and on the window `pagehide` event, so closing the window while the application keeps running still saves what the user typed. The quit drain does not ask the renderer to flush before it starts, so task edits buffered when the user quits the application can still reach the main process after shutdown began and be rejected with a `shutdown` failure.
+React buffers task edits for a few seconds, so the quit drain would close the database while the user's last keystrokes are still in the renderer. The first quit request therefore starts with a renderer flush handshake:
+
+1. The main process sends `spot-storage:flush-pending-task-changes` to the window and waits.
+2. Task write commands keep being accepted during that wait, because refusing them is exactly what would lose the buffered edits.
+3. React flushes every buffered task change, waits for the resulting storage commands, and invokes `spot-storage:pending-task-changes-flushed`.
+4. Only then does the main process refuse further commands, drain the in-flight ones, close the database, and flush the logger.
+
+The wait is bounded by `SHUTDOWN_CONFIG.rendererFlushTimeoutMs`, so an unresponsive or already destroyed renderer delays the quit by at most that timeout. When no renderer is wired at all, shutdown starts immediately and later commands are refused right away.
+
+React also flushes its buffered task edits when the renderer is torn down without quitting, on component unmount and on the window `pagehide` event, so closing the window while the application keeps running still saves what the user typed.
 
 ## Task Data Model
 
@@ -363,7 +375,7 @@ Active list actions:
 
 - keeps an internal copy of its task while the user edits
 - buffers changed fields in a ref
-- flushes content and metadata changes after 5 seconds, on blur, on unmount, or when the window fires `pagehide`
+- flushes content and metadata changes after 5 seconds, on blur, on unmount, when the window fires `pagehide`, and when the main process asks for pending changes before quitting
 - adopts the task values coming from the parent whenever the parent replaces the task object, keeping the buffered changes the user has not saved yet on top of them, so a reload or a bulk update can never leave the inputs showing values that are not in the state
 - commits the tag still sitting in the trailing tag input when it flushes on unmount or `pagehide`, because that input is not part of the buffered changes until it loses focus
 - discards its buffered changes when the user deletes the task, so the deletion is not followed by an update on a task row that no longer exists
@@ -551,6 +563,8 @@ Current test coverage includes focused regression checks for:
 - smoke coverage for task filters and task list interactions
 - SQLite storage setup, task row mapping, command execution, transaction rollback, and optional operational logging behavior
 - storage IPC handler registration, channel delegation, shutdown drain, post-shutdown command failure behavior, and exclusive storage-folder switching that finalizes in-flight commands and queues later ones
+- the shutdown flush handshake: buffered renderer changes saved before the database is closed, commands refused only after the renderer reported, and a bounded wait when the renderer never reports
+- the renderer flush coordinator: listener registration and removal, waiting for the dispatched storage commands, surviving failed commands, and reporting to the main process only once storage caught up
 - runtime path resolution for packaged and development runs
 - task database folder resolution at startup, saved-folder reuse, re-prompting on an unavailable folder, the development folder override, folder changes with configuration persistence, and fallback to the previous folder when the new one cannot be opened
 - database location IPC registration, cancelled folder dialogs, and existing-database detection
@@ -558,7 +572,7 @@ Current test coverage includes focused regression checks for:
 - Electron window load-target resolution for local built React loading
 - React task-page startup loading, Electron preload API requirement, persisted Electron loading, and startup-error rendering
 - React task-page storage commands for create, update, delete, complete, restore, manual reorder, and importance sort, plus write-failure warning, storage-health feedback, and reconciliation behavior
-- task edit durability corner cases: buffered edits discarded on delete, parent task values adopted after a reconciled write failure, buffered edits preserved across a bulk update, the trailing tag input saved when the task disappears, and buffered edits saved when the page is being closed
+- task edit durability corner cases: buffered edits discarded on delete, parent task values adopted after a reconciled write failure, buffered edits preserved across a bulk update, the trailing tag input saved when the task disappears, and buffered edits saved when the page is being closed or when the main process asks for them before quitting
 - generic SPOT logging success, public log levels, startup file-open failures, bounded retry failures, retry recovery, shutdown flush behavior, and size-based rolling with bounded retention
 
 Validation commands:
@@ -587,7 +601,6 @@ The two rules that govern this document itself:
 
 The most important remaining work is:
 
-- Make the quit drain ask the renderer to flush its buffered task edits, and wait for that flush, before it starts closing the database.
 - Add persistence and Electron-shell integration tests for runtime startup, mutation, shutdown, and packaged loading flows.
 - Improve accessibility and focus behavior in reusable inputs and clickables.
 - Continue polishing drag-and-drop feedback as the task interaction model settles.

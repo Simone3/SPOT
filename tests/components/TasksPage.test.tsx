@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { makeTask } from '../testUtils';
+import { flushPendingTaskChanges } from 'src/logic/PendingTaskChanges';
 import { TasksPage } from 'src/components/tasks/TasksPage';
 import type { Task, TaskChange } from 'src/types/TaskTypes';
 import type { TaskFilterChange } from 'src/types/FilterTypes';
@@ -155,6 +156,12 @@ const createMockSpotStorage = (
 		executeTaskCommand,
 		getStorageStatus: jest.fn(async() => {
 			return healthyStatus;
+		}),
+		onFlushPendingTaskChanges: jest.fn(() => {
+			return () => {};
+		}),
+		notifyPendingTaskChangesFlushed: jest.fn(async() => {
+			return undefined;
 		})
 	};
 };
@@ -428,6 +435,43 @@ describe('TasksPage', () => {
 				]
 			}
 		});
+	});
+
+	test('makes the shutdown flush wait for the storage commands it dispatched', async() => {
+		const persistedTask = makeTask({
+			id: 'persisted-task',
+			text: 'Persisted startup task',
+			visible: false
+		});
+		const commandDeferred = createDeferred<TaskStorageCommandResult>();
+		const executeTaskCommand = jest.fn((command: TaskStorageCommand): Promise<TaskStorageCommandResult> => {
+			void command;
+			return commandDeferred.promise;
+		});
+		setWindowSpotStorage(createMockSpotStorage(createLoadTasks([ persistedTask ]), executeTaskCommand));
+
+		render(<TasksPage/>);
+		expect(await screen.findByText('Persisted startup task')).toBeInTheDocument();
+
+		fireEvent.click(screen.getByRole('button', { name: 'Tasks update' }));
+
+		let didFlushSettle = false;
+		const flushPromise = flushPendingTaskChanges().then(() => {
+			didFlushSettle = true;
+		});
+
+		await act(async() => {
+			await Promise.resolve();
+		});
+
+		expect(didFlushSettle).toBe(false);
+
+		await act(async() => {
+			commandDeferred.resolve(createSuccessfulCommandResult());
+			await flushPromise;
+		});
+
+		expect(didFlushSettle).toBe(true);
 	});
 
 	test('shows a warning and reconciles local state when storage rejects a task command', async() => {

@@ -28,6 +28,20 @@ const spotStorage: SpotStorageApi = {
 	},
 	getStorageStatus: () => {
 		return ipcRenderer.invoke(SPOT_STORAGE_IPC_CHANNELS.getStorageStatus);
+	},
+	onFlushPendingTaskChanges: (listener) => {
+		const flushListener = (): void => {
+			listener();
+		};
+
+		ipcRenderer.on(SPOT_STORAGE_IPC_CHANNELS.flushPendingTaskChanges, flushListener);
+
+		return () => {
+			ipcRenderer.removeListener(SPOT_STORAGE_IPC_CHANNELS.flushPendingTaskChanges, flushListener);
+		};
+	},
+	notifyPendingTaskChangesFlushed: () => {
+		return ipcRenderer.invoke(SPOT_STORAGE_IPC_CHANNELS.pendingTaskChangesFlushed);
 	}
 };
 

@@ -13,6 +13,10 @@ import { SettingsPage } from 'src/components/settings/SettingsPage';
 import { DatabaseLocationGate } from 'src/components/storage/DatabaseLocationGate';
 import { DatabaseLocationContextProvider } from 'src/contexts/DatabaseLocationContext';
 import { DatesContextProvider } from 'src/contexts/DatesContext';
+import { installPendingTaskChangesFlushHandler } from 'src/logic/PendingTaskChanges';
+
+// Answers the main-process shutdown flush request for the whole lifetime of the renderer, no matter which route is open
+installPendingTaskChangesFlushHandler();
 
 const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
 root.render(

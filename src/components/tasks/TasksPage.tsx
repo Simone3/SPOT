@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useContext, type ReactElement } from 'reac
 import { Page } from 'src/components/common/Page';
 import { Pane } from 'src/components/common/Pane';
 import { DatabaseLocationContext } from 'src/contexts/DatabaseLocationContext';
+import { trackPendingTaskCommand } from 'src/logic/PendingTaskChanges';
 import { getInitialTaskState, addTaskToTaskState, refreshVisibleTasksInTaskState, deleteTaskFromTaskState, changeFiltersInTaskState, loadTasksIntoTaskState, resetFiltersTaskState, updateTaskInTaskState, sortTasksByImportanceInTaskState, moveActiveTaskInTaskState, type TaskStateContainer } from 'src/logic/TaskStateLogic';
 import type { PersistedTask, PersistedTaskChange, Task, TaskChange, TasksContainer } from 'src/types/TaskTypes';
 import type { TaskFilterChange } from 'src/types/FilterTypes';
@@ -271,7 +272,8 @@ const TasksPage = (): ReactElement => {
 		commitTaskState(nextTaskState);
 
 		if(command) {
-			void executeOptimisticTaskCommand(command, previousTaskState);
+			// Tracked so that the shutdown flush can wait for the command to reach storage
+			trackPendingTaskCommand(executeOptimisticTaskCommand(command, previousTaskState));
 		}
 	};
 
