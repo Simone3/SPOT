@@ -1,0 +1,24 @@
+src/main/logging/SpotLogger.ts
+  s_c73f664cc15142::t_c097463fe81555 212-213
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "495cedc383d3f7901107d24dc18721f688b88c55",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_c73f664cc15142": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "c4ce4a4c-9c76-46cc-96dd-4cc3a82462cd",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
