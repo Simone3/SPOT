@@ -847,6 +847,48 @@ describe('TaskStorage', () => {
 		});
 	});
 
+	test('opens every transaction with an immediate write lock', async() => {
+		const storageDirectory = makeTempStorageDirectory();
+		tempStorageDirectories.push(storageDirectory);
+		const task: PersistedTask = {
+			id: 'immediate-transaction-task',
+			text: 'Immediate transaction task',
+			state: 'ACTIVE',
+			priority: 'NORMAL',
+			owner: undefined,
+			dueDate: undefined,
+			tags: [],
+			sortPosition: 100,
+			completionDate: undefined
+		};
+		const taskStorage = createTrackedTaskStorage({
+			storageDirectory,
+			now: () => {
+				return new Date('2026-06-06T12:00:00.000Z');
+			}
+		});
+
+		await expect(taskStorage.executeTaskCommand({
+			command: 'task.create',
+			payload: {
+				task
+			}
+		})).resolves.toMatchObject({
+			ok: true
+		});
+
+		const transactionStartQueries = readOperationalLogEntries(storageDirectory).flatMap((entry) => {
+			if(entry.type !== 'sql.query' || !entry.query.startsWith('BEGIN')) {
+				return [];
+			}
+
+			return [entry.query];
+		});
+
+		expect(transactionStartQueries.length).toBeGreaterThan(0);
+		expect(new Set(transactionStartQueries)).toEqual(new Set(['BEGIN IMMEDIATE']));
+	});
+
 	test('rolls back a bulk update when one task update fails', async() => {
 		const storageDirectory = makeTempStorageDirectory();
 		tempStorageDirectories.push(storageDirectory);

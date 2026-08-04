@@ -133,8 +133,9 @@ const createSpotDatabaseWrapper = (
 		});
 	};
 
+	// Takes the write lock upfront, so a concurrent writer cannot make this transaction fail with an unrecoverable SQLITE_BUSY while upgrading from a read to a write
 	const runTransaction = (callback: () => void): void => {
-		execQuery('BEGIN');
+		execQuery('BEGIN IMMEDIATE');
 
 		try {
 			callback();
