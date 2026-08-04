@@ -1,0 +1,40 @@
+DOCUMENTATION.md
+  s_dccab594883ba6::t_f8e8d636f6c048 276,303-304,546,623,631,643
+src/logic/PendingTaskChanges.ts
+  s_dccab594883ba6::t_92572312c41488 76-81
+src/logic/TasksLogic.ts
+  s_dccab594883ba6::t_6f6efb65263e17 110-119,127
+src/main/storage/TaskRepository.ts
+  s_dccab594883ba6::t_6faebab43f53f7 3,32-33,36
+src/main/storage/TaskRowMapping.ts
+  s_dccab594883ba6::t_dd442957fbbc2c 97-103
+tests/components/TaskEditDurability.test.tsx
+  s_dccab594883ba6::t_e4adc331570aee 282-305
+tests/logic/PendingTaskChanges.test.ts
+  s_dccab594883ba6::t_4595981832fce6 259-289
+tests/logic/TasksLogic.test.ts
+  s_dccab594883ba6::t_71cc5388cf149c 72-88
+tests/main/TaskStorage.test.ts
+  s_dccab594883ba6::t_c4720f8f166f66 977,980
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "a397e9818d032dfc901ccd71245bfc5a5564e00e",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_dccab594883ba6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "94fa46e2-cb28-4b9a-9885-af6cf2fe6171",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
