@@ -1,0 +1,30 @@
+DOCUMENTATION.md
+  s_c6d48deea8f353::t_6ccb3b8c344262 147-148,348-350,635
+src/main/Main.ts
+  s_c6d48deea8f353::t_b5c6a087a122e4 17-22,38-56,85,130,134
+src/main/ipc/TaskStorageIpc.ts
+  s_c6d48deea8f353::t_1473fa76dc20a7 28-30,88,179-209,215,218,222,274,303-304
+tests/main/TaskStorageIpc.test.ts
+  s_c6d48deea8f353::t_67b65343376352 350-521
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "e67ea14eded1c30b5ae3262f7b208fb43de65b47",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_c6d48deea8f353": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d7e99c02-764f-446b-835f-3b8eadbb4f05",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
