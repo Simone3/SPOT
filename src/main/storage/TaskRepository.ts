@@ -1,3 +1,4 @@
+import { spotLogger } from 'src/main/logging/SpotLogger';
 import { openSpotDatabase, type SpotDatabase } from 'src/main/storage/SpotDatabase';
 import { TASK_INSERT_COLUMN_NAMES, TASK_SELECT_COLUMN_NAMES, taskChangeToTaskUpdateColumns, taskRowToColumnValues, taskRowToTask, taskToTaskRow, type TaskRow } from 'src/main/storage/TaskRowMapping';
 import type { PersistedTask, PersistedTaskChange, Task } from 'src/types/TaskTypes';
@@ -34,6 +35,18 @@ const assertSingleTaskChanged = (changes: number | bigint, action: string, taskI
 	}
 };
 
+const getErrorMessage = (error: unknown): string => {
+	if(error instanceof Error) {
+		return error.message;
+	}
+
+	if(error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
+		return error.message;
+	}
+
+	return String(error);
+};
+
 export const withSpotDatabase = <T>(
 	options: TaskRepositoryOptions,
 	callback: (spotDatabase: SpotDatabase) => T
@@ -60,9 +73,19 @@ export const readTaskRows = (spotDatabase: SpotDatabase): TaskRow[] => {
 };
 
 export const readTasksFromDatabase = (spotDatabase: SpotDatabase): Task[] => {
-	return readTaskRows(spotDatabase).map((taskRow) => {
-		return taskRowToTask(taskRow);
-	});
+	return readTaskRows(spotDatabase).reduce<Task[]>((tasks, taskRow) => {
+		try {
+			tasks.push(taskRowToTask(taskRow));
+		}
+		catch(error) {
+			spotLogger.warn('Skipping malformed task row', {
+				taskId: taskRow.id,
+				error: getErrorMessage(error)
+			});
+		}
+
+		return tasks;
+	}, []);
 };
 
 export const readTasks = (options: TaskRepositoryOptions): Task[] => {

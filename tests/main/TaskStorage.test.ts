@@ -50,6 +50,28 @@ ${formatColumnList(TASK_INSERT_COLUMN_NAMES)}
 	}
 };
 
+const insertRawTaskRow = (storageDirectory: string, row: TaskRow): void => {
+	const spotDatabase = openSpotDatabase({
+		storageDirectory,
+		now: () => {
+			return new Date('2026-06-06T09:00:00.000Z');
+		}
+	});
+	const query = `
+		INSERT INTO tasks (
+${formatColumnList(TASK_INSERT_COLUMN_NAMES)}
+		)
+		VALUES (${createParameterList(TASK_INSERT_COLUMN_NAMES.length)})
+	`;
+
+	try {
+		spotDatabase.runQuery(query, ...taskRowToColumnValues(row, TASK_INSERT_COLUMN_NAMES));
+	}
+	finally {
+		spotDatabase.close();
+	}
+};
+
 const readPersistedTaskRows = (storageDirectory: string): TaskRow[] => {
 	const spotDatabase = openSpotDatabase({
 		storageDirectory,
@@ -322,6 +344,65 @@ describe('TaskStorage', () => {
 				databasePath: path.join(storageDirectory, STORAGE_CONFIG.databaseFileName)
 			}
 		});
+	});
+
+	test('skips a malformed task row instead of failing the entire load', async() => {
+		const storageDirectory = makeTempStorageDirectory();
+		tempStorageDirectories.push(storageDirectory);
+		const activeTask: PersistedTask = {
+			id: 'active-task',
+			text: 'Read active task',
+			state: 'ACTIVE',
+			priority: 'URGENT',
+			owner: undefined,
+			dueDate: '2026-06-10',
+			tags: [ 'storage' ],
+			sortPosition: 100,
+			completionDate: undefined
+		};
+		insertPersistedTask(storageDirectory, activeTask);
+		insertRawTaskRow(storageDirectory, {
+			id: 'malformed-task',
+			text: 'Malformed task',
+			state: 'BOGUS',
+			priority: 'URGENT',
+			owner: null,
+			due_date: null,
+			tags_json: '[]',
+			sort_position: 200,
+			completion_date: null,
+			created_at: '2026-06-06T10:00:00.000Z',
+			updated_at: '2026-06-06T11:00:00.000Z'
+		});
+		const taskStorage = createTrackedTaskStorage({ storageDirectory });
+
+		const result = await taskStorage.loadTasks();
+
+		expect(result).toMatchObject({
+			ok: true,
+			tasks: [
+				{
+					...activeTask,
+					visible: false
+				}
+			],
+			status: {
+				database: {
+					state: 'healthy'
+				}
+			}
+		});
+
+		const logEntries = readOperationalLogEntries(storageDirectory);
+
+		expect(logEntries).toEqual(expect.arrayContaining([
+			expect.objectContaining({
+				level: 'warn',
+				message: 'Skipping malformed task row',
+				taskId: 'malformed-task',
+				error: 'Unsupported task state "BOGUS".'
+			})
+		]));
 	});
 
 	test('executes task create, update, and delete commands against SQLite', async() => {

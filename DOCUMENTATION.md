@@ -244,6 +244,8 @@ Completing and restoring tasks are represented as `task.update` commands because
 
 Each configured task write command runs in exactly one SQLite transaction on the storage-owned connection. Bulk changes must not be split into per-task transactions. Fields marked immutable in `TASK_FIELD_COLUMN_MAPPINGS`, currently `id`, cannot be included in update changes. If an update or delete references a missing task row, the command fails and the transaction rolls back. Task durability is immediate and does not rely on delayed batching.
 
+`readTasksFromDatabase()` in `src/main/storage/TaskRepository.ts` maps each row independently: a row that fails mapping (unrecognized `state`/`priority`, or malformed `tags_json`) is skipped and logged with `spotLogger.warn()` rather than failing the whole load, so one corrupt row cannot hide every other task behind a storage-unavailable state.
+
 ### Renderer Behavior
 
 React calls `loadTasks()` through `window.spotStorage` on startup, and again whenever the selected task database folder changes, and calls `executeTaskCommand()` for task mutations. It updates optimistically for normal task changes, keeps the latest renderer-facing `StorageStatus`, stays quiet while the database is healthy, shows startup storage failures before rendering task lists, and shows a prominent save warning when writes fail.
