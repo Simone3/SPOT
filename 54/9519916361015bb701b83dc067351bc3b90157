@@ -1,0 +1,28 @@
+src/main/storage/TaskRepository.ts
+  s_72f8db8a6989c6::t_469f488efcfda2 1,38-49,76-88
+DOCUMENTATION.md
+  s_72f8db8a6989c6::t_d56a43ae2fa9b2 247-248
+tests/main/TaskStorage.test.ts
+  s_72f8db8a6989c6::t_85acb667440df8 53-74,349-407
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "549519916361015bb701b83dc067351bc3b90157",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_72f8db8a6989c6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "64a98700-4474-4b9f-9357-49807fd395f3",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
