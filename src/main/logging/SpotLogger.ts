@@ -207,10 +207,10 @@ const createLogEntry = (
 	now: () => Date
 ): SpotLogEntry => {
 	return {
-		...fields,
 		createdAt: now().toISOString(),
 		level,
-		message
+		message,
+		...fields
 	};
 };
 
