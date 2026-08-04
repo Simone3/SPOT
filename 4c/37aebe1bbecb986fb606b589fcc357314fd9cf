@@ -1,0 +1,28 @@
+DOCUMENTATION.md
+  s_f0306fd28629d2::t_af86bce74ac41d 245
+src/main/storage/SpotDatabase.ts
+  s_f0306fd28629d2::t_053286f53dce99 136,138
+tests/main/TaskStorage.test.ts
+  s_f0306fd28629d2::t_57f64686f17824 850-891
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "4c37aebe1bbecb986fb606b589fcc357314fd9cf",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_f0306fd28629d2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "10680397-3e6f-4a8e-8c7d-46a6ceb5b5a8",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
