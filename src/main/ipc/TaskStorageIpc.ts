@@ -25,6 +25,9 @@ export interface RendererFlushTarget {
 
 export interface TaskStorageCommandController {
 	runExclusively: <TResult>(operation: () => Promise<TResult>) => Promise<TResult>;
+
+	// Runs the renderer flush handshake for a window that is about to close, or returns undefined when the window has nothing to wait for
+	requestRendererFlushBeforeWindowClose: () => Promise<void> | undefined;
 }
 
 export interface RegisterTaskStorageIpcHandlersOptions {
@@ -82,6 +85,7 @@ const createTaskStorageCommandController = ({
 	let isShuttingDown = false;
 	let isQuitAllowed = false;
 	let shutdownPromise: Promise<void> | undefined;
+	let rendererFlushPromise: Promise<void> | undefined;
 	let finishRendererFlush: (() => void) | undefined;
 
 	const runOnStorage = <TResult>(operation: () => Promise<TResult>): Promise<TResult> => {
@@ -172,19 +176,50 @@ const createTaskStorageCommandController = ({
 		});
 	};
 
+	// A window closing while the application is quitting, or the other way around, must join the handshake that is already
+	// running instead of starting a second one the renderer would answer only once
+	const requestRendererFlushOnce = (): Promise<void> | undefined => {
+		if(rendererFlushPromise) {
+			return rendererFlushPromise;
+		}
+
+		const flushPromise = requestRendererFlush();
+
+		if(!flushPromise) {
+			return undefined;
+		}
+
+		rendererFlushPromise = flushPromise.then(() => {
+			rendererFlushPromise = undefined;
+		});
+
+		return rendererFlushPromise;
+	};
+
+	// Closing the window destroys the renderer, and on macOS the application even keeps running afterwards, so the buffered task
+	// edits have to be saved when the window goes away and not only when the application quits
+	const requestRendererFlushBeforeWindowClose = (): Promise<void> | undefined => {
+		// The window closes as part of a quit that already runs the same handshake and closes the database right after it
+		if(shutdownPromise) {
+			return undefined;
+		}
+
+		return requestRendererFlushOnce();
+	};
+
 	const requestShutdown = (): void => {
 		if(shutdownPromise) {
 			return;
 		}
 
-		const rendererFlushPromise = requestRendererFlush();
+		const pendingRendererFlush = requestRendererFlushOnce();
 
 		// Without a renderer to wait for, shutdown starts right away and later commands are refused immediately
-		if(!rendererFlushPromise) {
+		if(!pendingRendererFlush) {
 			isShuttingDown = true;
 		}
 
-		shutdownPromise = (rendererFlushPromise ?? Promise.resolve())
+		shutdownPromise = (pendingRendererFlush ?? Promise.resolve())
 			.then(() => {
 				isShuttingDown = true;
 
@@ -236,6 +271,7 @@ const createTaskStorageCommandController = ({
 			return result;
 		},
 		runExclusively,
+		requestRendererFlushBeforeWindowClose,
 		notifyPendingTaskChangesFlushed: () => {
 			finishRendererFlush?.();
 		}
@@ -264,6 +300,7 @@ export const registerTaskStorageIpcHandlers = (options: RegisterTaskStorageIpcHa
 	});
 
 	return {
-		runExclusively: commandController.runExclusively
+		runExclusively: commandController.runExclusively,
+		requestRendererFlushBeforeWindowClose: commandController.requestRendererFlushBeforeWindowClose
 	};
 };

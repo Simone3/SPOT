@@ -14,7 +14,12 @@ import type { BackupStatus } from 'src/types/TaskStorageTypes';
 
 let mainWindow: BrowserWindow | undefined;
 
-const createWindow = (): void => {
+// "requestRendererFlushBeforeWindowClose" saves the task changes the renderer still buffers, or returns undefined when the window can close right away
+interface CreateWindowOptions {
+	requestRendererFlushBeforeWindowClose: () => Promise<void> | undefined;
+}
+
+const createWindow = ({ requestRendererFlushBeforeWindowClose }: CreateWindowOptions): void => {
 	const win = new BrowserWindow({
 		width: WINDOW_CONFIG.widthPixels,
 		height: WINDOW_CONFIG.heightPixels,
@@ -30,6 +35,25 @@ const createWindow = (): void => {
 	});
 
 	mainWindow = win;
+
+	// Closing the window destroys the renderer without quitting on macOS and before the quit drain elsewhere, so the buffered task
+	// edits are saved here through the same handshake, and the window is destroyed only once the renderer reported
+	win.on('close', (event) => {
+		const rendererFlushPromise = requestRendererFlushBeforeWindowClose();
+
+		if(!rendererFlushPromise) {
+			return;
+		}
+
+		event.preventDefault();
+
+		void rendererFlushPromise.then(() => {
+			if(!win.isDestroyed()) {
+				win.destroy();
+			}
+		});
+	});
+
 	win.on('closed', () => {
 		if(mainWindow === win) {
 			mainWindow = undefined;
@@ -58,7 +82,7 @@ void app.whenReady().then(async() => {
 	// The scheduler needs the storage chain that registering the handlers returns, and the handlers need the scheduler to start and finish backups
 	let backupScheduler: BackupScheduler | undefined;
 
-	const { runExclusively } = registerTaskStorageIpcHandlers({
+	const { runExclusively, requestRendererFlushBeforeWindowClose } = registerTaskStorageIpcHandlers({
 		app,
 		ipcMain,
 		taskStorage,
@@ -103,11 +127,11 @@ void app.whenReady().then(async() => {
 
 	await backupLocationManager.initialize();
 
-	createWindow();
+	createWindow({ requestRendererFlushBeforeWindowClose });
 
 	app.on('activate', () => {
 		if(BrowserWindow.getAllWindows().length === 0) {
-			createWindow();
+			createWindow({ requestRendererFlushBeforeWindowClose });
 		}
 	});
 });

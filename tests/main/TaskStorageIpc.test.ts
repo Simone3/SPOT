@@ -347,6 +347,178 @@ describe('TaskStorageIpc', () => {
 		expect(taskStorage.executeTaskCommand).not.toHaveBeenCalled();
 	});
 
+	test('saves the task changes still buffered in the renderer before the window closes', async() => {
+		const { handlers, ipcMain } = createMockIpcMain();
+		const { app } = createMockApp();
+		const { commandResult, taskStorage } = createMockTaskStorage();
+		const prepareForShutdown = jest.fn(async() => {
+			return undefined;
+		});
+		const flushTarget = {
+			send: jest.fn(),
+			isDestroyed: () => {
+				return false;
+			}
+		};
+		const event = {} as IpcMainInvokeEvent;
+		const bufferedCommand: TaskStorageCommand = {
+			command: 'task.update',
+			payload: {
+				taskId: 'stored-task',
+				change: {
+					text: 'Typed right before closing the window'
+				}
+			}
+		};
+		let isWindowClosed = false;
+
+		const { requestRendererFlushBeforeWindowClose } = registerTaskStorageIpcHandlers({
+			app,
+			ipcMain,
+			taskStorage: {
+				...taskStorage,
+				prepareForShutdown
+			},
+			getRendererFlushTarget: () => {
+				return flushTarget;
+			}
+		});
+
+		const windowClosePromise = requestRendererFlushBeforeWindowClose()!.then(() => {
+			isWindowClosed = true;
+		});
+
+		expect(flushTarget.send).toHaveBeenCalledWith(SPOT_STORAGE_IPC_CHANNELS.flushPendingTaskChanges);
+
+		// The window is still there while the renderer flushes what the user typed, so the commands it sends are executed
+		await expect(handlers.get(SPOT_STORAGE_IPC_CHANNELS.executeTaskCommand)!(event, bufferedCommand)).resolves.toBe(commandResult);
+		expect(isWindowClosed).toBe(false);
+
+		await handlers.get(SPOT_STORAGE_IPC_CHANNELS.pendingTaskChangesFlushed)!(event);
+		await windowClosePromise;
+
+		expect(taskStorage.executeTaskCommand).toHaveBeenCalledWith(bufferedCommand);
+
+		// Closing the window is not quitting: the database stays open, because the application may still be running
+		expect(prepareForShutdown).not.toHaveBeenCalled();
+		expect(app.quit).not.toHaveBeenCalled();
+	});
+
+	test('closes the window right away when it closes as part of a quit', () => {
+		const { ipcMain } = createMockIpcMain();
+		const { app, handlers: appHandlers } = createMockApp();
+		const { taskStorage } = createMockTaskStorage();
+		jest.spyOn(spotLogger, 'flush').mockResolvedValue(undefined);
+		const flushTarget = {
+			send: jest.fn()
+		};
+
+		const { requestRendererFlushBeforeWindowClose } = registerTaskStorageIpcHandlers({
+			app,
+			ipcMain,
+			taskStorage,
+			getRendererFlushTarget: () => {
+				return flushTarget;
+			}
+		});
+
+		appHandlers.get('before-quit')!({ preventDefault: jest.fn() });
+
+		expect(requestRendererFlushBeforeWindowClose()).toBeUndefined();
+		expect(flushTarget.send).toHaveBeenCalledTimes(1);
+	});
+
+	test('asks the renderer once when the application quits while the window is closing', async() => {
+		const { handlers, ipcMain } = createMockIpcMain();
+		const { app, handlers: appHandlers } = createMockApp();
+		const { taskStorage } = createMockTaskStorage();
+		const prepareForShutdown = jest.fn(async() => {
+			return undefined;
+		});
+		jest.spyOn(spotLogger, 'flush').mockResolvedValue(undefined);
+		const flushTarget = {
+			send: jest.fn()
+		};
+		const event = {} as IpcMainInvokeEvent;
+
+		const { requestRendererFlushBeforeWindowClose } = registerTaskStorageIpcHandlers({
+			app,
+			ipcMain,
+			taskStorage: {
+				...taskStorage,
+				prepareForShutdown
+			},
+			getRendererFlushTarget: () => {
+				return flushTarget;
+			}
+		});
+
+		const windowClosePromise = requestRendererFlushBeforeWindowClose()!;
+
+		appHandlers.get('before-quit')!({ preventDefault: jest.fn() });
+
+		expect(flushTarget.send).toHaveBeenCalledTimes(1);
+		expect(prepareForShutdown).not.toHaveBeenCalled();
+
+		// The single report the renderer sends releases the window close and the quit drain alike
+		await handlers.get(SPOT_STORAGE_IPC_CHANNELS.pendingTaskChangesFlushed)!(event);
+		await windowClosePromise;
+		await waitForQueuedWork();
+
+		expect(prepareForShutdown).toHaveBeenCalledTimes(1);
+		expect(app.quit).toHaveBeenCalledTimes(1);
+	});
+
+	test('asks the renderer again when a window is closed after the previous one', async() => {
+		const { handlers, ipcMain } = createMockIpcMain();
+		const { taskStorage } = createMockTaskStorage();
+		const flushTarget = {
+			send: jest.fn()
+		};
+		const event = {} as IpcMainInvokeEvent;
+
+		const { requestRendererFlushBeforeWindowClose } = registerTaskStorageIpcHandlers({
+			ipcMain,
+			taskStorage,
+			getRendererFlushTarget: () => {
+				return flushTarget;
+			}
+		});
+
+		const firstWindowClosePromise = requestRendererFlushBeforeWindowClose()!;
+
+		await handlers.get(SPOT_STORAGE_IPC_CHANNELS.pendingTaskChangesFlushed)!(event);
+		await firstWindowClosePromise;
+
+		// On macOS the application keeps running, so a window opened again later has to be flushed again when it closes
+		const secondWindowClosePromise = requestRendererFlushBeforeWindowClose()!;
+
+		expect(flushTarget.send).toHaveBeenCalledTimes(2);
+
+		await handlers.get(SPOT_STORAGE_IPC_CHANNELS.pendingTaskChangesFlushed)!(event);
+		await expect(secondWindowClosePromise).resolves.toBeUndefined();
+	});
+
+	test('closes the window without waiting when the renderer is already gone', () => {
+		const { ipcMain } = createMockIpcMain();
+		const { taskStorage } = createMockTaskStorage();
+
+		const { requestRendererFlushBeforeWindowClose } = registerTaskStorageIpcHandlers({
+			ipcMain,
+			taskStorage,
+			getRendererFlushTarget: () => {
+				return {
+					send: jest.fn(),
+					isDestroyed: () => {
+						return true;
+					}
+				};
+			}
+		});
+
+		expect(requestRendererFlushBeforeWindowClose()).toBeUndefined();
+	});
+
 	test('does not wait forever when the renderer never reports its buffered changes', async() => {
 		jest.useFakeTimers();
 		const { ipcMain } = createMockIpcMain();
