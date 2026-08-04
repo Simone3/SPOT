@@ -34,6 +34,22 @@ export const cloneFilters = (filters: TaskFilters): TaskFilters => {
 };
 
 /**
+ * Tests a task's text against the filter text, treated as a case-insensitive regex.
+ * Falls back to a plain case-insensitive substring match if the filter text is not a valid regex.
+ * @param taskText Task text to test.
+ * @param filterText Filter text, potentially a regex pattern.
+ * @returns Whether the task text matches.
+ */
+const matchesText = (taskText: string, filterText: string): boolean => {
+	try {
+		return new RegExp(filterText, 'i').test(taskText);
+	}
+	catch {
+		return taskText.toLowerCase().includes(filterText.toLowerCase());
+	}
+};
+
+/**
  * Checks if a specific tasks matches a set of filters.
  * @param task Task to test.
  * @param filters Filters to apply.
@@ -62,7 +78,7 @@ const matchesFilters = (task: Task, filters: TaskFilters): boolean => {
 		return false;
 	}
 
-	if(filters.text && !new RegExp(filters.text, 'i').test(task.text)) {
+	if(filters.text && !matchesText(task.text, filters.text)) {
 		return false;
 	}
 

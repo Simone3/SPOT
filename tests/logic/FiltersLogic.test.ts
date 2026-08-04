@@ -109,4 +109,21 @@ describe('FiltersLogic', () => {
 
 		expect(task.visible).toBe(true);
 	});
+
+	test('falls back to a substring match when the text filter is not a valid regex', () => {
+		const matchingTask = makeTask({ text: 'Write project (draft)', visible: false });
+		const otherTask = makeTask({ text: 'Unrelated task', visible: false });
+
+		refreshTaskVisibility(matchingTask, {
+			...getInitialFilters(),
+			text: '(draft'
+		});
+		refreshTaskVisibility(otherTask, {
+			...getInitialFilters(),
+			text: '(draft'
+		});
+
+		expect(matchingTask.visible).toBe(true);
+		expect(otherTask.visible).toBe(false);
+	});
 });
