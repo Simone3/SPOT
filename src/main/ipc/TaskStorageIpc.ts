@@ -65,18 +65,45 @@ const createTaskStorageCommandController = (
 	taskStorage: TaskStorageIpcApi,
 	app?: TaskStorageIpcApp,
 	getRendererFlushTarget?: () => RendererFlushTarget | undefined
-): Pick<TaskStorageIpcApi, 'executeTaskCommand'> & TaskStorageCommandController & {
+): Pick<TaskStorageIpcApi, 'loadTasks' | 'executeTaskCommand'> & TaskStorageCommandController & {
 	notifyPendingTaskChangesFlushed: () => void;
 } => {
-	const pendingCommands = new Set<Promise<unknown>>();
+	// Everything that touches the database runs on this chain, so task commands and storage folder changes are strictly
+	// ordered and can never overlap, whichever order they are requested in
+	let storageOperations: Promise<unknown> = Promise.resolve();
 	let isShuttingDown = false;
 	let isQuitAllowed = false;
 	let shutdownPromise: Promise<void> | undefined;
-	let exclusiveOperation: Promise<void> | undefined;
 	let finishRendererFlush: (() => void) | undefined;
 
+	const runOnStorage = <TResult>(operation: () => Promise<TResult>): Promise<TResult> => {
+		const operationResult = storageOperations.then(() => {
+			return operation();
+		});
+
+		// The chain has to survive a failed operation, or nothing would run after it
+		storageOperations = operationResult.then(() => {
+			return undefined;
+		}, () => {
+			return undefined;
+		});
+
+		return operationResult;
+	};
+
+	const drainStorageOperations = async(): Promise<void> => {
+		let drainedOperations;
+
+		// An operation can be appended while the previous ones are being awaited
+		do {
+			drainedOperations = storageOperations;
+			await drainedOperations;
+		}
+		while(drainedOperations !== storageOperations);
+	};
+
 	const prepareForShutdown = async(): Promise<void> => {
-		await Promise.allSettled(Array.from(pendingCommands));
+		await drainStorageOperations();
 		try {
 			await taskStorage.prepareForShutdown?.();
 		}
@@ -158,46 +185,26 @@ const createTaskStorageCommandController = (
 		requestShutdown();
 	});
 
-	const trackPendingCommand = (commandPromise: Promise<TaskStorageCommandResult>): Promise<TaskStorageCommandResult> => {
-		pendingCommands.add(commandPromise);
-
-		return commandPromise.finally(() => {
-			pendingCommands.delete(commandPromise);
-		});
-	};
-
-	// Lets the storage folder change finalize the commands already running on the old database, while later commands wait for the new database instead of racing the switch
-	const runExclusively = async<TResult>(operation: () => Promise<TResult>): Promise<TResult> => {
-		const commandsToDrain = Array.from(pendingCommands);
-		let releaseExclusiveOperation: (() => void) | undefined;
-		exclusiveOperation = new Promise<void>((resolve) => {
-			releaseExclusiveOperation = resolve;
-		});
-
-		try {
-			await Promise.allSettled(commandsToDrain);
-
-			return await operation();
-		}
-		finally {
-			exclusiveOperation = undefined;
-			releaseExclusiveOperation?.();
-		}
+	// Lets a storage folder change finalize the commands already running on the old database, while later commands wait
+	// for the new database instead of racing the switch, and a second folder change waits for the first to finish
+	const runExclusively = <TResult>(operation: () => Promise<TResult>): Promise<TResult> => {
+		return runOnStorage(operation);
 	};
 
 	return {
+		loadTasks: () => {
+			return runOnStorage(() => {
+				return taskStorage.loadTasks();
+			});
+		},
 		executeTaskCommand: (command) => {
 			if(isShuttingDown) {
 				return createShutdownCommandResult(taskStorage);
 			}
 
-			if(exclusiveOperation) {
-				return trackPendingCommand(exclusiveOperation.then(() => {
-					return taskStorage.executeTaskCommand(command);
-				}));
-			}
-
-			return trackPendingCommand(taskStorage.executeTaskCommand(command));
+			return runOnStorage(() => {
+				return taskStorage.executeTaskCommand(command);
+			});
 		},
 		runExclusively,
 		notifyPendingTaskChangesFlushed: () => {
@@ -214,8 +221,9 @@ export const registerTaskStorageIpcHandlers = ({
 }: RegisterTaskStorageIpcHandlersOptions): TaskStorageCommandController => {
 	const commandController = createTaskStorageCommandController(taskStorage, app, getRendererFlushTarget);
 
+	// Loading also goes through the chain, so tasks are never read from a database that is being replaced
 	ipcMain.handle(SPOT_STORAGE_IPC_CHANNELS.loadTasks, () => {
-		return taskStorage.loadTasks();
+		return commandController.loadTasks();
 	});
 
 	ipcMain.handle(SPOT_STORAGE_IPC_CHANNELS.executeTaskCommand, (_event, command: TaskStorageCommand) => {

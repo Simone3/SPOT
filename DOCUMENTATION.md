@@ -67,7 +67,7 @@ npm run make
 - `src/main/config/SpotConfigStore.ts` reads and writes the JSON application configuration file that stores the selected task database folder.
 - `src/main/config/DatabaseLocationManager.ts` owns the task database folder: startup resolution, validation, the development override, the folder switch on task storage, and configuration persistence.
 - `src/main/logging/SpotLogger.ts` configures `electron-log` behind a generic factory-created logger and exports the process-wide `spotLogger` utility with `info`, `warn`, `error`, `debug`, and `flush` methods, newline-delimited JSON output, size-based rolling, and one retained archive.
-- `src/main/ipc/TaskStorageIpc.ts` registers the narrow Electron IPC surface for storage loading, task write commands, database health reporting, the shutdown flush handshake and drain for buffered and in-flight task commands, and the exclusive-access helper used while the task database folder changes.
+- `src/main/ipc/TaskStorageIpc.ts` registers the narrow Electron IPC surface for storage loading, task write commands, database health reporting, the shutdown flush handshake and drain for buffered and in-flight task commands, and the exclusive-access helper used while the task database folder changes. Task loading, task write commands and folder changes all run on one serial chain, so they are strictly ordered and never overlap, whichever order they are requested in.
 - `src/main/ipc/DatabaseLocationIpc.ts` registers the task database folder IPC surface and opens the native folder dialog.
 - `src/main/storage/TaskStorage.ts` defines the Electron main-process storage contract, configured SQLite task loading and write commands through a storage-owned database connection, database health reporting, folder switching, and shutdown preparation.
 - `src/main/storage/DatabaseDirectory.ts` validates a task database folder, detects an existing `spot.sqlite` file, and creates default folders.
@@ -188,7 +188,7 @@ Startup resolution:
 Changing the folder, from the setup screen or from Settings:
 
 1. The folder is validated. The native folder dialog is opened by `src/main/ipc/DatabaseLocationIpc.ts` with `openDirectory` and `createDirectory`, and it reports whether the folder already contains `spot.sqlite`.
-2. React writes everything it still has buffered or queued for the current database before asking for the switch, so no task command can still be on its way. `runExclusively()` from the storage IPC controller then finalizes the task write commands already running on the old database, and commands received during the switch wait for the new database instead of racing it.
+2. React writes everything it still has buffered or queued for the current database before asking for the switch, so no task command can still be on its way. `runExclusively()` from the storage IPC controller then puts the switch on the serial storage chain, so it runs after the task commands already on it and before the ones that arrive later, and a second folder change waits for the first to finish instead of interleaving with it.
 3. `TaskStorage.openStorageDirectory()` closes the old SQLite connection and opens the new one, creating an empty database when the folder has no `spot.sqlite` file.
 4. The new folder is saved in the configuration file, and React reloads all tasks from the new database. When the new folder cannot be opened, the previous folder is reopened, the configuration is left untouched, and the failure message is shown.
 
@@ -587,7 +587,7 @@ Current test coverage includes focused regression checks for:
 - date comparison and display formatting
 - smoke coverage for task filters and task list interactions
 - SQLite storage setup, task row mapping, command execution, transaction rollback, and optional operational logging behavior
-- storage IPC handler registration, channel delegation, shutdown drain, post-shutdown command failure behavior, and exclusive storage-folder switching that finalizes in-flight commands and queues later ones
+- storage IPC handler registration, channel delegation, shutdown drain, post-shutdown command failure behavior, exclusive storage-folder switching that finalizes in-flight commands and queues later ones, and two overlapping folder changes running one after the other with no command in between
 - the shutdown flush handshake: buffered renderer changes saved before the database is closed, commands refused only after the renderer reported, and a bounded wait when the renderer never reports
 - the buffered task changes: save delays and their restart, immediate saves, forgetting a reverted value, the shorter state change delay, updater-form changes, dropping the buffer of a deleted task, committing the trailing tag input only on the final save, keeping changes when no applier is registered, per-task subscriber notification with stable snapshots, page hide saving, waiting for in-flight storage commands, and reporting to the main process only once storage caught up
 - runtime path resolution for packaged and development runs

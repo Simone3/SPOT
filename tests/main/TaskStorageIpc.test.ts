@@ -386,6 +386,67 @@ describe('TaskStorageIpc', () => {
 		expect(app.quit).toHaveBeenCalledTimes(1);
 	});
 
+	test('runs two storage folder changes one after the other, with no command in between', async() => {
+		const { handlers, ipcMain } = createMockIpcMain();
+		const { commandResult, taskStorage } = createMockTaskStorage();
+		const executionOrder: string[] = [];
+		const firstChangeDeferred = createDeferred<void>();
+		taskStorage.executeTaskCommand = jest.fn(async() => {
+			executionOrder.push('command');
+
+			return commandResult;
+		});
+		const event = {} as IpcMainInvokeEvent;
+
+		const { runExclusively } = registerTaskStorageIpcHandlers({
+			ipcMain,
+			taskStorage
+		});
+
+		const firstChangePromise = runExclusively(async() => {
+			executionOrder.push('first-change-start');
+			await firstChangeDeferred.promise;
+			executionOrder.push('first-change-end');
+
+			return 'first';
+		});
+
+		// Requested while the first one is still running, for instance by a second click on the folder actions
+		const secondChangePromise = runExclusively(async() => {
+			executionOrder.push('second-change-start');
+			await waitForQueuedWork();
+			executionOrder.push('second-change-end');
+
+			return 'second';
+		});
+		const commandPromise = handlers.get(SPOT_STORAGE_IPC_CHANNELS.executeTaskCommand)!(event, {
+			command: 'task.update',
+			payload: {
+				taskId: 'stored-task',
+				change: {
+					text: 'Written during the folder changes'
+				}
+			}
+		} as TaskStorageCommand) as Promise<TaskStorageCommandResult>;
+
+		await waitForQueuedWork();
+
+		expect(executionOrder).toEqual([ 'first-change-start' ]);
+
+		firstChangeDeferred.resolve();
+
+		await expect(firstChangePromise).resolves.toBe('first');
+		await expect(secondChangePromise).resolves.toBe('second');
+		await expect(commandPromise).resolves.toBe(commandResult);
+		expect(executionOrder).toEqual([
+			'first-change-start',
+			'first-change-end',
+			'second-change-start',
+			'second-change-end',
+			'command'
+		]);
+	});
+
 	test('finalizes in-flight task commands before a storage folder change and queues later commands', async() => {
 		const { handlers, ipcMain } = createMockIpcMain();
 		const { commandResult, taskStorage } = createMockTaskStorage();
