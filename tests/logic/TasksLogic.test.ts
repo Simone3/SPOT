@@ -69,6 +69,23 @@ describe('TasksLogic', () => {
 		]);
 	});
 
+	test('keeps loading every task when a completed one has no completion date', () => {
+		const tasksContainer = getInitialTasks();
+
+		// A completed row stored without a completion date must not hide all the other tasks behind a load failure
+		loadBackEndTasks(tasksContainer, [
+			makeTask({ id: 'completed-without-date', state: 'COMPLETED', completionDate: undefined }),
+			makeTask({ id: 'completed-with-date', state: 'COMPLETED', completionDate: new Date('2024-01-01') }),
+			makeTask({ id: 'active', sortPosition: 10 })
+		]);
+
+		expect(taskIds(tasksContainer.completed)).toEqual([
+			'completed-with-date',
+			'completed-without-date'
+		]);
+		expect(taskIds(tasksContainer.active)).toEqual([ 'active' ]);
+	});
+
 	test('sorts active tasks by priority, due date presence, due date descending, then manual position', () => {
 		const tasksContainer: TasksContainer = {
 			active: [

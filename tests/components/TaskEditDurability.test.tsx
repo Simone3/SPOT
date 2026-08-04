@@ -279,6 +279,30 @@ describe('Task edit durability', () => {
 		});
 	});
 
+	test('keeps a half-typed tag in its input while another edit is saved', () => {
+		jest.useFakeTimers();
+		const task = makeTask({
+			text: 'Original task',
+			visible: true
+		});
+		const { applyPendingTaskChanges } = renderTasksList([ task ]);
+
+		typeTaskText('Edited task');
+		typeNewTag('half-typed');
+
+		act(() => {
+			jest.advanceTimersByTime(TASKS_CONFIG.flushDelayMs);
+		});
+
+		expect(applyPendingTaskChanges).toHaveBeenCalledWith(task.id, {
+			change: {
+				text: 'Edited task'
+			},
+			newTag: ''
+		});
+		expect(screen.getAllByPlaceholderText('Add tag...').at(-1)).toHaveValue('half-typed');
+	});
+
 	test('saves buffered edits when everything is flushed before the renderer goes away', () => {
 		jest.useFakeTimers();
 		const task = makeTask({

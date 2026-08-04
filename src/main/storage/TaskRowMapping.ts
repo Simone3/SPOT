@@ -94,7 +94,13 @@ export const createImmutableTaskFieldChangeMessage = (taskField: string, columnN
 	return `Task field "${taskField}" maps to immutable column "${columnName}" and cannot be changed.`;
 };
 
-const createInvalidTaskChangeError = (message: string): InvalidTaskChangeError => {
+/**
+ * Marks a command the database refuses and would refuse again in exactly the same way, so that React drops it instead of
+ * retrying it forever in front of every change the user makes afterwards.
+ * @param message Failure message.
+ * @returns The error carrying the invalid-command marker.
+ */
+export const createInvalidTaskChangeError = (message: string): InvalidTaskChangeError => {
 	const error = new Error(message) as InvalidTaskChangeError;
 	error.invalidTaskChange = true;
 	return error;

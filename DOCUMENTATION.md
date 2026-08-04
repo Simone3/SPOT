@@ -273,7 +273,7 @@ Supported write commands are:
 
 Completing and restoring tasks are represented as `task.update` commands because they update `state` and `completionDate`. Manual reorder and sort by importance use `tasks.updateMany` with a `reason`, such as `manual-reorder` or `importance-sort`.
 
-Each task write command runs in exactly one SQLite transaction on the storage-owned connection. Bulk changes must not be split into per-task transactions. Transactions are opened with `BEGIN IMMEDIATE`, never a plain deferred `BEGIN`: the write lock is taken upfront so a concurrent writer on the same database file cannot make the transaction fail with an unrecoverable `SQLITE_BUSY` while it upgrades from a read to a write. The busy handler installed through `STORAGE_CONFIG.databaseTimeoutMs` can then retry the initial lock acquisition normally. Fields marked immutable in `TASK_FIELD_COLUMN_MAPPINGS`, currently `id`, cannot be included in update changes. If an update or delete references a missing task row, the command fails and the transaction rolls back. Task durability is immediate and does not rely on delayed batching.
+Each task write command runs in exactly one SQLite transaction on the storage-owned connection. Bulk changes must not be split into per-task transactions. Transactions are opened with `BEGIN IMMEDIATE`, never a plain deferred `BEGIN`: the write lock is taken upfront so a concurrent writer on the same database file cannot make the transaction fail with an unrecoverable `SQLITE_BUSY` while it upgrades from a read to a write. The busy handler installed through `STORAGE_CONFIG.databaseTimeoutMs` can then retry the initial lock acquisition normally. Fields marked immutable in `TASK_FIELD_COLUMN_MAPPINGS`, currently `id`, cannot be included in update changes. If an update or delete references a missing task row, the command fails and the transaction rolls back. That failure is reported as `invalid-command`, not as `database-error`: the row will not appear later, so retrying the command would never succeed and would keep every task change made afterwards from ever being written, because the write queue never lets a later command overtake a failed one. Task durability is immediate and does not rely on delayed batching.
 
 `readTasksFromDatabase()` in `src/main/storage/TaskRepository.ts` maps each row independently: a row that fails mapping (unrecognized `state`/`priority`, or malformed `tags_json`) is skipped and logged with `spotLogger.warn()` rather than failing the whole load, so one corrupt row cannot hide every other task behind a storage-unavailable state.
 
@@ -300,7 +300,8 @@ Task edits are not sent to the task state on every keystroke. `src/logic/Pending
 - A buffered change is saved after `TASKS_CONFIG.flushDelayMs`, or after the shorter `TASKS_CONFIG.stateChangeDelayMs` when it is a pending state change. Every new change restarts the delay, and a value brought back to the one already in the task state is dropped from the buffer.
 - `TasksPage` registers the single applier that saves buffered changes. It looks the task up by ID in the current task state, so changes are always applied to the task as it is at save time, and a task that no longer exists is skipped.
 - `TasksPage` clears the buffer of a deleted task, and saves everything still buffered when it unmounts, before unregistering the applier.
-- The trailing tag input is buffered as `newTag` and is not a task change until it is committed. Delayed and explicit saves leave it alone, because the user may still be typing; only the final flush of the whole buffer turns it into a tag.
+- A save takes out of the buffer only what it is actually saving. Anything the user typed in the meantime and that is not part of that save stays buffered.
+- The trailing tag input is buffered as `newTag` and is not a task change until it is committed. Delayed and explicit saves leave it alone, because the user may still be typing; only the final flush of the whole buffer turns it into a tag. Saving the other buffered changes of the same task must therefore not clear it either.
 - Buffered changes are never dropped when no applier is registered: they stay buffered until one is.
 
 `StorageStatus` reports the database state as `healthy` or `unavailable`, plus `storageDirectory`, `databasePath`, and a `backup` status. Database health is hard: `unavailable` means the tasks may not be saved and React says so prominently. Backup health is soft and separate: `idle`, `ok`, or `failed`, with the backup `directory`, the `lastBackupAt` and `lastBackupPath` of the last successful one, and a failure `message`. A failed backup never makes the database unhealthy, because the tasks are already saved in the local database either way.
@@ -542,7 +543,7 @@ Forced importance sorting is implemented in `src/logic/TasksLogic.ts`. The inten
 3. Due date descending when both tasks have a due date, using the stored `YYYY-MM-DD` string order.
 4. Existing manual `sortPosition` as fallback.
 
-Completed tasks are sorted by `completionDate` descending, then by ID.
+Completed tasks are sorted by `completionDate` descending, then by ID. A completed task stored without a completion date simply sorts last: the comparator must not assume the date is there, because throwing while the loaded tasks are sorted would fail the whole startup load and hide every other task behind a storage error.
 
 ## Dates
 
@@ -619,7 +620,7 @@ Current test coverage includes focused regression checks for:
 
 - insertion at start, middle, and end
 - manual sort position recomputation, move operations, and random operation checks
-- task shallow cloning, task loading, importance sorting, state changes, and new-task defaults
+- task shallow cloning, task loading, loading a completed task that has no completion date, importance sorting, state changes, and new-task defaults
 - filter cloning and task visibility matching
 - domain counting, active/filter domain separation, and selected-filter cleanup
 - date comparison and display formatting
@@ -627,7 +628,7 @@ Current test coverage includes focused regression checks for:
 - SQLite storage setup, task row mapping, command execution, transaction rollback, and optional operational logging behavior
 - storage IPC handler registration, channel delegation, shutdown drain, post-shutdown command failure behavior, exclusive access that finalizes in-flight commands and queues later ones, and two overlapping exclusive operations running one after the other with no command in between
 - the shutdown flush handshake: buffered renderer changes saved before the database is closed, commands refused only after the renderer reported, and a bounded wait when the renderer never reports
-- the buffered task changes: save delays and their restart, immediate saves, forgetting a reverted value, the shorter state change delay, updater-form changes, dropping the buffer of a deleted task, committing the trailing tag input only on the final save, keeping changes when no applier is registered, per-task subscriber notification with stable snapshots, page hide saving, waiting for in-flight storage commands, and reporting to the main process only once storage caught up
+- the buffered task changes: save delays and their restart, immediate saves, forgetting a reverted value, the shorter state change delay, updater-form changes, dropping the buffer of a deleted task, committing the trailing tag input only on the final save, keeping the trailing tag input buffered while the other changes of the same task are saved, keeping changes when no applier is registered, per-task subscriber notification with stable snapshots, page hide saving, waiting for in-flight storage commands, and reporting to the main process only once storage caught up
 - runtime path resolution for packaged and development runs
 - backup folder resolution at startup, saved-folder reuse, the development folder override, the fallback to the default folder when the saved or chosen one cannot be used, configuration persistence, and running the change on the storage chain
 - backup location IPC registration, cancelled folder dialogs, and rejecting a chosen path that is not a usable folder
@@ -639,7 +640,7 @@ Current test coverage includes focused regression checks for:
 - React task-page startup loading, Electron preload API requirement, persisted Electron loading, and startup-error rendering
 - React task-page storage commands for create, update, delete, complete, restore, manual reorder, and importance sort, plus the write-failure warning, storage-health feedback, and the task state being kept as it is after a rejected write
 - the task write queue: in-order writing, retrying a failed or thrown write while keeping the warning until it goes through, later commands not overtaking a failed one, dropping a refused command instead of retrying it forever, keeping a dropped command's warning through later successful writes, and database status reporting
-- task edit durability corner cases: edits still saved after the task is filtered out of the list, never saved for a deleted task, task state values shown again when the parent replaces the task, what the user is typing kept while the parent replaces the task, the trailing tag input saved when the task disappears, and everything saved before the renderer goes away
+- task edit durability corner cases: edits still saved after the task is filtered out of the list, never saved for a deleted task, task state values shown again when the parent replaces the task, what the user is typing kept while the parent replaces the task, the trailing tag input saved when the task disappears, a half-typed tag left in its input while another edit of the same task is saved, and everything saved before the renderer goes away
 - generic SPOT logging success, public log levels, startup file-open failures, bounded retry failures, retry recovery, shutdown flush behavior, and size-based rolling with bounded retention
 
 Validation commands:

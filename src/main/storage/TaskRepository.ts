@@ -1,6 +1,6 @@
 import { spotLogger } from 'src/main/logging/SpotLogger';
 import { openSpotDatabase, type SpotDatabase } from 'src/main/storage/SpotDatabase';
-import { TASK_INSERT_COLUMN_NAMES, TASK_SELECT_COLUMN_NAMES, taskChangeToTaskUpdateColumns, taskRowToColumnValues, taskRowToTask, taskToTaskRow, type TaskRow } from 'src/main/storage/TaskRowMapping';
+import { createInvalidTaskChangeError, TASK_INSERT_COLUMN_NAMES, TASK_SELECT_COLUMN_NAMES, taskChangeToTaskUpdateColumns, taskRowToColumnValues, taskRowToTask, taskToTaskRow, type TaskRow } from 'src/main/storage/TaskRowMapping';
 import type { PersistedTask, PersistedTaskChange, Task } from 'src/types/TaskTypes';
 
 export interface TaskRepositoryOptions {
@@ -29,9 +29,11 @@ const INSERT_TASK_QUERY = `
 	VALUES (${createParameterList(TASK_INSERT_COLUMN_NAMES.length)})
 `;
 
+// A row that is not there will not appear later, so this is reported as a refused command: retrying it would never succeed and
+// would keep every task change the user makes afterwards from being written
 const assertSingleTaskChanged = (changes: number | bigint, action: string, taskId: string): void => {
 	if(Number(changes) !== 1) {
-		throw new Error(`Cannot ${action} missing task "${taskId}".`);
+		throw createInvalidTaskChangeError(`Cannot ${action} missing task "${taskId}".`);
 	}
 };
 

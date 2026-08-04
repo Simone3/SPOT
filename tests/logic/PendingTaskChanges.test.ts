@@ -256,6 +256,37 @@ describe('PendingTaskChanges', () => {
 		});
 	});
 
+	test('keeps the trailing tag input while the other buffered changes are saved', () => {
+		jest.useFakeTimers();
+		const task = makeTask({ text: 'Original task' });
+		const applier = registerApplier();
+
+		changePendingTaskValue(task, 'text', 'Edited task', false);
+		changePendingNewTag(task.id, 'half-typed');
+
+		// The delayed save of the text must not take away the tag the user is still typing
+		jest.advanceTimersByTime(TASKS_CONFIG.flushDelayMs);
+
+		expect(applier).toHaveBeenCalledWith(task.id, {
+			change: {
+				text: 'Edited task'
+			},
+			newTag: ''
+		});
+		expect(getPendingTaskChanges(task.id)).toEqual({
+			change: {},
+			newTag: 'half-typed'
+		});
+
+		flushPendingTaskChanges();
+
+		expect(applier).toHaveBeenLastCalledWith(task.id, {
+			change: {},
+			newTag: 'half-typed'
+		});
+		expect(getPendingTaskChanges(task.id)).toBeUndefined();
+	});
+
 	test('keeps buffered changes when there is nobody to apply them', () => {
 		jest.useFakeTimers();
 		const task = makeTask({ text: 'Original task' });

@@ -974,9 +974,10 @@ describe('TaskStorage', () => {
 			}
 		});
 
+		// A row that is not there will not appear later, so React must drop the command instead of retrying it forever
 		expect(result).toMatchObject({
 			ok: false,
-			reason: 'database-error',
+			reason: 'invalid-command',
 			message: 'Cannot update missing task "missing-task".'
 		});
 		expect(readPersistedTaskRows(storageDirectory)).toEqual([

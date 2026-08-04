@@ -108,13 +108,23 @@ const activeTasksImportanceCompareFunction = (taskA: Task, taskB: Task): number 
 };
 
 /**
+ * Returns the completion instant used to sort completed tasks.
+ * A completed task stored without a completion date must not break the whole load, so it simply sorts last.
+ * @param task Completed task to read.
+ * @returns The completion time, or 0 when the task has no completion date.
+ */
+const getCompletionTime = (task: Task): number => {
+	return task.completionDate ? task.completionDate.getTime() : 0;
+};
+
+/**
  * Comparator for completed tasks (sort by completion date DESC and then by ID).
  * @param taskA First completed task to compare.
  * @param taskB Second completed task to compare.
  * @returns The completed task sort order.
  */
 const completedTasksCompareFunction = (taskA: Task, taskB: Task): number => {
-	const completionCompare = taskB.completionDate!.getTime() - taskA.completionDate!.getTime();
+	const completionCompare = getCompletionTime(taskB) - getCompletionTime(taskA);
 	if(completionCompare !== 0) {
 		return completionCompare;
 	}

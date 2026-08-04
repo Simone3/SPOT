@@ -73,8 +73,12 @@ const flushTask = (taskId: string, commitNewTag: boolean): void => {
 	}
 
 	clearFlushTimeout(taskId);
-	pendingTaskChanges.delete(taskId);
-	notifyChangeSubscribers(taskId);
+
+	// Only what is being saved leaves the buffer: a trailing tag input the user is still typing in is not part of this save
+	setPendingTaskChanges(taskId, {
+		change: {},
+		newTag: commitNewTag ? EMPTY_NEW_TAG : pendingChanges.newTag
+	});
 	applyPendingTaskChanges(taskId, {
 		change: pendingChanges.change,
 		newTag
