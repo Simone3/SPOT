@@ -1,0 +1,28 @@
+DOCUMENTATION.md
+  s_aea16bd218d490::t_50f077706b081f 445
+src/logic/FiltersLogic.ts
+  s_aea16bd218d490::t_f17ba31807102f 36-51,81
+tests/logic/FiltersLogic.test.ts
+  s_aea16bd218d490::t_0a8ab4c7d99f12 112-128
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "57cacd6a8fd49d72d600e9706fa996bc06bc6806",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_aea16bd218d490": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2bb4cadd-4ffc-4680-80bd-ef3f7a4d8e80",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
