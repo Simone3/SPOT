@@ -110,20 +110,20 @@ describe('FiltersLogic', () => {
 		expect(task.visible).toBe(true);
 	});
 
-	test('falls back to a substring match when the text filter is not a valid regex', () => {
-		const matchingTask = makeTask({ text: 'Write project (draft)', visible: false });
-		const otherTask = makeTask({ text: 'Unrelated task', visible: false });
+	test('matches text as a plain literal substring, ignoring regex metacharacters', () => {
+		const literalMatchTask = makeTask({ text: 'Write project (draft)', visible: false });
+		const noMetacharacterMatchTask = makeTask({ text: 'Write projectXdraft', visible: false });
 
-		refreshTaskVisibility(matchingTask, {
+		refreshTaskVisibility(literalMatchTask, {
 			...getInitialFilters(),
-			text: '(draft'
+			text: '(draft)'
 		});
-		refreshTaskVisibility(otherTask, {
+		refreshTaskVisibility(noMetacharacterMatchTask, {
 			...getInitialFilters(),
-			text: '(draft'
+			text: 'project.draft'
 		});
 
-		expect(matchingTask.visible).toBe(true);
-		expect(otherTask.visible).toBe(false);
+		expect(literalMatchTask.visible).toBe(true);
+		expect(noMetacharacterMatchTask.visible).toBe(false);
 	});
 });

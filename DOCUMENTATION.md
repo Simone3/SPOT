@@ -442,7 +442,7 @@ Both actions open a `ConfirmModal` that names the current folder, the new folder
 
 Current filters:
 
-- Text search against `task.text`, using a case-insensitive regular expression. If the filter text is not a valid regex, falls back to a plain case-insensitive substring match instead of throwing.
+- Text search against `task.text`, using a case-insensitive plain substring match (no regex).
 - Priority filter.
 - Owner filter.
 - Due date filter.
