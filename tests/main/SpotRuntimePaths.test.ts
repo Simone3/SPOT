@@ -1,6 +1,6 @@
 import path from 'node:path';
 import type { App } from 'electron';
-import { APP_CONFIG_FILE, LOGGING_CONFIG, STORAGE_CONFIG } from 'src/config/AppConfig';
+import { APP_CONFIG_FILE, BACKUP_CONFIG, LOGGING_CONFIG, STORAGE_CONFIG } from 'src/config/AppConfig';
 import { resolveSpotRuntimePaths } from 'src/main/config/SpotRuntimePaths';
 
 const userDataPath = path.join('/tmp', 'spot-user-data');
@@ -22,7 +22,8 @@ describe('SpotRuntimePaths', () => {
 			isDevelopment: false,
 			configFilePath: path.join(userDataPath, APP_CONFIG_FILE.fileName),
 			logDirectory: path.join(userDataPath, LOGGING_CONFIG.directoryName),
-			defaultDatabaseDirectory: path.join(userDataPath, STORAGE_CONFIG.directoryName)
+			databaseDirectory: path.join(userDataPath, STORAGE_CONFIG.directoryName),
+			defaultBackupDirectory: path.join(userDataPath, BACKUP_CONFIG.directoryName)
 		});
 		expect(app.getPath).toHaveBeenCalledWith('userData');
 	});
@@ -34,7 +35,8 @@ describe('SpotRuntimePaths', () => {
 			isDevelopment: true,
 			configFilePath: path.join(developmentPath, APP_CONFIG_FILE.fileName),
 			logDirectory: path.join(developmentPath, LOGGING_CONFIG.directoryName),
-			defaultDatabaseDirectory: path.join(developmentPath, STORAGE_CONFIG.directoryName)
+			databaseDirectory: path.join(developmentPath, STORAGE_CONFIG.directoryName),
+			defaultBackupDirectory: path.join(developmentPath, BACKUP_CONFIG.directoryName)
 		});
 	});
 });

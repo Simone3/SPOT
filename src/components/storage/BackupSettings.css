@@ -1,21 +1,31 @@
 
-.database-location-settings {
+.backup-settings {
 	max-width: 640px;
 	margin: 20px;
 	line-height: 1.4;
 }
 
-.database-location-settings-title {
+.backup-settings-title {
 	margin: 0 0 8px 0;
 	font-size: 1.1rem;
 }
 
-.database-location-settings-description {
+.backup-settings-title-spaced {
+	margin-top: 28px;
+}
+
+.backup-settings-description {
 	margin: 0;
 	color: var(--colors-text-secondary);
 }
 
-.database-location-settings-directory {
+.backup-settings-warning {
+	margin: 10px 0 0 0;
+	color: var(--colors-text-secondary);
+	font-size: 0.85rem;
+}
+
+.backup-settings-directory {
 	margin: 12px 0 0 0;
 	padding: 10px 12px;
 	border: 1px solid var(--colors-border-subtle);
@@ -24,30 +34,30 @@
 	word-break: break-all;
 }
 
-.database-location-settings-notice {
+.backup-settings-notice {
 	margin: 12px 0 0 0;
 	color: var(--colors-warn);
 	font-size: 0.85rem;
 }
 
-.database-location-settings-actions {
+.backup-settings-actions {
 	display: flex;
 	gap: 10px;
 	margin-top: 16px;
 }
 
-.database-location-settings-actions .button {
+.backup-settings-actions .button {
 	padding: 8px 12px;
 	line-height: 1.2;
 }
 
-.database-location-settings-feedback {
+.backup-settings-feedback {
 	margin: 16px 0 0 0;
 	color: var(--colors-text-secondary);
 	word-break: break-all;
 }
 
-.database-location-settings-feedback-error {
+.backup-settings-feedback-error {
 	padding: 12px 14px;
 	border: 1px solid var(--colors-danger-border);
 	border-radius: 5px;

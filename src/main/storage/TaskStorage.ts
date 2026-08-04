@@ -1,15 +1,14 @@
 import path from 'node:path';
 import { STORAGE_CONFIG } from 'src/config/AppConfig';
 import { spotLogger } from 'src/main/logging/SpotLogger';
+import { createDatabaseBackup } from 'src/main/storage/DatabaseBackup';
 import { executeTaskCommandOnDatabase } from 'src/main/storage/TaskCommandExecutor';
 import { openSpotDatabase, type SpotDatabase } from 'src/main/storage/SpotDatabase';
 import { readTasksFromDatabase } from 'src/main/storage/TaskRepository';
 import { isInvalidTaskChangeError } from 'src/main/storage/TaskRowMapping';
-import type { LoadTasksResult, StorageDatabaseStatus, StorageFailure, StorageStatus, TaskStorageCommand, TaskStorageCommandName, TaskStorageCommandResult } from 'src/types/TaskStorageTypes';
+import type { BackupResult, BackupStatus, LoadTasksResult, StorageDatabaseStatus, StorageFailure, StorageStatus, TaskStorageCommand, TaskStorageCommandName, TaskStorageCommandResult } from 'src/types/TaskStorageTypes';
 
-export type { LoadTasksResult, SpotStorageApi, StorageDatabaseHealth, StorageDatabaseStatus, StorageFailure, StorageFailureReason, StorageStatus, TaskStorageCommand, TaskStorageCommandName, TaskStorageCommandResult } from 'src/types/TaskStorageTypes';
-
-export const STORAGE_NOT_IMPLEMENTED_MESSAGE = 'Persistent task storage is not implemented yet.';
+export type { BackupHealth, BackupResult, BackupStatus, LoadTasksResult, SpotStorageApi, StorageDatabaseHealth, StorageDatabaseStatus, StorageFailure, StorageFailureReason, StorageStatus, TaskStorageCommand, TaskStorageCommandName, TaskStorageCommandResult } from 'src/types/TaskStorageTypes';
 
 interface ReactCommandOperationalLogEntry {
 	message: string;
@@ -39,49 +38,18 @@ export interface TaskStorage {
 	executeTaskCommand: (command: TaskStorageCommand) => Promise<TaskStorageCommandResult>;
 	writeOperationalLogLine: (entry: OperationalLogEntry) => Promise<OperationalLogWriteResult>;
 	getStorageStatus: () => Promise<StorageStatus>;
-	getStorageDirectory: () => string | undefined;
-	openStorageDirectory: (storageDirectory: string) => Promise<StorageStatus>;
+	getDatabaseDirectory: () => string;
+	getBackupDirectory: () => string;
+	setBackupDirectory: (backupDirectory: string) => void;
+	createBackup: () => Promise<BackupResult>;
 	prepareForShutdown: () => Promise<void>;
 }
 
 export interface CreateTaskStorageOptions {
-	storageDirectory?: string;
+	databaseDirectory: string;
+	backupDirectory: string;
 	now?: () => Date;
 }
-
-interface ConfiguredTaskStorageDatabase {
-	getDatabase: () => SpotDatabase;
-	close: () => void;
-}
-
-const createUnwiredStorageStatus = (): StorageStatus => {
-	return {
-		database: {
-			state: 'not-configured',
-			message: STORAGE_NOT_IMPLEMENTED_MESSAGE
-		}
-	};
-};
-
-const createConfiguredStorageStatus = (
-	storageDirectory: string,
-	database: StorageDatabaseStatus = { state: 'healthy' }
-): StorageStatus => {
-	return {
-		database,
-		storageDirectory,
-		databasePath: path.join(storageDirectory, STORAGE_CONFIG.databaseFileName)
-	};
-};
-
-const createNotImplementedFailure = (status: StorageStatus): StorageFailure => {
-	return {
-		ok: false,
-		reason: 'not-implemented',
-		message: STORAGE_NOT_IMPLEMENTED_MESSAGE,
-		status
-	};
-};
 
 const getErrorMessage = (error: unknown): string => {
 	if(error instanceof Error) {
@@ -95,35 +63,6 @@ const getErrorMessage = (error: unknown): string => {
 	return String(error);
 };
 
-const createDatabaseFailure = (
-	storageDirectory: string,
-	error: unknown
-): StorageFailure => {
-	const message = getErrorMessage(error);
-
-	return {
-		ok: false,
-		reason: 'database-error',
-		message,
-		status: createConfiguredStorageStatus(storageDirectory, {
-			state: 'unavailable',
-			message
-		})
-	};
-};
-
-const createInvalidCommandFailure = (
-	storageDirectory: string,
-	error: unknown
-): StorageFailure => {
-	return {
-		ok: false,
-		reason: 'invalid-command',
-		message: getErrorMessage(error),
-		status: createConfiguredStorageStatus(storageDirectory, { state: 'healthy' })
-	};
-};
-
 const writeReactCommandLogEntry = (command: TaskStorageCommand): void => {
 	spotLogger.info('React storage command received', {
 		type: 'react.command',
@@ -132,16 +71,24 @@ const writeReactCommandLogEntry = (command: TaskStorageCommand): void => {
 	});
 };
 
-const createConfiguredTaskStorageDatabase = (
-	storageDirectory: string,
-	now: (() => Date) | undefined
-): ConfiguredTaskStorageDatabase => {
+// Owns the one database SPOT reads and writes. It always lives in the local database directory: the backup directory only receives rotated
+// copies, so it can never become the source of truth.
+export const createTaskStorage = ({ databaseDirectory, backupDirectory: initialBackupDirectory, now }: CreateTaskStorageOptions): TaskStorage => {
 	let spotDatabase: SpotDatabase | undefined;
+	let backupDirectory = initialBackupDirectory;
+	let backupStatus: BackupStatus = {
+		state: 'idle',
+		directory: initialBackupDirectory
+	};
+
+	const getCurrentDate = (): Date => {
+		return now ? now() : new Date();
+	};
 
 	const getDatabase = (): SpotDatabase => {
 		if(!spotDatabase) {
 			spotDatabase = openSpotDatabase({
-				storageDirectory,
+				storageDirectory: databaseDirectory,
 				now
 			});
 		}
@@ -149,132 +96,147 @@ const createConfiguredTaskStorageDatabase = (
 		return spotDatabase;
 	};
 
-	const close = (): void => {
-		if(!spotDatabase) {
-			return;
-		}
-
-		const databaseToClose = spotDatabase;
-		spotDatabase = undefined;
-		databaseToClose.close();
+	const createStatus = (database: StorageDatabaseStatus = { state: 'healthy' }): StorageStatus => {
+		return {
+			database,
+			storageDirectory: databaseDirectory,
+			databasePath: path.join(databaseDirectory, STORAGE_CONFIG.databaseFileName),
+			backup: backupStatus
+		};
 	};
 
-	return {
-		getDatabase,
-		close
-	};
-};
-
-const loadConfiguredTasks = (
-	storageDirectory: string,
-	database: ConfiguredTaskStorageDatabase
-): LoadTasksResult => {
-	try {
-		const tasks = readTasksFromDatabase(database.getDatabase());
+	const createDatabaseFailure = (error: unknown): StorageFailure => {
+		const message = getErrorMessage(error);
 
 		return {
-			ok: true,
-			tasks,
-			status: createConfiguredStorageStatus(storageDirectory, { state: 'healthy' })
+			ok: false,
+			reason: 'database-error',
+			message,
+			status: createStatus({
+				state: 'unavailable',
+				message
+			})
 		};
-	}
-	catch(error) {
-		return createDatabaseFailure(storageDirectory, error);
-	}
-};
+	};
 
-const executeConfiguredTaskCommand = (
-	storageDirectory: string,
-	now: (() => Date) | undefined,
-	database: ConfiguredTaskStorageDatabase,
-	command: TaskStorageCommand
-): TaskStorageCommandResult => {
-	writeReactCommandLogEntry(command);
-
-	try {
-		executeTaskCommandOnDatabase(database.getDatabase(), { now }, command);
-
+	const createInvalidCommandFailure = (error: unknown): StorageFailure => {
 		return {
-			ok: true,
-			status: createConfiguredStorageStatus(storageDirectory, { state: 'healthy' })
+			ok: false,
+			reason: 'invalid-command',
+			message: getErrorMessage(error),
+			status: createStatus()
 		};
-	}
-	catch(error) {
-		if(isInvalidTaskChangeError(error)) {
-			return createInvalidCommandFailure(storageDirectory, error);
-		}
-
-		return createDatabaseFailure(storageDirectory, error);
-	}
-};
-
-const getConfiguredStorageStatus = (
-	storageDirectory: string,
-	database: ConfiguredTaskStorageDatabase
-): StorageStatus => {
-	try {
-		database.getDatabase();
-
-		return createConfiguredStorageStatus(storageDirectory, { state: 'healthy' });
-	}
-	catch(error) {
-		return createDatabaseFailure(storageDirectory, error).status;
-	}
-};
-
-export const createTaskStorage = (options: CreateTaskStorageOptions = {}): TaskStorage => {
-	let storageDirectory = options.storageDirectory;
-	let database = storageDirectory ? createConfiguredTaskStorageDatabase(storageDirectory, options.now) : undefined;
-
-	const getStorageStatus = (): Promise<StorageStatus> => {
-		if(!storageDirectory || !database) {
-			return Promise.resolve(createUnwiredStorageStatus());
-		}
-
-		return Promise.resolve(getConfiguredStorageStatus(storageDirectory, database));
 	};
 
-	const loadTasks = async(): Promise<LoadTasksResult> => {
-		if(!storageDirectory || !database) {
-			return createNotImplementedFailure(await getStorageStatus());
+	const loadTasks = (): Promise<LoadTasksResult> => {
+		try {
+			return Promise.resolve({
+				ok: true,
+				tasks: readTasksFromDatabase(getDatabase()),
+				status: createStatus()
+			});
 		}
-
-		return loadConfiguredTasks(storageDirectory, database);
+		catch(error) {
+			return Promise.resolve(createDatabaseFailure(error));
+		}
 	};
 
-	const executeTaskCommand = async(command: TaskStorageCommand): Promise<TaskStorageCommandResult> => {
-		if(!storageDirectory || !database) {
-			return createNotImplementedFailure(await getStorageStatus());
-		}
+	const executeTaskCommand = (command: TaskStorageCommand): Promise<TaskStorageCommandResult> => {
+		writeReactCommandLogEntry(command);
 
-		return executeConfiguredTaskCommand(storageDirectory, options.now, database, command);
+		try {
+			executeTaskCommandOnDatabase(getDatabase(), { now }, command);
+
+			return Promise.resolve({
+				ok: true,
+				status: createStatus()
+			});
+		}
+		catch(error) {
+			if(isInvalidTaskChangeError(error)) {
+				return Promise.resolve(createInvalidCommandFailure(error));
+			}
+
+			return Promise.resolve(createDatabaseFailure(error));
+		}
 	};
 
-	const writeOperationalLogLine = async(entry: OperationalLogEntry): Promise<OperationalLogWriteResult> => {
-		if(!storageDirectory) {
-			return createNotImplementedFailure(await getStorageStatus());
-		}
-
+	const writeOperationalLogLine = (entry: OperationalLogEntry): Promise<OperationalLogWriteResult> => {
 		const { message, ...fields } = entry;
 		spotLogger.info(message, fields);
 
-		return {
+		return Promise.resolve({
 			ok: true,
-			status: createConfiguredStorageStatus(storageDirectory, { state: 'healthy' })
+			status: createStatus()
+		});
+	};
+
+	// A failed backup is reported without touching the database status: the tasks are already saved in the local database either way
+	const createBackup = async(): Promise<BackupResult> => {
+		try {
+			const backupPath = await createDatabaseBackup({
+				database: getDatabase(),
+				backupDirectory,
+				temporaryDirectory: databaseDirectory,
+				now
+			});
+
+			backupStatus = {
+				state: 'ok',
+				directory: backupDirectory,
+				lastBackupAt: getCurrentDate().toISOString(),
+				lastBackupPath: backupPath
+			};
+
+			spotLogger.info('Database backup written', {
+				type: 'storage.backup',
+				backupPath
+			});
+
+			return {
+				ok: true,
+				backupPath,
+				status: backupStatus
+			};
+		}
+		catch(error) {
+			const message = getErrorMessage(error);
+
+			backupStatus = {
+				state: 'failed',
+				directory: backupDirectory,
+				lastBackupAt: backupStatus.lastBackupAt,
+				lastBackupPath: backupStatus.lastBackupPath,
+				message
+			};
+
+			spotLogger.error('Could not write the database backup', {
+				type: 'storage.backup',
+				backupDirectory,
+				error: message
+			});
+
+			return {
+				ok: false,
+				message,
+				status: backupStatus
+			};
+		}
+	};
+
+	// The previous folder keeps the copies it already received, and the status starts over because nothing was written to the new one yet
+	const setBackupDirectory = (nextBackupDirectory: string): void => {
+		backupDirectory = nextBackupDirectory;
+		backupStatus = {
+			state: 'idle',
+			directory: nextBackupDirectory
 		};
 	};
 
-	// Closes the current database before switching folders, so the previous SQLite file is released and the new one is opened right away
-	const openStorageDirectory = (nextStorageDirectory: string): Promise<StorageStatus> => {
-		database?.close();
-		storageDirectory = nextStorageDirectory;
-		database = createConfiguredTaskStorageDatabase(nextStorageDirectory, options.now);
-
-		return getStorageStatus();
-	};
-
 	const prepareForShutdown = (): Promise<void> => {
-		database?.close();
+		const databaseToClose = spotDatabase;
+		spotDatabase = undefined;
+		databaseToClose?.close();
 
 		return Promise.resolve();
 	};
@@ -283,11 +245,24 @@ export const createTaskStorage = (options: CreateTaskStorageOptions = {}): TaskS
 		loadTasks,
 		executeTaskCommand,
 		writeOperationalLogLine,
-		getStorageStatus,
-		getStorageDirectory: () => {
-			return storageDirectory;
+		getStorageStatus: () => {
+			try {
+				getDatabase();
+
+				return Promise.resolve(createStatus());
+			}
+			catch(error) {
+				return Promise.resolve(createDatabaseFailure(error).status);
+			}
 		},
-		openStorageDirectory,
+		getDatabaseDirectory: () => {
+			return databaseDirectory;
+		},
+		getBackupDirectory: () => {
+			return backupDirectory;
+		},
+		setBackupDirectory,
+		createBackup,
 		prepareForShutdown
 	};
 };

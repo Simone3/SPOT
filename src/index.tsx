@@ -10,8 +10,7 @@ import { Sidebar } from 'src/components/common/Sidebar';
 import { MainContent } from 'src/components/common/MainContent';
 import { TagsPage } from 'src/components/tags/TagsPage';
 import { SettingsPage } from 'src/components/settings/SettingsPage';
-import { DatabaseLocationGate } from 'src/components/storage/DatabaseLocationGate';
-import { DatabaseLocationContextProvider } from 'src/contexts/DatabaseLocationContext';
+import { BackupLocationContextProvider } from 'src/contexts/BackupLocationContext';
 import { DatesContextProvider } from 'src/contexts/DatesContext';
 import { installPendingTaskChangesFlushHandler } from 'src/logic/PendingTaskChanges';
 
@@ -22,21 +21,19 @@ const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement)
 root.render(
 	<React.StrictMode>
 		<DatesContextProvider>
-			<DatabaseLocationContextProvider>
-				<DatabaseLocationGate>
-					<HashRouter>
-						<Sidebar/>
-						<MainContent>
-							<Routes>
-								<Route path='/' element={<TasksPage/>}/>
-								<Route path='/notes' element={<NotesPage/>}/>
-								<Route path='/tags' element={<TagsPage/>}/>
-								<Route path='/settings' element={<SettingsPage/>}/>
-							</Routes>
-						</MainContent>
-					</HashRouter>
-				</DatabaseLocationGate>
-			</DatabaseLocationContextProvider>
+			<BackupLocationContextProvider>
+				<HashRouter>
+					<Sidebar/>
+					<MainContent>
+						<Routes>
+							<Route path='/' element={<TasksPage/>}/>
+							<Route path='/notes' element={<NotesPage/>}/>
+							<Route path='/tags' element={<TagsPage/>}/>
+							<Route path='/settings' element={<SettingsPage/>}/>
+						</Routes>
+					</MainContent>
+				</HashRouter>
+			</BackupLocationContextProvider>
 		</DatesContextProvider>
 	</React.StrictMode>
 );

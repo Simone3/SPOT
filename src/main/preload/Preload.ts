@@ -1,21 +1,21 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import { SPOT_DATABASE_LOCATION_IPC_CHANNELS } from 'src/types/DatabaseLocationIpcChannels';
-import type { SpotDatabaseLocationApi } from 'src/types/DatabaseLocationTypes';
+import { SPOT_BACKUP_LOCATION_IPC_CHANNELS } from 'src/types/BackupLocationIpcChannels';
+import type { SpotBackupLocationApi } from 'src/types/BackupLocationTypes';
 import { SPOT_STORAGE_IPC_CHANNELS } from 'src/types/TaskStorageIpcChannels';
-import type { SpotStorageApi } from 'src/types/TaskStorageTypes';
+import type { BackupStatus, SpotStorageApi } from 'src/types/TaskStorageTypes';
 
-const spotDatabaseLocation: SpotDatabaseLocationApi = {
-	getDatabaseLocation: () => {
-		return ipcRenderer.invoke(SPOT_DATABASE_LOCATION_IPC_CHANNELS.getDatabaseLocation);
+const spotBackupLocation: SpotBackupLocationApi = {
+	getBackupLocation: () => {
+		return ipcRenderer.invoke(SPOT_BACKUP_LOCATION_IPC_CHANNELS.getBackupLocation);
 	},
-	chooseDatabaseDirectory: () => {
-		return ipcRenderer.invoke(SPOT_DATABASE_LOCATION_IPC_CHANNELS.chooseDatabaseDirectory);
+	chooseBackupDirectory: () => {
+		return ipcRenderer.invoke(SPOT_BACKUP_LOCATION_IPC_CHANNELS.chooseBackupDirectory);
 	},
-	setDatabaseDirectory: (directory) => {
-		return ipcRenderer.invoke(SPOT_DATABASE_LOCATION_IPC_CHANNELS.setDatabaseDirectory, directory);
+	setBackupDirectory: (directory) => {
+		return ipcRenderer.invoke(SPOT_BACKUP_LOCATION_IPC_CHANNELS.setBackupDirectory, directory);
 	},
-	setDefaultDatabaseDirectory: () => {
-		return ipcRenderer.invoke(SPOT_DATABASE_LOCATION_IPC_CHANNELS.setDefaultDatabaseDirectory);
+	setDefaultBackupDirectory: () => {
+		return ipcRenderer.invoke(SPOT_BACKUP_LOCATION_IPC_CHANNELS.setDefaultBackupDirectory);
 	}
 };
 
@@ -40,6 +40,17 @@ const spotStorage: SpotStorageApi = {
 			ipcRenderer.removeListener(SPOT_STORAGE_IPC_CHANNELS.flushPendingTaskChanges, flushListener);
 		};
 	},
+	onBackupStatusChanged: (listener) => {
+		const backupStatusListener = (_event: unknown, status: BackupStatus): void => {
+			listener(status);
+		};
+
+		ipcRenderer.on(SPOT_STORAGE_IPC_CHANNELS.backupStatusChanged, backupStatusListener);
+
+		return () => {
+			ipcRenderer.removeListener(SPOT_STORAGE_IPC_CHANNELS.backupStatusChanged, backupStatusListener);
+		};
+	},
 	notifyPendingTaskChangesFlushed: () => {
 		return ipcRenderer.invoke(SPOT_STORAGE_IPC_CHANNELS.pendingTaskChangesFlushed);
 	}
@@ -61,4 +72,4 @@ contextBridge.exposeInMainWorld('versions', {
 });
 
 contextBridge.exposeInMainWorld('spotStorage', spotStorage);
-contextBridge.exposeInMainWorld('spotDatabaseLocation', spotDatabaseLocation);
+contextBridge.exposeInMainWorld('spotBackupLocation', spotBackupLocation);

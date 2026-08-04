@@ -25,6 +25,7 @@ export interface SpotDatabase {
 	getQuery: <TRow>(query: string, ...parameters: SpotSqlParameter[]) => TRow | undefined;
 	getAllQueryRows: <TRow>(query: string, ...parameters: SpotSqlParameter[]) => TRow[];
 	runTransaction: (callback: () => void) => void;
+	vacuumInto: (targetPath: string) => void;
 	getAppliedMigrationVersions: () => number[];
 }
 
@@ -147,6 +148,12 @@ const createSpotDatabaseWrapper = (
 		}
 	};
 
+	// Writes a self-contained copy of the database, so a backup never has to reassemble the live file with its write-ahead log.
+	// It opens its own read transaction, which is why it must not run while another transaction is open on this connection.
+	const vacuumInto = (targetPath: string): void => {
+		runQuery('VACUUM INTO ?', targetPath);
+	};
+
 	const getAppliedMigrationVersions = (): number[] => {
 		const query = `
 			SELECT version
@@ -169,6 +176,7 @@ const createSpotDatabaseWrapper = (
 		getQuery,
 		getAllQueryRows,
 		runTransaction,
+		vacuumInto,
 		getAppliedMigrationVersions
 	};
 };
@@ -242,6 +250,8 @@ export const openSpotDatabase = ({ storageDirectory, now = () => {
 	const spotDatabase = createSpotDatabaseWrapper(connection, databasePath);
 
 	try {
+		// The database always lives on the local user-data disk, never in a synchronized folder, so the write-ahead log and its shared-memory file are safe to use
+		spotDatabase.execQuery('PRAGMA journal_mode = WAL');
 		migrateSpotDatabase(spotDatabase, now);
 	}
 	catch(error) {

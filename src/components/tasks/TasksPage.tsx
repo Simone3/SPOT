@@ -1,8 +1,7 @@
 import 'src/components/tasks/TasksPage.css';
-import { useState, useEffect, useRef, useContext, type ReactElement } from 'react';
+import { useState, useEffect, useRef, type ReactElement } from 'react';
 import { Page } from 'src/components/common/Page';
 import { Pane } from 'src/components/common/Pane';
-import { DatabaseLocationContext } from 'src/contexts/DatabaseLocationContext';
 import { clearPendingTaskChanges, flushPendingTaskChanges, registerPendingTaskChangesApplier, type PendingTaskChanges } from 'src/logic/PendingTaskChanges';
 import { clearTaskStorageFailures, getTaskStorageQueueState, sendTaskStorageCommand, subscribeToTaskStorageQueue } from 'src/logic/TaskStorageQueue';
 import { findTaskById } from 'src/logic/TasksLogic';
@@ -175,6 +174,16 @@ const createTaskStorageFeedback = (
 		};
 	}
 
+	// The database itself is fine here, so a failing backup is reported as a notice: the tasks are saved either way
+	if(taskStorageStatus?.backup?.state === 'failed') {
+		return {
+			role: 'status',
+			title: 'Backup copies are not being written',
+			message: 'Your tasks are saved, but SPOT could not write a backup copy to the backup folder. You can check the folder in Settings.',
+			statusMessage: taskStorageStatus.backup.message
+		};
+	}
+
 	return undefined;
 };
 
@@ -217,7 +226,6 @@ const TasksPage = (): ReactElement => {
 	const [ taskStorageWarning, setTaskStorageWarning ] = useState<string | undefined>();
 	const [ taskStorageStatus, setTaskStorageStatus ] = useState<StorageStatus | undefined>();
 	const taskStateRef = useRef(taskState);
-	const databaseDirectory = useContext(DatabaseLocationContext)?.location?.directory;
 
 	const commitTaskState = (nextTaskState: TaskStateContainer): void => {
 		taskStateRef.current = nextTaskState;
@@ -241,7 +249,6 @@ const TasksPage = (): ReactElement => {
 		}
 	};
 
-	// Tasks are also reloaded from scratch when the user selects another task database folder
 	useEffect(() => {
 		let didCancelStartupLoad = false;
 
@@ -316,7 +323,18 @@ const TasksPage = (): ReactElement => {
 		return () => {
 			didCancelStartupLoad = true;
 		};
-	}, [ databaseDirectory ]);
+	}, []);
+
+	// Backups run on a timer, so their outcome arrives on its own instead of riding on the answer to a task command
+	useEffect(() => {
+		const spotStorage = window.spotStorage as SpotStorageApi | undefined;
+
+		return spotStorage?.onBackupStatusChanged?.((backup) => {
+			setTaskStorageStatus((currentStorageStatus) => {
+				return currentStorageStatus ? { ...currentStorageStatus, backup } : currentStorageStatus;
+			});
+		});
+	}, []);
 
 	const onFilterChange = (changedFilters: TaskFilterChange): void => {
 		commitTaskState(changeFiltersInTaskState(taskStateRef.current, changedFilters));

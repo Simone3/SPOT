@@ -32,6 +32,12 @@ export interface RegisterTaskStorageIpcHandlersOptions {
 	taskStorage: TaskStorageIpcApi;
 	app?: TaskStorageIpcApp;
 	getRendererFlushTarget?: () => RendererFlushTarget | undefined;
+
+	// Called after every command that reached the database, so the backup schedule can be restarted
+	onTaskCommandApplied?: () => void;
+
+	// Called once the in-flight commands are done and before the database is closed, so a last backup can still read it
+	onBeforeStorageShutdown?: () => Promise<void>;
 }
 
 const createShutdownStorageStatus = (): StorageStatus => {
@@ -61,11 +67,13 @@ const createShutdownCommandResult = async(taskStorage: TaskStorageIpcApi): Promi
 	};
 };
 
-const createTaskStorageCommandController = (
-	taskStorage: TaskStorageIpcApi,
-	app?: TaskStorageIpcApp,
-	getRendererFlushTarget?: () => RendererFlushTarget | undefined
-): Pick<TaskStorageIpcApi, 'loadTasks' | 'executeTaskCommand'> & TaskStorageCommandController & {
+const createTaskStorageCommandController = ({
+	taskStorage,
+	app,
+	getRendererFlushTarget,
+	onTaskCommandApplied,
+	onBeforeStorageShutdown
+}: RegisterTaskStorageIpcHandlersOptions): Pick<TaskStorageIpcApi, 'loadTasks' | 'executeTaskCommand'> & TaskStorageCommandController & {
 	notifyPendingTaskChangesFlushed: () => void;
 } => {
 	// Everything that touches the database runs on this chain, so task commands and storage folder changes are strictly
@@ -102,8 +110,23 @@ const createTaskStorageCommandController = (
 		while(drainedOperations !== storageOperations);
 	};
 
+	// The last backup runs once nothing is left to write and while the database is still open, and it is best effort: a backup folder that
+	// cannot be reached must never keep the app from quitting
+	const runFinalBackup = async(): Promise<void> => {
+		try {
+			await onBeforeStorageShutdown?.();
+		}
+		catch(error) {
+			spotLogger.error('The backup written during shutdown failed', {
+				type: 'storage.backup',
+				error: error instanceof Error ? error.message : String(error)
+			});
+		}
+	};
+
 	const prepareForShutdown = async(): Promise<void> => {
 		await drainStorageOperations();
+		await runFinalBackup();
 		try {
 			await taskStorage.prepareForShutdown?.();
 		}
@@ -197,14 +220,20 @@ const createTaskStorageCommandController = (
 				return taskStorage.loadTasks();
 			});
 		},
-		executeTaskCommand: (command) => {
+		executeTaskCommand: async(command) => {
 			if(isShuttingDown) {
 				return createShutdownCommandResult(taskStorage);
 			}
 
-			return runOnStorage(() => {
+			const result = await runOnStorage(() => {
 				return taskStorage.executeTaskCommand(command);
 			});
+
+			if(result.ok) {
+				onTaskCommandApplied?.();
+			}
+
+			return result;
 		},
 		runExclusively,
 		notifyPendingTaskChangesFlushed: () => {
@@ -213,13 +242,9 @@ const createTaskStorageCommandController = (
 	};
 };
 
-export const registerTaskStorageIpcHandlers = ({
-	ipcMain,
-	taskStorage,
-	app,
-	getRendererFlushTarget
-}: RegisterTaskStorageIpcHandlersOptions): TaskStorageCommandController => {
-	const commandController = createTaskStorageCommandController(taskStorage, app, getRendererFlushTarget);
+export const registerTaskStorageIpcHandlers = (options: RegisterTaskStorageIpcHandlersOptions): TaskStorageCommandController => {
+	const { ipcMain, taskStorage } = options;
+	const commandController = createTaskStorageCommandController(options);
 
 	// Loading also goes through the chain, so tasks are never read from a database that is being replaced
 	ipcMain.handle(SPOT_STORAGE_IPC_CHANNELS.loadTasks, () => {

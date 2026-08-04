@@ -3,7 +3,7 @@ import path from 'node:path';
 import { spotLogger } from 'src/main/logging/SpotLogger';
 
 export interface SpotConfig {
-	databaseDirectory?: string;
+	backupDirectory?: string;
 }
 
 export interface SpotConfigStore {
@@ -18,10 +18,10 @@ const parseSpotConfig = (content: string): SpotConfig => {
 		return {};
 	}
 
-	const { databaseDirectory } = parsedContent as Partial<Record<keyof SpotConfig, unknown>>;
+	const { backupDirectory } = parsedContent as Partial<Record<keyof SpotConfig, unknown>>;
 
 	return {
-		databaseDirectory: typeof databaseDirectory === 'string' && databaseDirectory ? databaseDirectory : undefined
+		backupDirectory: typeof backupDirectory === 'string' && backupDirectory ? backupDirectory : undefined
 	};
 };
 

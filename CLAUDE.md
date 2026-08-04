@@ -6,7 +6,7 @@ Instructions for Claude Code when working in this repository.
 
 ## Project
 
-SPOT (Simple Planner & Organizer Tool) is an Electron + React task manager for macOS, Windows, and Linux, meant to manage tasks in a simple and direct way (no frills). Work in progress: the React renderer is considered done for now, and the Electron persistence layer is wired for startup loading, task mutations, shutdown draining, packaged loading, and the user-selected task database folder. Standalone browser mode is not a supported runtime.
+SPOT (Simple Planner & Organizer Tool) is an Electron + React task manager for macOS, Windows, and Linux, meant to manage tasks in a simple and direct way (no frills). Work in progress: the React renderer is considered done for now, and the Electron persistence layer is wired for startup loading, task mutations, shutdown draining, packaged loading, and rotated backups into the user-selected backup folder. Standalone browser mode is not a supported runtime.
 
 ## Commands
 
@@ -43,8 +43,9 @@ npm test -- tests/logic/SomeFile.spec.ts
 - Tunable constants (sizes, delays, retry policies, file and directory names) belong in `src/config/AppConfig.ts`, not inline in modules. Message strings stay in the module that owns them.
 - Match the existing code style exactly, including spacing and newline conventions. Read a neighboring file before writing a new one.
 - Preserve the storage command names: `task.create`, `task.update`, `task.delete`, `tasks.updateMany`.
-- Database failures are user-facing: surface task-save feedback on write failure and reconcile state. Operational-log failures are best-effort and ignored by React when SQLite succeeds.
-- Only `spot.sqlite` lives in the user-selected task database folder. Configuration and log files always stay in the Electron user-data folder, and development runs keep their own root folder there.
+- Database failures are user-facing: surface task-save feedback on write failure and reconcile state. Operational-log failures are best-effort and ignored by React when SQLite succeeds. Backup failures are user-facing too, but as a soft notice: they must never be routed through the database error path, because the tasks are already saved locally.
+- The live `spot.sqlite` database always lives in the Electron user-data folder and never moves. The user-selected folder only receives rotated write-only backup copies; SPOT never reads them back and does not sync across devices. Configuration and log files also stay in the user-data folder, and development runs keep their own root folder there.
+- Never place the live database in a folder a synchronization client controls, and never copy it with a plain file copy: build backups with `VACUUM INTO` locally, then publish them with an atomic rename.
 
 ## Testing
 

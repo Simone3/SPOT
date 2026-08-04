@@ -1,11 +1,12 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { LOGGING_CONFIG, STORAGE_CONFIG } from 'src/config/AppConfig';
+import { BACKUP_CONFIG, LOGGING_CONFIG, STORAGE_CONFIG } from 'src/config/AppConfig';
 import { initializeSpotLogger, resetSpotLoggerForTests, spotLogger, type CreateSpotLoggerBackend, type CreateSpotLoggerOptions } from 'src/main/logging/SpotLogger';
 import { openSpotDatabase } from 'src/main/storage/SpotDatabase';
 import { TASK_INSERT_COLUMN_NAMES, TASK_SELECT_COLUMN_NAMES, createImmutableTaskFieldChangeMessage, taskRowToColumnValues, taskToTaskRow, type TaskRow } from 'src/main/storage/TaskRowMapping';
-import { createTaskStorage, STORAGE_NOT_IMPLEMENTED_MESSAGE, type CreateTaskStorageOptions, type OperationalLogEntry, type TaskStorage, type TaskStorageCommand } from 'src/main/storage/TaskStorage';
+import { isBackupFileName } from 'src/main/storage/DatabaseBackup';
+import { createTaskStorage, type CreateTaskStorageOptions, type OperationalLogEntry, type TaskStorage, type TaskStorageCommand } from 'src/main/storage/TaskStorage';
 import type { PersistedTask } from 'src/types/TaskTypes';
 
 const makeTempStorageDirectory = (): string => {
@@ -147,7 +148,7 @@ const createNoopBackendFactory = (): CreateSpotLoggerBackend => {
 	};
 };
 
-type CreateTrackedTaskStorageOptions = CreateTaskStorageOptions & {
+type CreateTrackedTaskStorageOptions = Partial<CreateTaskStorageOptions> & {
 	logger?: Omit<CreateSpotLoggerOptions, 'logDirectory'>;
 };
 
@@ -155,18 +156,28 @@ describe('TaskStorage', () => {
 	const tempStorageDirectories: string[] = [];
 	const taskStorageInstances: TaskStorage[] = [];
 
+	const makeTrackedStorageDirectory = (): string => {
+		const storageDirectory = makeTempStorageDirectory();
+		tempStorageDirectories.push(storageDirectory);
+
+		return storageDirectory;
+	};
+
 	const createTrackedTaskStorage = (options: CreateTrackedTaskStorageOptions = {}): TaskStorage => {
 		const { logger, ...taskStorageOptions } = options;
+		const databaseDirectory = taskStorageOptions.databaseDirectory ?? makeTrackedStorageDirectory();
 
-		if(taskStorageOptions.storageDirectory) {
-			initializeSpotLogger({
-				logDirectory: taskStorageOptions.storageDirectory,
-				now: taskStorageOptions.now,
-				...logger
-			});
-		}
+		initializeSpotLogger({
+			logDirectory: databaseDirectory,
+			now: taskStorageOptions.now,
+			...logger
+		});
 
-		const taskStorage = createTaskStorage(taskStorageOptions);
+		const taskStorage = createTaskStorage({
+			...taskStorageOptions,
+			databaseDirectory,
+			backupDirectory: taskStorageOptions.backupDirectory ?? path.join(databaseDirectory, BACKUP_CONFIG.directoryName)
+		});
 		taskStorageInstances.push(taskStorage);
 
 		return taskStorage;
@@ -187,58 +198,81 @@ describe('TaskStorage', () => {
 		}
 	});
 
-	test('reports the unwired database status', async() => {
-		const taskStorage = createTrackedTaskStorage();
-
-		const status = await taskStorage.getStorageStatus();
-
-		expect(status).toEqual({
-			database: {
-				state: 'not-configured',
-				message: STORAGE_NOT_IMPLEMENTED_MESSAGE
-			}
+	test('writes a backup copy holding the stored tasks', async() => {
+		const storageDirectory = makeTrackedStorageDirectory();
+		const backupDirectory = makeTrackedStorageDirectory();
+		const taskStorage = createTrackedTaskStorage({
+			databaseDirectory: storageDirectory,
+			backupDirectory
 		});
-	});
 
-	test('returns explicit placeholder failures while storage is unwired', async() => {
-		const taskStorage = createTrackedTaskStorage();
-		const command: TaskStorageCommand = {
-			command: 'task.update',
+		await taskStorage.executeTaskCommand({
+			command: 'task.create',
 			payload: {
-				taskId: 'task-1',
-				change: {
-					text: 'Updated task'
+				task: {
+					id: 'backed-up-task',
+					text: 'Backed up task',
+					state: 'ACTIVE',
+					priority: 'NORMAL',
+					owner: undefined,
+					dueDate: undefined,
+					tags: [],
+					sortPosition: 100,
+					completionDate: undefined
 				}
 			}
-		};
-		const logEntry: OperationalLogEntry = {
-			message: 'React storage command received',
-			type: 'react.command',
-			command: command.command,
-			payload: command.payload
-		};
+		});
 
-		await expect(taskStorage.loadTasks()).resolves.toMatchObject({
-			ok: false,
-			reason: 'not-implemented',
-			message: STORAGE_NOT_IMPLEMENTED_MESSAGE
+		const result = await taskStorage.createBackup();
+
+		expect(result).toMatchObject({
+			ok: true,
+			status: {
+				state: 'ok',
+				directory: backupDirectory
+			}
 		});
-		await expect(taskStorage.executeTaskCommand(command)).resolves.toMatchObject({
-			ok: false,
-			reason: 'not-implemented',
-			message: STORAGE_NOT_IMPLEMENTED_MESSAGE
+		expect(readdirSync(backupDirectory).filter(isBackupFileName)).toHaveLength(1);
+
+		// The backup has to be a database SPOT could open again, not just a file with the right name
+		const restoredDirectory = makeTrackedStorageDirectory();
+		copyFileSync(result.ok ? result.backupPath : '', path.join(restoredDirectory, STORAGE_CONFIG.databaseFileName));
+
+		expect(readPersistedTaskRows(restoredDirectory).map((row) => {
+			return row.text;
+		})).toEqual([ 'Backed up task' ]);
+	});
+
+	test('reports a failed backup without making the database unhealthy', async() => {
+		const storageDirectory = makeTrackedStorageDirectory();
+		const backupDirectory = makeTrackedStorageDirectory();
+		const taskStorage = createTrackedTaskStorage({
+			databaseDirectory: storageDirectory,
+			backupDirectory
 		});
-		await expect(taskStorage.writeOperationalLogLine(logEntry)).resolves.toMatchObject({
-			ok: false,
-			reason: 'not-implemented',
-			message: STORAGE_NOT_IMPLEMENTED_MESSAGE
+
+		// A file where the backup folder should be makes every write to it fail
+		rmSync(backupDirectory, { recursive: true, force: true });
+		writeFileSync(backupDirectory, 'not a folder', 'utf8');
+
+		const result = await taskStorage.createBackup();
+
+		expect(result.ok).toBe(false);
+		expect(result.status.state).toBe('failed');
+		await expect(taskStorage.getStorageStatus()).resolves.toMatchObject({
+			database: {
+				state: 'healthy'
+			},
+			backup: {
+				state: 'failed'
+			}
 		});
 	});
 
 	test('loads an empty task list from a configured SQLite database', async() => {
 		const storageDirectory = makeTempStorageDirectory();
 		tempStorageDirectories.push(storageDirectory);
-		const taskStorage = createTrackedTaskStorage({ storageDirectory });
+		const taskStorage = createTrackedTaskStorage({ databaseDirectory: storageDirectory });
 
 		const result = await taskStorage.loadTasks();
 
@@ -250,7 +284,8 @@ describe('TaskStorage', () => {
 					state: 'healthy'
 				},
 				storageDirectory,
-				databasePath: path.join(storageDirectory, STORAGE_CONFIG.databaseFileName)
+				databasePath: path.join(storageDirectory, STORAGE_CONFIG.databaseFileName),
+				backup: expect.objectContaining({ state: 'idle' })
 			}
 		});
 		expect(existsSync(path.join(storageDirectory, STORAGE_CONFIG.databaseFileName))).toBe(true);
@@ -259,7 +294,7 @@ describe('TaskStorage', () => {
 	test('reports configured storage status', async() => {
 		const storageDirectory = makeTempStorageDirectory();
 		tempStorageDirectories.push(storageDirectory);
-		const taskStorage = createTrackedTaskStorage({ storageDirectory });
+		const taskStorage = createTrackedTaskStorage({ databaseDirectory: storageDirectory });
 
 		const status = await taskStorage.getStorageStatus();
 
@@ -268,7 +303,11 @@ describe('TaskStorage', () => {
 				state: 'healthy'
 			},
 			storageDirectory,
-			databasePath: path.join(storageDirectory, STORAGE_CONFIG.databaseFileName)
+			databasePath: path.join(storageDirectory, STORAGE_CONFIG.databaseFileName),
+			backup: {
+				state: 'idle',
+				directory: path.join(storageDirectory, BACKUP_CONFIG.directoryName)
+			}
 		});
 		expect(existsSync(path.join(storageDirectory, STORAGE_CONFIG.databaseFileName))).toBe(true);
 	});
@@ -276,7 +315,7 @@ describe('TaskStorage', () => {
 	test('reuses one SQLite connection until shutdown preparation closes it', async() => {
 		const storageDirectory = makeTempStorageDirectory();
 		tempStorageDirectories.push(storageDirectory);
-		const taskStorage = createTrackedTaskStorage({ storageDirectory });
+		const taskStorage = createTrackedTaskStorage({ databaseDirectory: storageDirectory });
 
 		await taskStorage.getStorageStatus();
 		await taskStorage.loadTasks();
@@ -320,7 +359,7 @@ describe('TaskStorage', () => {
 		};
 		insertPersistedTask(storageDirectory, completedTask);
 		insertPersistedTask(storageDirectory, activeTask);
-		const taskStorage = createTrackedTaskStorage({ storageDirectory });
+		const taskStorage = createTrackedTaskStorage({ databaseDirectory: storageDirectory });
 
 		const result = await taskStorage.loadTasks();
 
@@ -341,7 +380,8 @@ describe('TaskStorage', () => {
 					state: 'healthy'
 				},
 				storageDirectory,
-				databasePath: path.join(storageDirectory, STORAGE_CONFIG.databaseFileName)
+				databasePath: path.join(storageDirectory, STORAGE_CONFIG.databaseFileName),
+				backup: expect.objectContaining({ state: 'idle' })
 			}
 		});
 	});
@@ -374,7 +414,7 @@ describe('TaskStorage', () => {
 			created_at: '2026-06-06T10:00:00.000Z',
 			updated_at: '2026-06-06T11:00:00.000Z'
 		});
-		const taskStorage = createTrackedTaskStorage({ storageDirectory });
+		const taskStorage = createTrackedTaskStorage({ databaseDirectory: storageDirectory });
 
 		const result = await taskStorage.loadTasks();
 
@@ -424,7 +464,7 @@ describe('TaskStorage', () => {
 			completionDate: undefined
 		};
 		const createTaskStorageInstance = createTrackedTaskStorage({
-			storageDirectory,
+			databaseDirectory: storageDirectory,
 			now: () => {
 				return createdAt;
 			}
@@ -461,7 +501,7 @@ describe('TaskStorage', () => {
 		]);
 
 		const updateTaskStorageInstance = createTrackedTaskStorage({
-			storageDirectory,
+			databaseDirectory: storageDirectory,
 			now: () => {
 				return updatedAt;
 			}
@@ -522,12 +562,13 @@ describe('TaskStorage', () => {
 					state: 'healthy'
 				},
 				storageDirectory,
-				databasePath: path.join(storageDirectory, STORAGE_CONFIG.databaseFileName)
+				databasePath: path.join(storageDirectory, STORAGE_CONFIG.databaseFileName),
+				backup: expect.objectContaining({ state: 'idle' })
 			}
 		});
 
 		const restoreTaskStorageInstance = createTrackedTaskStorage({
-			storageDirectory,
+			databaseDirectory: storageDirectory,
 			now: () => {
 				return restoredAt;
 			}
@@ -590,7 +631,7 @@ describe('TaskStorage', () => {
 			completionDate: undefined
 		};
 		const taskStorage = createTrackedTaskStorage({
-			storageDirectory,
+			databaseDirectory: storageDirectory,
 			now: () => {
 				return createdAt;
 			}
@@ -667,7 +708,7 @@ describe('TaskStorage', () => {
 			completionDate: undefined
 		};
 		const taskStorage = createTrackedTaskStorage({
-			storageDirectory,
+			databaseDirectory: storageDirectory,
 			now: () => {
 				return createdAt;
 			},
@@ -729,7 +770,7 @@ describe('TaskStorage', () => {
 		};
 		insertPersistedTask(storageDirectory, task);
 		const taskStorage = createTrackedTaskStorage({
-			storageDirectory,
+			databaseDirectory: storageDirectory,
 			now: () => {
 				return new Date('2026-06-06T12:00:00.000Z');
 			}
@@ -802,7 +843,7 @@ describe('TaskStorage', () => {
 		insertPersistedTask(storageDirectory, firstTask);
 		insertPersistedTask(storageDirectory, secondTask);
 		const taskStorage = createTrackedTaskStorage({
-			storageDirectory,
+			databaseDirectory: storageDirectory,
 			now: () => {
 				return new Date('2026-06-06T12:00:00.000Z');
 			}
@@ -862,7 +903,7 @@ describe('TaskStorage', () => {
 			completionDate: undefined
 		};
 		const taskStorage = createTrackedTaskStorage({
-			storageDirectory,
+			databaseDirectory: storageDirectory,
 			now: () => {
 				return new Date('2026-06-06T12:00:00.000Z');
 			}
@@ -905,7 +946,7 @@ describe('TaskStorage', () => {
 		};
 		insertPersistedTask(storageDirectory, task);
 		const taskStorage = createTrackedTaskStorage({
-			storageDirectory,
+			databaseDirectory: storageDirectory,
 			now: () => {
 				return new Date('2026-06-06T12:00:00.000Z');
 			}

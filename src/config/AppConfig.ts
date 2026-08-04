@@ -19,6 +19,17 @@ export const STORAGE_CONFIG = {
 	writeRetryDelayMs: 5000
 } as const;
 
+export const BACKUP_CONFIG = {
+	directoryName: 'backups',
+	filePrefix: 'spot-backup-',
+	fileExtension: '.sqlite',
+	partialFileExtension: '.part',
+	temporaryFileName: 'spot-backup.tmp.sqlite',
+	delayAfterChangeMs: 120000,
+	retainedBackupCount: 5,
+	shutdownTimeoutMs: 5000
+} as const;
+
 export const APP_CONFIG_FILE = {
 	developmentDirectoryName: 'dev',
 	fileName: 'spot-config.json'

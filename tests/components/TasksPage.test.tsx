@@ -170,6 +170,9 @@ const createMockSpotStorage = (
 		onFlushPendingTaskChanges: jest.fn(() => {
 			return () => {};
 		}),
+		onBackupStatusChanged: jest.fn(() => {
+			return () => {};
+		}),
 		notifyPendingTaskChangesFlushed: jest.fn(async() => {
 			return undefined;
 		})

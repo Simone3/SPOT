@@ -1,12 +1,12 @@
 /// <reference types="react-scripts" />
 
-import type { SpotDatabaseLocationApi } from 'src/types/DatabaseLocationTypes';
+import type { SpotBackupLocationApi } from 'src/types/BackupLocationTypes';
 import type { SpotStorageApi } from 'src/types/TaskStorageTypes';
 
 declare global {
 	interface Window {
 		spotStorage: SpotStorageApi;
-		spotDatabaseLocation: SpotDatabaseLocationApi;
+		spotBackupLocation: SpotBackupLocationApi;
 		versions?: {
 			node: () => string;
 			chrome: () => string;
