@@ -24,11 +24,18 @@ const createWindow = ({ requestRendererFlushBeforeWindowClose }: CreateWindowOpt
 	const win = new BrowserWindow({
 		width: WINDOW_CONFIG.widthPixels,
 		height: WINDOW_CONFIG.heightPixels,
+		show: false,
 		webPreferences: {
 			contextIsolation: true,
 			nodeIntegration: false,
 			preload: path.join(__dirname, WINDOW_CONFIG.preloadScriptFileName)
 		}
+	});
+
+	// Maximizes to the screen work area on startup without engaging macOS native fullscreen (a distinct window state the user opts into separately)
+	win.once('ready-to-show', () => {
+		win.maximize();
+		win.show();
 	});
 
 	const loadTarget = resolveWindowLoadTarget({
