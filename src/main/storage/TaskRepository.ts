@@ -1,6 +1,9 @@
-import { spotLogger } from 'src/main/logging/SpotLogger';
-import { openSpotDatabase, type SpotDatabase } from 'src/main/storage/SpotDatabase';
-import { createInvalidTaskChangeError, TASK_INSERT_COLUMN_NAMES, TASK_SELECT_COLUMN_NAMES, taskChangeToTaskUpdateColumns, taskRowToColumnValues, taskRowToTask, taskToTaskRow, type TaskRow } from 'src/main/storage/TaskRowMapping';
+import { appLogger } from 'src/framework/main/logging/AppLogger';
+import type { AppDatabase } from 'src/framework/main/storage/AppDatabase';
+import { createInvalidChangeError } from 'src/framework/main/storage/InvalidChangeError';
+import { getErrorMessage } from 'src/framework/utils/ErrorUtils';
+import { openSpotDatabase } from 'src/main/storage/SpotDatabase';
+import { TASK_INSERT_COLUMN_NAMES, TASK_SELECT_COLUMN_NAMES, taskChangeToTaskUpdateColumns, taskRowToColumnValues, taskRowToTask, taskToTaskRow, type TaskRow } from 'src/main/storage/TaskRowMapping';
 import type { PersistedTask, PersistedTaskChange, Task } from 'src/types/TaskTypes';
 
 export interface TaskRepositoryOptions {
@@ -33,25 +36,13 @@ const INSERT_TASK_QUERY = `
 // would keep every task change the user makes afterwards from being written
 const assertSingleTaskChanged = (changes: number | bigint, action: string, taskId: string): void => {
 	if(Number(changes) !== 1) {
-		throw createInvalidTaskChangeError(`Cannot ${action} missing task "${taskId}".`);
+		throw createInvalidChangeError(`Cannot ${action} missing task "${taskId}".`);
 	}
-};
-
-const getErrorMessage = (error: unknown): string => {
-	if(error instanceof Error) {
-		return error.message;
-	}
-
-	if(error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
-		return error.message;
-	}
-
-	return String(error);
 };
 
 export const withSpotDatabase = <T>(
 	options: TaskRepositoryOptions,
-	callback: (spotDatabase: SpotDatabase) => T
+	callback: (spotDatabase: AppDatabase) => T
 ): T => {
 	const spotDatabase = openSpotDatabase({
 		storageDirectory: options.storageDirectory,
@@ -66,21 +57,21 @@ export const withSpotDatabase = <T>(
 	}
 };
 
-export const runTaskTransaction = (spotDatabase: SpotDatabase, callback: () => void): void => {
+export const runTaskTransaction = (spotDatabase: AppDatabase, callback: () => void): void => {
 	spotDatabase.runTransaction(callback);
 };
 
-export const readTaskRows = (spotDatabase: SpotDatabase): TaskRow[] => {
+export const readTaskRows = (spotDatabase: AppDatabase): TaskRow[] => {
 	return spotDatabase.getAllQueryRows<TaskRow>(SELECT_TASKS_QUERY);
 };
 
-export const readTasksFromDatabase = (spotDatabase: SpotDatabase): Task[] => {
+export const readTasksFromDatabase = (spotDatabase: AppDatabase): Task[] => {
 	return readTaskRows(spotDatabase).reduce<Task[]>((tasks, taskRow) => {
 		try {
 			tasks.push(taskRowToTask(taskRow));
 		}
 		catch(error) {
-			spotLogger.warn('Skipping malformed task row', {
+			appLogger.warn('Skipping malformed task row', {
 				taskId: taskRow.id,
 				error: getErrorMessage(error)
 			});
@@ -96,7 +87,7 @@ export const readTasks = (options: TaskRepositoryOptions): Task[] => {
 	});
 };
 
-export const insertTaskRecord = (spotDatabase: SpotDatabase, task: PersistedTask, writtenAt: Date): void => {
+export const insertTaskRecord = (spotDatabase: AppDatabase, task: PersistedTask, writtenAt: Date): void => {
 	const row = taskToTaskRow(task, {
 		createdAt: writtenAt,
 		updatedAt: writtenAt
@@ -107,7 +98,7 @@ export const insertTaskRecord = (spotDatabase: SpotDatabase, task: PersistedTask
 };
 
 export const updateTaskRecord = (
-	spotDatabase: SpotDatabase,
+	spotDatabase: AppDatabase,
 	taskId: string,
 	change: PersistedTaskChange,
 	writtenAt: Date
@@ -128,7 +119,7 @@ export const updateTaskRecord = (
 	assertSingleTaskChanged(result.changes, 'update', taskId);
 };
 
-export const deleteTaskRecord = (spotDatabase: SpotDatabase, taskId: string): void => {
+export const deleteTaskRecord = (spotDatabase: AppDatabase, taskId: string): void => {
 	const query = `
 		DELETE FROM tasks
 		WHERE id = ?

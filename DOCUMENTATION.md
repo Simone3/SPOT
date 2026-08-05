@@ -63,22 +63,37 @@ npm run make
 - `src/config/AppConfig.ts` holds the app-wide configuration constants shared by the Electron main process and the React renderer.
 - `src/main/Main.ts` resolves the runtime paths, initializes the process-wide logger, creates the task storage, registers IPC handlers, creates the backup scheduler, resolves the backup folder, and creates the Electron `BrowserWindow` that loads the built React renderer.
 - `src/main/preload/Preload.ts` exposes the narrow renderer APIs through Electron's context bridge.
-- `src/main/config/SpotRuntimePaths.ts` resolves the fixed application paths inside the Electron user-data folder, including the database folder and the default backup folder, and gives development runs their own root folder.
-- `src/main/config/SpotConfigStore.ts` reads and writes the JSON application configuration file that stores the selected backup folder.
-- `src/main/config/BackupLocationManager.ts` owns the backup folder: startup resolution, validation, the development override, the fallback to the default folder, and configuration persistence.
-- `src/main/logging/SpotLogger.ts` configures `electron-log` behind a generic factory-created logger and exports the process-wide `spotLogger` utility with `info`, `warn`, `error`, `debug`, and `flush` methods, newline-delimited JSON output, size-based rolling, and one retained archive.
-- `src/main/ipc/TaskStorageIpc.ts` registers the narrow Electron IPC surface for storage loading, task write commands, database health reporting, the shutdown flush handshake and drain for buffered and in-flight task commands, the shutdown backup hook, and the exclusive-access helper shared with the backup folder change. Task loading, task write commands, backups and folder changes all run on one serial chain, so they are strictly ordered and never overlap, whichever order they are requested in.
-- `src/main/ipc/BackupLocationIpc.ts` registers the backup folder IPC surface and opens the native folder dialog.
-- `src/main/storage/TaskStorage.ts` defines the Electron main-process storage contract, SQLite task loading and write commands through a storage-owned database connection, database health reporting, backup execution and backup status, and shutdown preparation.
-- `src/main/storage/BackupDirectory.ts` validates a backup folder and creates it when it is missing.
-- `src/main/storage/DatabaseBackup.ts` writes one rotated backup copy: `VACUUM INTO` a local temporary file, publish it into the backup folder through a partial file and an atomic rename, then prune the folder down to the retained backup count.
-- `src/main/storage/BackupScheduler.ts` decides when a backup runs: after the task changes have settled, once more at shutdown under a bounded timeout, and never twice at the same time.
+- `src/framework` contains the reusable application scaffolding described in the Framework Layer section below. It never imports SPOT code.
+- `src/framework/utils/ErrorUtils.ts` reads a message out of an unknown thrown value.
+- `src/framework/utils/ManuallySortedList.ts` inserts, moves, and renumbers items that carry a `sortPosition`, with the position step supplied by the caller.
+- `src/framework/types/StorageTypes.ts` owns the storage result envelope: database and backup status, failure reasons, load and command results, and operational log entries.
+- `src/framework/types/BackupTypes.ts` owns the backup folder contract and the backup file naming shape.
+- `src/framework/main/logging/AppLogger.ts` configures `electron-log` behind a factory-created logger and exports the process-wide `appLogger` utility with `info`, `warn`, `error`, `debug`, and `flush` methods, newline-delimited JSON output, size-based rolling, and bounded write retries.
+- `src/framework/main/config/RuntimePaths.ts` lays out the application paths inside the Electron user-data folder from a caller-supplied set of folder and file names, and gives development runs their own root folder.
+- `src/framework/main/config/JsonConfigStore.ts` reads and writes a JSON configuration file whose shape is decided by a caller-supplied parser.
+- `src/framework/main/config/BackupLocationManager.ts` owns the backup folder: startup resolution, validation, the development override, the fallback to the default folder, and persistence through a caller-supplied directory store.
+- `src/framework/main/storage/AppDatabase.ts` opens a SQLite database in write-ahead logging mode, applies caller-supplied migrations in ascending version order, refuses a database written by a newer schema, exposes a small query wrapper including the backup `VACUUM INTO` helper, and emits SQL query log records through the process-wide logger.
+- `src/framework/main/storage/DatabaseStorage.ts` is the generic storage core: one lazy database connection, record loading, command execution with database-error and refused-command classification, operational log writing, backup execution and backup status, and shutdown preparation.
+- `src/framework/main/storage/InvalidChangeError.ts` marks and recognizes a change the database will never accept, so it is reported as refused instead of retried.
+- `src/framework/main/storage/BackupDirectory.ts` validates a backup folder and creates it when it is missing.
+- `src/framework/main/storage/DatabaseBackup.ts` writes one rotated backup copy: `VACUUM INTO` a local temporary file, publish it into the backup folder through a partial file and an atomic rename, then prune the folder down to the retained backup count.
+- `src/framework/main/storage/BackupScheduler.ts` decides when a backup runs: after the changes have settled, once more at shutdown under a bounded timeout, and never twice at the same time.
+- `src/framework/main/ipc/StorageCommandIpc.ts` serializes every storage operation on one chain and owns the shutdown protocol: the `before-quit` handshake with the renderer, the drain of in-flight commands, the pre-close backup hook, and the exclusive-access helper.
+- `src/framework/main/ipc/BackupLocationIpc.ts` registers the backup folder IPC surface and opens the native folder dialog with caller-supplied channel names and wording.
+- `src/framework/main/window/WindowLoadTarget.ts` resolves the built renderer entry file from the application root.
+- `src/framework/preload/IpcBridge.ts` subscribes the renderer to a main-process channel without exposing the Electron event object.
+- `src/framework/renderer/StorageQueue.ts` creates a renderer-side write queue: commands are written one at a time and in order, failed writes are retried a bounded number of times, and changes that can never be written are reported.
+- `src/main/config/SpotRuntimePaths.ts` names the SPOT folders and files and resolves them through the framework runtime paths.
+- `src/main/config/SpotConfigStore.ts` owns the SPOT configuration file shape and exposes the backup folder to the framework backup location manager.
+- `src/main/ipc/TaskStorageIpc.ts` names the SPOT storage IPC channels and hands the task operations to the framework storage command controller.
+- `src/main/ipc/BackupLocationIpc.ts` names the SPOT backup folder channels and the wording of the native folder dialog.
+- `src/main/storage/TaskStorage.ts` binds the framework storage core to SPOT: the SPOT database, the task command executor, the task loader, and the SPOT backup file naming. It also defines the SPOT storage contract used by IPC and the renderer.
 - `src/main/storage/TaskCommandExecutor.ts` maps task storage commands to the task repository operations and keeps each command inside one transaction.
-- `src/main/storage/SpotDatabase.ts` opens `spot.sqlite` in write-ahead logging mode, applies schema migrations, currently creates schema version `1`, exposes a small internal query wrapper including the backup `VACUUM INTO` helper, and emits SQL query log records through the process-wide logger.
+- `src/main/storage/SpotDatabase.ts` owns the SPOT schema: the migration list that currently creates schema version `1`, and the `openSpotDatabase()` helper that opens `spot.sqlite` through the framework database.
 - `src/main/storage/TaskRowMapping.ts` maps between SQLite task rows and React `Task` objects and owns the shared task field to SQLite column mapping used by storage queries.
-- `src/main/storage/TaskRepository.ts` owns SQLite task queries and task repository helpers that can run against an existing SPOT database wrapper or a short scoped repository session.
+- `src/main/storage/TaskRepository.ts` owns SQLite task queries and task repository helpers that can run against an existing database wrapper or a short scoped repository session.
 - `src/main/window/WindowLoadTarget.ts` resolves the built React `build/index.html` file from the Electron app root.
-- `src/types` contains shared TypeScript types and constants split into semantic files for tasks, task storage, task-storage IPC channels, backup location, backup-location IPC channels, domains, filters, and dates. Types that have one clear owner stay in the owning `.ts` or `.tsx` file instead.
+- `src/types` contains shared TypeScript types and constants split into semantic files for tasks, task storage, task-storage IPC channels, backup location, backup-location IPC channels, domains, filters, and dates. The storage and backup types re-export the framework contracts and add only what is specific to SPOT. Types that have one clear owner stay in the owning `.ts` or `.tsx` file instead.
 - `src/react-app-env.d.ts` contains the React Scripts TypeScript reference plus renderer-side declarations for `window.versions`, `window.spotStorage`, and `window.spotBackupLocation`.
 - `src/components/common` contains layout and shared UI primitives.
 - `src/components/inputs` contains reusable inputs.
@@ -87,13 +102,47 @@ npm run make
 - `src/components/settings` contains the Settings route page.
 - `src/components/storage` contains the Settings section that explains where the database lives and lets the user choose the backup folder.
 - `src/contexts` contains app-level React contexts.
-- `src/logic` contains state and domain logic, including `PendingTaskChanges.ts`, which holds the task edits the user has not saved yet, and `TaskStorageQueue.ts`, which writes them in order and retries the writes that fail.
+- `src/logic` contains state and domain logic, including `PendingTaskChanges.ts`, which holds the task edits the user has not saved yet, and `TaskStorageQueue.ts`, which creates the single renderer write queue from the framework and exposes it to the task components.
 - `src/utils` contains general utilities.
-- `tests` contains Jest tests, test setup, and test-only helpers.
+- `tests/framework` contains the tests for `src/framework`; `tests/main`, `tests/logic`, `tests/components`, and `tests/utils` contain the SPOT tests. `tests` also holds the test setup and test-only helpers.
 
 ## Source Imports
 
 React source files use absolute imports rooted at `src/...`, including local CSS imports, instead of relative `./` or `../` paths. `tsconfig.json` sets `baseUrl` to the repository root so TypeScript, React Scripts, Jest, and ESLint can resolve those imports consistently.
+
+## Framework Layer
+
+`src/framework` holds the reusable scaffolding an Electron + React + SQLite desktop application needs regardless of what it stores: logging, the database wrapper and its migrations, the storage core, rotated backups and their scheduling, the backup folder feature, the storage IPC chain and shutdown protocol, and the renderer write queue. It is kept here, inside SPOT, rather than as a package: the intent is to lift the folder into a second application as it is, and only turn it into a library once the same code has actually served two applications.
+
+The rule that makes this possible is one-directional: **`src/framework` must never import SPOT code.** Everything it needs about SPOT arrives through its options. In particular:
+
+- No `src/config/AppConfig` imports. Sizes, delays, retention counts, file names, and IPC channel names are parameters. SPOT passes them from `AppConfig` at the point where it composes the framework.
+- No SPOT types. The framework is generic over the command type and the record type it stores; the storage envelope it does fix (status, failure reasons, results) lives in `src/framework/types`.
+- No SPOT wording. Log messages the framework itself writes are generic; user-facing wording, dialog labels, and the messages the renderer shows are supplied by the application.
+
+ESLint enforces the boundary: `src/framework/**` has a `no-restricted-imports` rule that rejects imports from `src/components`, `src/contexts`, `src/logic`, `src/main`, `src/types`, `src/utils`, and `src/config`.
+
+The framework holds no module-level state. Everything is created by a factory, so a second application, or a test, can create its own instance. The one deliberate exception is `appLogger`, a process-wide handle the application initializes once at startup, which avoids threading a logger through every call.
+
+SPOT binds to the framework in a thin layer of adapters, and those adapters are where SPOT's own names, channels, and wording live:
+
+| Framework module | SPOT adapter |
+| --- | --- |
+| `main/logging/AppLogger.ts` | initialized in `src/main/Main.ts` from `LOGGING_CONFIG` |
+| `main/config/RuntimePaths.ts` | `src/main/config/SpotRuntimePaths.ts` |
+| `main/config/JsonConfigStore.ts` | `src/main/config/SpotConfigStore.ts` |
+| `main/config/BackupLocationManager.ts` | composed in `src/main/Main.ts` with the SPOT directory store |
+| `main/storage/AppDatabase.ts` | `src/main/storage/SpotDatabase.ts`, which owns the SPOT migration list |
+| `main/storage/DatabaseStorage.ts` | `src/main/storage/TaskStorage.ts` |
+| `main/storage/BackupScheduler.ts` | composed in `src/main/Main.ts` from `BACKUP_CONFIG` |
+| `main/ipc/StorageCommandIpc.ts` | `src/main/ipc/TaskStorageIpc.ts` |
+| `main/ipc/BackupLocationIpc.ts` | `src/main/ipc/BackupLocationIpc.ts` |
+| `main/window/WindowLoadTarget.ts` | `src/main/window/WindowLoadTarget.ts` |
+| `renderer/StorageQueue.ts` | `src/logic/TaskStorageQueue.ts` |
+
+Not everything reusable was moved. `src/utils/DateUtils.ts` stays in SPOT because its `toSmartString()` depends on the renderer's `CurrentDates` label bundle, and pulling that type into the framework would defeat the boundary. UI primitives under `src/components` stay in SPOT as well: they are worth copying into a second application, not sharing from one place.
+
+Tests for the framework live in `tests/framework` and use only framework modules, so they travel with the folder.
 
 ## Configuration
 
@@ -145,7 +194,7 @@ The page layout is a fixed-height flex app:
 
 `package.json` points Electron at `dist/electron/main.js`, which is generated from `src/main/Main.ts` by `npm run build-electron`. The build script bundles `src/main/Main.ts` and `src/main/preload/Preload.ts` with `esbuild`, preserving external Electron and `electron-log` imports while resolving in-repository `src/...` imports at build time.
 
-`src/main/Main.ts` resolves the runtime paths with `resolveSpotRuntimePaths()` and initializes `spotLogger` as soon as Electron is ready. It then creates the task storage on the runtime database folder, registers a sample `ping` IPC handler, the storage IPC handlers from `src/main/ipc/TaskStorageIpc.ts`, which also attach the storage shutdown drain to Electron's `before-quit` event, the backup scheduler, and the backup location handlers from `src/main/ipc/BackupLocationIpc.ts`. It resolves the backup folder through `BackupLocationManager.initialize()` before creating the `BrowserWindow`. It uses `resolveWindowLoadTarget()` from `src/main/window/WindowLoadTarget.ts` to load the built React `build/index.html` file through `loadFile()` in both development and packaged mode.
+`src/main/Main.ts` is the composition root: it resolves the runtime paths with `resolveSpotRuntimePaths()` and initializes `appLogger` with the `LOGGING_CONFIG` settings as soon as Electron is ready. It then creates the task storage on the runtime database folder, registers a sample `ping` IPC handler, the storage IPC handlers from `src/main/ipc/TaskStorageIpc.ts`, which also attach the storage shutdown drain to Electron's `before-quit` event, the backup scheduler, and the backup location handlers from `src/main/ipc/BackupLocationIpc.ts`. It resolves the backup folder through `BackupLocationManager.initialize()` before creating the `BrowserWindow`. It uses `resolveWindowLoadTarget()` from `src/main/window/WindowLoadTarget.ts` to load the built React `build/index.html` file through `loadFile()` in both development and packaged mode.
 
 Every window `Main.ts` creates also intercepts its own `close` event with `requestRendererFlushBeforeWindowClose()` from the storage IPC handlers: the close is prevented, the renderer flush handshake runs, and the window is destroyed only once the renderer reported or the handshake timed out. Without it the buffered task edits would be lost on the usual way of closing the application, because closing the window destroys the renderer before `before-quit` runs on Windows and Linux and without quitting at all on macOS.
 
@@ -198,7 +247,7 @@ The backup folder contains up to `BACKUP_CONFIG.retainedBackupCount` files named
 
 ### Backups
 
-`src/main/storage/DatabaseBackup.ts` writes one backup:
+`src/framework/main/storage/DatabaseBackup.ts` writes one backup, using the file naming and retention count SPOT passes from `BACKUP_CONFIG`:
 
 1. `VACUUM INTO` a temporary file in the local database folder. This is the only step that touches the database, it runs in its own read transaction, and it produces a complete self-contained database with no journal and no write-ahead log. A plain file copy is not used: it would capture a database mid-transaction, and under write-ahead logging it would silently miss everything still in `spot.sqlite-wal`.
 2. Copy that inert file into the backup folder under a `.part` name. Nothing is writing to the source, so this copy is safe however slow the destination is.
@@ -207,7 +256,7 @@ The backup folder contains up to `BACKUP_CONFIG.retainedBackupCount` files named
 
 A `.part` file left behind by an interrupted backup is cleared at the start of the next run. Steps 2 to 4 are asynchronous on purpose, so the shutdown timeout can actually abandon a backup whose destination has become slow or unreachable.
 
-`src/main/storage/BackupScheduler.ts` decides when that runs:
+`src/framework/main/storage/BackupScheduler.ts` decides when that runs, using the delays SPOT passes from `BACKUP_CONFIG`:
 
 - Every applied task command restarts a `BACKUP_CONFIG.delayAfterChangeMs` timer, so a burst of edits produces one backup once the user has stopped, not one per edit.
 - Backups run through `runExclusively()` on the serial storage chain, so a snapshot is never taken while a write transaction is open, and two backups never overlap.
@@ -216,7 +265,7 @@ A `.part` file left behind by an interrupted backup is cleared at the start of t
 
 ### Backup Folder Selection
 
-`src/main/config/BackupLocationManager.ts` owns the backup folder and reports it as a `BackupLocation` with `directory`, `defaultDirectory`, `databaseDirectory`, `databasePath`, `isDevelopment`, and an optional `message`.
+`src/framework/main/config/BackupLocationManager.ts` owns the backup folder and reports it as a `BackupLocation` with `directory`, `defaultDirectory`, `databaseDirectory`, `databasePath`, `isDevelopment`, and an optional `message`.
 
 Startup resolution:
 
@@ -236,7 +285,7 @@ The renderer uses the narrow `window.spotBackupLocation` API:
 
 ### SQLite Schema
 
-`src/main/storage/SpotDatabase.ts` opens or creates `spot.sqlite` using Electron's bundled Node `node:sqlite` support. No external SQLite dependency is used. The connection is switched to `journal_mode = WAL` right after it is opened, which is safe because the database file never leaves the local user-data disk. The raw SQLite connection stays private to `SpotDatabase.ts`; task storage uses wrapper methods for SQL execution, row reads, transactions, and the backup `VACUUM INTO`. `createTaskStorage({ databaseDirectory, backupDirectory })` owns one lazy database wrapper, opens it on the first status, load, write, or backup operation, reuses it across storage calls, and closes it from `prepareForShutdown()`.
+`src/framework/main/storage/AppDatabase.ts` opens or creates the database file using Electron's bundled Node `node:sqlite` support. No external SQLite dependency is used. The connection is switched to `journal_mode = WAL` right after it is opened, which is safe because the database file never leaves the local user-data disk. The raw SQLite connection stays private to `AppDatabase.ts`; storage uses wrapper methods for SQL execution, row reads, transactions, and the backup `VACUUM INTO`. `src/main/storage/SpotDatabase.ts` supplies the SPOT part: the `spot.sqlite` file name and the migration list. `createTaskStorage({ databaseDirectory, backupDirectory })` owns one lazy database wrapper, opens it on the first status, load, write, or backup operation, reuses it across storage calls, and closes it from `prepareForShutdown()`.
 
 Schema version `1` creates `schema_migrations` and `tasks`:
 
@@ -280,7 +329,7 @@ Completing and restoring tasks are represented as `task.update` commands because
 
 Each task write command runs in exactly one SQLite transaction on the storage-owned connection. Bulk changes must not be split into per-task transactions. Transactions are opened with `BEGIN IMMEDIATE`, never a plain deferred `BEGIN`: the write lock is taken upfront so a concurrent writer on the same database file cannot make the transaction fail with an unrecoverable `SQLITE_BUSY` while it upgrades from a read to a write. The busy handler installed through `STORAGE_CONFIG.databaseTimeoutMs` can then retry the initial lock acquisition normally. Fields marked immutable in `TASK_FIELD_COLUMN_MAPPINGS`, currently `id`, cannot be included in update changes, and a change that sets a field marked required there to `undefined` is refused the same way. If an update or delete references a missing task row, the command fails and the transaction rolls back. Every one of those failures is reported as `invalid-command`, not as `database-error`: none of them would go any differently later, so retrying such a command would never succeed and would keep every task change made afterwards from ever being written, because the write queue never lets a later command overtake a failed one. Task durability is immediate and does not rely on delayed batching.
 
-`readTasksFromDatabase()` in `src/main/storage/TaskRepository.ts` maps each row independently: a row that fails mapping (unrecognized `state`/`priority`, or malformed `tags_json`) is skipped and logged with `spotLogger.warn()` rather than failing the whole load, so one corrupt row cannot hide every other task behind a storage-unavailable state.
+`readTasksFromDatabase()` in `src/main/storage/TaskRepository.ts` maps each row independently: a row that fails mapping (unrecognized `state`/`priority`, or malformed `tags_json`) is skipped and logged with `appLogger.warn()` rather than failing the whole load, so one corrupt row cannot hide every other task behind a storage-unavailable state.
 
 ### Renderer Behavior
 
@@ -288,7 +337,7 @@ React calls `loadTasks()` through `window.spotStorage` once on startup and calls
 
 ### Writing Task Changes
 
-`src/logic/TaskStorageQueue.ts` owns every task write. Commands are queued and written one at a time and in order, so a write that fails cannot be overtaken by later ones.
+`src/logic/TaskStorageQueue.ts` owns every task write. It creates the single renderer queue from `src/framework/renderer/StorageQueue.ts`, supplying the bridge to `window.spotStorage`, the `STORAGE_CONFIG` retry policy, and the warning wording. Commands are queued and written one at a time and in order, so a write that fails cannot be overtaken by later ones.
 
 - A write that fails with `database-error`, or whose call throws, stays at the front of the queue and is retried every `STORAGE_CONFIG.writeRetryDelayMs`. A database that failed once can work again, and the change is not lost in the meantime.
 - Those retries are bounded by `STORAGE_CONFIG.maximumWriteAttempts` consecutive database errors on the same command. Not every database error clears: a constraint violation or a full disk fails the same way every time, and an unbounded retry would keep that command at the front of the queue and leave every change made afterwards unwritten for the rest of the session. After the last attempt the command is given up on and reported with its own warning, which says the change is not stored, so the queue can move on.
@@ -320,7 +369,7 @@ Task edits are not sent to the task state on every keystroke. `src/logic/Pending
 
 ### Operational Logging
 
-`src/main/logging/SpotLogger.ts` uses `electron-log` version `5.4.4` to write newline-delimited JSON entries to `spot-logs.ndjson` inside the log directory of the current run. The dependency is wrapped by `createSpotLogger()`, while `initializeSpotLogger()` installs the concrete logger behind the process-wide `spotLogger` utility. Main-process code can call `spotLogger.info`, `spotLogger.warn`, `spotLogger.error`, `spotLogger.debug`, and `spotLogger.flush` without depending on `electron-log` directly or constructing a logger itself.
+`src/framework/main/logging/AppLogger.ts` uses `electron-log` version `5.4.4` to write newline-delimited JSON entries to the log file of the current run, which for SPOT is `spot-logs.ndjson`. The dependency is wrapped by `createAppLogger()`, while `initializeAppLogger()` installs the concrete logger behind the process-wide `appLogger` utility. Main-process code can call `appLogger.info`, `appLogger.warn`, `appLogger.error`, `appLogger.debug`, and `appLogger.flush` without depending on `electron-log` directly or constructing a logger itself. The file name, size limit, retained archive count, and retry policy are passed in by the application: SPOT supplies them from `LOGGING_CONFIG`.
 
 The main process logs every incoming React storage command and every SQL query run by the storage layer, including `SELECT` queries. SQL log entries include the query text, `elapsedMillis`, and success or failure. Query parameters should be logged only when they are useful for debugging and safe to write to disk.
 
@@ -338,7 +387,7 @@ Logger write methods return `void`; normal callers do not await operational logg
 
 Database write failures are user-facing. The SQLite transaction must not partially commit and the main process reports the failure to React, which keeps the task state, retries the write, and warns the user. Database read or startup failures are also user-facing; React receives a storage error state instead of silently falling back to stale persisted data.
 
-Operational-log failures are not renderer-facing. Startup log file open failures are tracked internally by `SpotLogger`, and runtime log write failures are ignored after bounded retries when SQLite succeeds. Database folder failures must leave persistence visibly non-healthy rather than pretending data is saved.
+Operational-log failures are not renderer-facing. Startup log file open failures are tracked internally by `AppLogger`, and runtime log write failures are ignored after bounded retries when SQLite succeeds. Database folder failures must leave persistence visibly non-healthy rather than pretending data is saved.
 
 Backup failures are renderer-facing but never alarming. They are logged, reported through the pushed backup status, and shown as a notice in the task page and in Settings, always stating that the tasks themselves are saved. A backup failure must never be routed through the database error path.
 
@@ -651,9 +700,11 @@ Current test coverage includes focused regression checks for:
 - runtime path resolution for packaged and development runs
 - backup folder resolution at startup, saved-folder reuse, the development folder override, the fallback to the default folder when the saved or chosen one cannot be used, configuration persistence, and running the change on the storage chain
 - backup location IPC registration, cancelled folder dialogs, and rejecting a chosen path that is not a usable folder
-- backup file naming and chronological sorting, a written copy that reopens as a valid SPOT database, backup folder creation, pruning down to the retained count while leaving other files alone, clearing a partial copy left by an interrupted backup, and failing without leaving a temporary file behind
+- backup file naming and chronological sorting, a written copy that reopens as a valid database, backup folder creation, pruning down to the retained count while leaving other files alone, clearing a partial copy left by an interrupted backup, and failing without leaving a temporary file behind
 - backup scheduling: waiting for the task changes to settle and restarting that wait, skipping a backup when nothing changed, retrying after a failure, reporting every outcome, running on the storage chain, backing up once more at shutdown while cancelling the pending schedule, and giving up on a shutdown backup that takes too long
 - a backup copy holding the stored tasks, and a failed backup that leaves the database healthy
+
+Tests that cover `src/framework` live in `tests/framework` and depend only on framework modules, so they move with the folder. Tests that cover how SPOT binds to it stay under `tests/main` and `tests/logic`.
 - smoke coverage for the Settings panel showing the fixed database location, reporting a failed backup without claiming the tasks are lost, and the confirmed backup folder change
 - Electron window load-target resolution for local built React loading
 - React task-page startup loading, Electron preload API requirement, persisted Electron loading, and startup-error rendering
@@ -661,7 +712,8 @@ Current test coverage includes focused regression checks for:
 - the task state surviving navigation: leaving the task page and coming back keeps the loaded tasks, the changes made to them, and the filters, without a loading step and without reading the database again
 - the task write queue: in-order writing, retrying a failed or thrown write while keeping the warning until it goes through, later commands not overtaking a failed one, keeping a command refused while storage was closing, retrying immediately when the retry delay cannot be waited out, dropping a refused command instead of retrying it forever, giving up on a write the database keeps failing so later commands are still written, not counting writes refused while storage was closing against that limit, keeping a dropped command's warning through later successful writes, and database status reporting
 - task edit durability corner cases: edits still saved after the task is filtered out of the list, never saved for a deleted task, task state values shown again when the parent replaces the task, what the user is typing kept while the parent replaces the task, the trailing tag input saved when the task disappears, a half-typed tag left in its input while another edit of the same task is saved, and everything saved before the renderer goes away
-- generic SPOT logging success, public log levels, startup file-open failures, bounded retry failures, retry recovery, shutdown flush behavior, and size-based rolling with bounded retention
+- generic logging success, public log levels, startup file-open failures, bounded retry failures, retry recovery, shutdown flush behavior, and size-based rolling with bounded retention
+- the manually sorted list utility: insertion at every position, moves, and sort position renumbering
 
 Validation commands:
 

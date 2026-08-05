@@ -1,20 +1,8 @@
 import { STORAGE_CONFIG } from 'src/config/AppConfig';
-import type { SpotStorageApi, StorageFailure, StorageStatus, TaskStorageCommand, TaskStorageCommandResult } from 'src/types/TaskStorageTypes';
+import { createStorageQueue, type StorageQueueState } from 'src/framework/renderer/StorageQueue';
+import type { SpotStorageApi, TaskStorageCommand, TaskStorageCommandResult } from 'src/types/TaskStorageTypes';
 
-/**
- * What the task page needs to know about storage writes: the latest database status, and whether something the user
- * changed is still not stored. The message is kept until that change is actually written, never cleared by an
- * unrelated command that happened to succeed.
- */
-export interface TaskStorageQueueState {
-	status: StorageStatus | undefined;
-	unsavedChangesMessage: string | undefined;
-}
-
-const IDLE_STATE: TaskStorageQueueState = {
-	status: undefined,
-	unsavedChangesMessage: undefined
-};
+export type TaskStorageQueueState = StorageQueueState;
 
 const createUnsavedChangesMessage = (message: string): string => {
 	return `Task storage update failed. ${message}`;
@@ -24,100 +12,11 @@ const createAbandonedChangeMessage = (message: string): string => {
 	return `Task storage update failed ${STORAGE_CONFIG.maximumWriteAttempts} times and was given up on, so that change is not stored. ${message}`;
 };
 
-// Storage commands are written one at a time and in order, so a failed one can be retried without letting later ones overtake it
-const queuedCommands: TaskStorageCommand[] = [];
-
-let queueState: TaskStorageQueueState = IDLE_STATE;
-
-// A command the database refused is never written, so its warning cannot be cleared by later commands succeeding
-let droppedCommandMessage: string | undefined;
-
-// How many times in a row the database failed on the command at the front of the queue, so that retries of an error that never clears can be bounded
-let frontCommandDatabaseErrors = 0;
-
-let isWriting = false;
-
-let retryTimeout: ReturnType<typeof setTimeout> | undefined;
-
-const stateSubscribers = new Set<() => void>();
-
-const idleWaiters = new Set<() => void>();
-
-const notifyStateSubscribers = (): void => {
-	stateSubscribers.forEach((subscriber) => {
-		subscriber();
-	});
-};
-
-const setQueueState = (nextState: TaskStorageQueueState): void => {
-	if(nextState.status === queueState.status && nextState.unsavedChangesMessage === queueState.unsavedChangesMessage) {
-		return;
-	}
-
-	queueState = nextState;
-	notifyStateSubscribers();
-};
-
-const releaseIdleWaiters = (): void => {
-	const waiters = Array.from(idleWaiters);
-
-	idleWaiters.clear();
-	waiters.forEach((waiter) => {
-		waiter();
-	});
-};
-
-const getErrorMessage = (error: unknown): string => {
-	if(error instanceof Error) {
-		return error.message;
-	}
-
-	if(error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
-		return error.message;
-	}
-
-	return String(error);
-};
-
-// A database that failed once can work again, so those writes are kept and retried. Storage that refused a command because it is closing
-// never even attempted it, so that command is kept too. A command the database refused as invalid would fail again in exactly the same
-// way, so it is dropped and only reported.
-const isRetryableFailure = (failure: StorageFailure): boolean => {
-	return failure.reason === 'database-error' || failure.reason === 'shutdown';
-};
-
-// A command refused while storage is closing was never attempted, and the process is going away anyway, so only the failures the database
-// itself reported are counted
-const countWriteResult = (result: TaskStorageCommandResult): void => {
-	frontCommandDatabaseErrors = !result.ok && result.reason === 'database-error' ? frontCommandDatabaseErrors + 1 : 0;
-};
-
-// Not every database error clears: a constraint violation or a full disk fails the same way every time, and retrying it forever would keep
-// every change made afterwards from ever being written, so the change is given up on and reported instead.
-const hasExhaustedWriteAttempts = (): boolean => {
-	return frontCommandDatabaseErrors >= STORAGE_CONFIG.maximumWriteAttempts;
-};
-
-// A change the database gave up on is reported differently from one it refused outright, because the user made a change SPOT tried and failed to store
-const createDroppedCommandMessage = (failure: StorageFailure): string => {
-	if(isRetryableFailure(failure)) {
-		return createAbandonedChangeMessage(failure.message);
-	}
-
-	return createUnsavedChangesMessage(failure.message);
-};
-
-const dropFrontCommand = (message: string): void => {
-	droppedCommandMessage = message;
-	queuedCommands.shift();
-	frontCommandDatabaseErrors = 0;
-};
-
-const writeCommand = async(command: TaskStorageCommand): Promise<TaskStorageCommandResult> => {
+const sendTaskCommandToMainProcess = (command: TaskStorageCommand): Promise<TaskStorageCommandResult> => {
 	const spotStorage = window.spotStorage as SpotStorageApi | undefined;
 
 	if(!spotStorage) {
-		return {
+		return Promise.resolve({
 			ok: false,
 			reason: 'not-implemented',
 			message: 'SPOT must be opened from the Electron app.',
@@ -126,102 +25,27 @@ const writeCommand = async(command: TaskStorageCommand): Promise<TaskStorageComm
 					state: 'unavailable'
 				}
 			}
-		};
-	}
-
-	try {
-		return await spotStorage.executeTaskCommand(command);
-	}
-	catch(error) {
-		return {
-			ok: false,
-			reason: 'database-error',
-			message: getErrorMessage(error),
-			status: {
-				database: {
-					state: 'unavailable',
-					message: getErrorMessage(error)
-				}
-			}
-		};
-	}
-};
-
-const scheduleRetry = (retryWrites: () => void): void => {
-	if(retryTimeout) {
-		return;
-	}
-
-	retryTimeout = setTimeout(() => {
-		retryTimeout = undefined;
-		retryWrites();
-	}, STORAGE_CONFIG.writeRetryDelayMs);
-};
-
-const writeQueuedCommands = async(): Promise<void> => {
-	if(isWriting) {
-		return;
-	}
-
-	isWriting = true;
-
-	try {
-		while(queuedCommands.length > 0) {
-			const result = await writeCommand(queuedCommands[0]);
-			countWriteResult(result);
-
-			if(!result.ok) {
-				// The command stays at the front of the queue, so nothing written later can overtake it
-				if(isRetryableFailure(result) && !hasExhaustedWriteAttempts()) {
-					setQueueState({
-						status: result.status,
-						unsavedChangesMessage: createUnsavedChangesMessage(result.message)
-					});
-					scheduleRetry(() => {
-						void writeQueuedCommands();
-					});
-
-					return;
-				}
-
-				dropFrontCommand(createDroppedCommandMessage(result));
-				setQueueState({
-					status: result.status,
-					unsavedChangesMessage: droppedCommandMessage
-				});
-
-				continue;
-			}
-
-			queuedCommands.shift();
-			setQueueState({
-				status: result.status,
-				unsavedChangesMessage: queueState.unsavedChangesMessage
-			});
-		}
-
-		// Everything still writable is stored, so only a warning about a command that will never be written survives
-		setQueueState({
-			status: queueState.status,
-			unsavedChangesMessage: droppedCommandMessage
 		});
-		releaseIdleWaiters();
 	}
-	finally {
-		isWriting = false;
-	}
+
+	return spotStorage.executeTaskCommand(command);
 };
+
+// One queue for the whole renderer, so that task writes stay ordered no matter which component made the change
+const taskStorageQueue = createStorageQueue<TaskStorageCommand>({
+	sendCommand: sendTaskCommandToMainProcess,
+	maximumWriteAttempts: STORAGE_CONFIG.maximumWriteAttempts,
+	writeRetryDelayMs: STORAGE_CONFIG.writeRetryDelayMs,
+	createUnsavedChangesMessage,
+	createAbandonedChangeMessage
+});
 
 /**
  * Queues a storage command to be written.
  * @param command Storage command to write.
  */
 export const sendTaskStorageCommand = (command: TaskStorageCommand): void => {
-	queuedCommands.push(command);
-
-	if(!retryTimeout) {
-		void writeQueuedCommands();
-	}
+	taskStorageQueue.sendCommand(command);
 };
 
 /**
@@ -230,11 +54,7 @@ export const sendTaskStorageCommand = (command: TaskStorageCommand): void => {
  * @returns The callback that unsubscribes.
  */
 export const subscribeToTaskStorageQueue = (subscriber: () => void): () => void => {
-	stateSubscribers.add(subscriber);
-
-	return () => {
-		stateSubscribers.delete(subscriber);
-	};
+	return taskStorageQueue.subscribe(subscriber);
 };
 
 /**
@@ -242,7 +62,7 @@ export const subscribeToTaskStorageQueue = (subscriber: () => void): () => void 
  * @returns The database status and the message about changes that are not stored.
  */
 export const getTaskStorageQueueState = (): TaskStorageQueueState => {
-	return queueState;
+	return taskStorageQueue.getState();
 };
 
 /**
@@ -250,13 +70,7 @@ export const getTaskStorageQueueState = (): TaskStorageQueueState => {
  * Used when the renderer is asked to save everything under a bounded time, which the retry delay alone could use up.
  */
 export const retryTaskStorageQueueNow = (): void => {
-	if(!retryTimeout) {
-		return;
-	}
-
-	clearTimeout(retryTimeout);
-	retryTimeout = undefined;
-	void writeQueuedCommands();
+	taskStorageQueue.retryNow();
 };
 
 /**
@@ -265,13 +79,7 @@ export const retryTaskStorageQueueNow = (): void => {
  * @returns A promise that resolves when nothing is left to write.
  */
 export const waitForTaskStorageQueue = (): Promise<void> => {
-	if(queuedCommands.length === 0 && !isWriting) {
-		return Promise.resolve();
-	}
-
-	return new Promise((resolve) => {
-		idleWaiters.add(resolve);
-	});
+	return taskStorageQueue.waitForIdle();
 };
 
 /**
@@ -279,11 +87,7 @@ export const waitForTaskStorageQueue = (): Promise<void> => {
  * Used when tasks are loaded again from the database, because the task state does not hold those changes anymore.
  */
 export const clearTaskStorageFailures = (): void => {
-	droppedCommandMessage = undefined;
-	setQueueState({
-		status: queueState.status,
-		unsavedChangesMessage: undefined
-	});
+	taskStorageQueue.clearFailures();
 };
 
 /**
@@ -291,16 +95,5 @@ export const clearTaskStorageFailures = (): void => {
  * Only meant for tests, because the queue is shared by the whole renderer.
  */
 export const resetTaskStorageQueueForTests = (): void => {
-	if(retryTimeout) {
-		clearTimeout(retryTimeout);
-		retryTimeout = undefined;
-	}
-
-	queuedCommands.length = 0;
-	queueState = IDLE_STATE;
-	droppedCommandMessage = undefined;
-	frontCommandDatabaseErrors = 0;
-	isWriting = false;
-	idleWaiters.clear();
-	stateSubscribers.clear();
+	taskStorageQueue.reset();
 };

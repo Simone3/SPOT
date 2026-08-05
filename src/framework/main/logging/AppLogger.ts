@@ -2,32 +2,32 @@ import { closeSync, existsSync, mkdirSync, openSync, readFileSync } from 'node:f
 import os from 'node:os';
 import path from 'node:path';
 import electronLog from 'electron-log';
-import { LOGGING_CONFIG } from 'src/config/AppConfig';
+import { getErrorMessage } from 'src/framework/utils/ErrorUtils';
 
-export const SPOT_LOG_WRITE_FAILED_MESSAGE = 'SPOT logging is unavailable.';
+export const LOG_WRITE_FAILED_MESSAGE = 'Logging is unavailable.';
 
-export const SPOT_LOGGER_NOT_INITIALIZED_MESSAGE = 'SPOT logging has not been initialized.';
+export const LOGGER_NOT_INITIALIZED_MESSAGE = 'Logging has not been initialized.';
 
-export type SpotLogLevel = 'info' | 'warn' | 'error' | 'debug';
+export type AppLogLevel = 'info' | 'warn' | 'error' | 'debug';
 
-type SpotElectronLogLevel = SpotLogLevel | 'verbose' | 'silly' | false;
+type ElectronLogLevel = AppLogLevel | 'verbose' | 'silly' | false;
 
-export type SpotLogFields = {
+export type AppLogFields = {
 	type?: string;
 	[field: string]: unknown;
 };
 
-export interface SpotLogEntry extends SpotLogFields {
+export interface AppLogEntry extends AppLogFields {
 	createdAt: string;
-	level: SpotLogLevel;
+	level: AppLogLevel;
 	message: string;
 }
 
-interface SpotLogTransport {
-	level: SpotElectronLogLevel;
+interface AppLogTransport {
+	level: ElectronLogLevel;
 }
 
-interface SpotLogFileTransport extends SpotLogTransport {
+interface AppLogFileTransport extends AppLogTransport {
 	fileName: string;
 	format: (params: { data: unknown[] }) => unknown[];
 	maxSize: number;
@@ -35,22 +35,22 @@ interface SpotLogFileTransport extends SpotLogTransport {
 	sync: boolean;
 }
 
-export interface SpotLoggerBackend {
+export interface AppLoggerBackend {
 	debug: (message: string) => void;
 	error: (message: string) => void;
 	info: (message: string) => void;
 	warn: (message: string) => void;
 	transports: {
-		console?: SpotLogTransport | null;
-		file: SpotLogFileTransport;
-		ipc?: SpotLogTransport | null;
-		remote?: SpotLogTransport | null;
+		console?: AppLogTransport | null;
+		file: AppLogFileTransport;
+		ipc?: AppLogTransport | null;
+		remote?: AppLogTransport | null;
 	};
 }
 
-export type CreateSpotLoggerBackend = (logId: string) => SpotLoggerBackend;
+export type CreateAppLoggerBackend = (logId: string) => AppLoggerBackend;
 
-export interface SpotLoggerConfiguration {
+export interface AppLoggerConfiguration {
 	filePath: string;
 	fileName: string;
 	maximumFileSizeBytes: number;
@@ -59,41 +59,43 @@ export interface SpotLoggerConfiguration {
 	retryDelayMs: number;
 }
 
-export interface SpotLoggerHealthyStatus {
+export interface AppLoggerHealthyStatus {
 	state: 'healthy';
 }
 
-export interface SpotLoggerUnavailableStatus {
+export interface AppLoggerUnavailableStatus {
 	state: 'unavailable';
 	message: string;
 }
 
-export type SpotLoggerStatus = SpotLoggerHealthyStatus | SpotLoggerUnavailableStatus;
+export type AppLoggerStatus = AppLoggerHealthyStatus | AppLoggerUnavailableStatus;
 
-export interface CreateSpotLoggerOptions {
+export interface CreateAppLoggerOptions {
 	logDirectory: string;
-	maximumFileSizeBytes?: number;
-	maximumWriteAttempts?: number;
-	retryDelayMs?: number;
-	backendFactory?: CreateSpotLoggerBackend;
+	fileName: string;
+	maximumFileSizeBytes: number;
+	retainedArchiveCount: number;
+	maximumWriteAttempts: number;
+	retryDelayMs: number;
+	backendFactory?: CreateAppLoggerBackend;
 	now?: () => Date;
 }
 
-export interface SpotLogger {
-	debug: (message: string, fields?: SpotLogFields) => void;
-	error: (message: string, fields?: SpotLogFields) => void;
-	info: (message: string, fields?: SpotLogFields) => void;
-	warn: (message: string, fields?: SpotLogFields) => void;
+export interface AppLogger {
+	debug: (message: string, fields?: AppLogFields) => void;
+	error: (message: string, fields?: AppLogFields) => void;
+	info: (message: string, fields?: AppLogFields) => void;
+	warn: (message: string, fields?: AppLogFields) => void;
 	flush: () => Promise<void>;
-	getStatus: () => SpotLoggerStatus;
-	getConfiguration: () => SpotLoggerConfiguration;
+	getStatus: () => AppLoggerStatus;
+	getConfiguration: () => AppLoggerConfiguration;
 }
 
-const createElectronLoggerBackend: CreateSpotLoggerBackend = (logId) => {
-	return electronLog.create({ logId }) as unknown as SpotLoggerBackend;
+const createElectronLoggerBackend: CreateAppLoggerBackend = (logId) => {
+	return electronLog.create({ logId }) as unknown as AppLoggerBackend;
 };
 
-const createUninitializedSpotLogger = (): SpotLogger => {
+const createUninitializedAppLogger = (): AppLogger => {
 	return {
 		debug: () => {
 			return undefined;
@@ -113,43 +115,44 @@ const createUninitializedSpotLogger = (): SpotLogger => {
 		getStatus: () => {
 			return {
 				state: 'unavailable',
-				message: SPOT_LOGGER_NOT_INITIALIZED_MESSAGE
+				message: LOGGER_NOT_INITIALIZED_MESSAGE
 			};
 		},
 		getConfiguration: () => {
-			throw new Error(SPOT_LOGGER_NOT_INITIALIZED_MESSAGE);
+			throw new Error(LOGGER_NOT_INITIALIZED_MESSAGE);
 		}
 	};
 };
 
-let activeSpotLogger = createUninitializedSpotLogger();
+let activeAppLogger = createUninitializedAppLogger();
 
-export const spotLogger: SpotLogger = {
+// The process-wide logger. Every module writes through this handle, so that logging can be initialized once at startup without threading a logger through every call.
+export const appLogger: AppLogger = {
 	debug: (message, fields) => {
-		activeSpotLogger.debug(message, fields);
+		activeAppLogger.debug(message, fields);
 	},
 	error: (message, fields) => {
-		activeSpotLogger.error(message, fields);
+		activeAppLogger.error(message, fields);
 	},
 	info: (message, fields) => {
-		activeSpotLogger.info(message, fields);
+		activeAppLogger.info(message, fields);
 	},
 	warn: (message, fields) => {
-		activeSpotLogger.warn(message, fields);
+		activeAppLogger.warn(message, fields);
 	},
 	flush: () => {
-		return activeSpotLogger.flush();
+		return activeAppLogger.flush();
 	},
 	getStatus: () => {
-		return activeSpotLogger.getStatus();
+		return activeAppLogger.getStatus();
 	},
 	getConfiguration: () => {
-		return activeSpotLogger.getConfiguration();
+		return activeAppLogger.getConfiguration();
 	}
 };
 
-const createSpotLogId = (logDirectory: string): string => {
-	return `spot-logger-${logDirectory.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
+const createLogId = (logDirectory: string): string => {
+	return `app-logger-${logDirectory.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
 };
 
 const sleep = (durationMs: number): Promise<void> => {
@@ -162,21 +165,9 @@ const sleep = (durationMs: number): Promise<void> => {
 	});
 };
 
-const getErrorMessage = (error: unknown): string => {
-	if(error instanceof Error) {
-		return error.message;
-	}
-
-	if(error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
-		return error.message;
-	}
-
-	return String(error);
-};
-
 const configureLoggerBackend = (
-	backend: SpotLoggerBackend,
-	configuration: SpotLoggerConfiguration
+	backend: AppLoggerBackend,
+	configuration: AppLoggerConfiguration
 ): void => {
 	if(backend.transports.console) {
 		backend.transports.console.level = false;
@@ -201,11 +192,11 @@ const configureLoggerBackend = (
 };
 
 const createLogEntry = (
-	level: SpotLogLevel,
+	level: AppLogLevel,
 	message: string,
-	fields: SpotLogFields | undefined,
+	fields: AppLogFields | undefined,
 	now: () => Date
-): SpotLogEntry => {
+): AppLogEntry => {
 	return {
 		createdAt: now().toISOString(),
 		level,
@@ -214,18 +205,18 @@ const createLogEntry = (
 	};
 };
 
-const serializeLogEntry = (entry: SpotLogEntry): string => {
+const serializeLogEntry = (entry: AppLogEntry): string => {
 	return JSON.stringify(entry);
 };
 
 const assertCurrentLogEndsWithLine = (filePath: string, line: string): void => {
 	if(!existsSync(filePath)) {
-		throw new Error(`SPOT log file "${filePath}" was not written.`);
+		throw new Error(`Log file "${filePath}" was not written.`);
 	}
 
 	const content = readFileSync(filePath, 'utf8');
 	if(!content.endsWith(`${line}${os.EOL}`)) {
-		throw new Error(`SPOT log file "${filePath}" did not receive the expected line.`);
+		throw new Error(`Log file "${filePath}" did not receive the expected line.`);
 	}
 };
 
@@ -237,7 +228,7 @@ const assertLogFileWritable = (logDirectory: string, filePath: string): void => 
 };
 
 const createStartupFailureMessage = (filePath: string, error: unknown): string => {
-	return `${SPOT_LOG_WRITE_FAILED_MESSAGE} Could not open "${filePath}" for appending. ${getErrorMessage(error)}`;
+	return `${LOG_WRITE_FAILED_MESSAGE} Could not open "${filePath}" for appending. ${getErrorMessage(error)}`;
 };
 
 const getStartupFailureMessage = (logDirectory: string, filePath: string): string | undefined => {
@@ -250,31 +241,33 @@ const getStartupFailureMessage = (logDirectory: string, filePath: string): strin
 	}
 };
 
-export const createSpotLogger = ({
+export const createAppLogger = ({
 	logDirectory,
-	maximumFileSizeBytes = LOGGING_CONFIG.maximumFileSizeBytes,
-	maximumWriteAttempts = LOGGING_CONFIG.maximumWriteAttempts,
-	retryDelayMs = LOGGING_CONFIG.retryDelayMs,
+	fileName,
+	maximumFileSizeBytes,
+	retainedArchiveCount,
+	maximumWriteAttempts,
+	retryDelayMs,
 	backendFactory = createElectronLoggerBackend,
 	now = () => {
 		return new Date();
 	}
-}: CreateSpotLoggerOptions): SpotLogger => {
-	const configuration: SpotLoggerConfiguration = {
-		filePath: path.join(logDirectory, LOGGING_CONFIG.fileName),
-		fileName: LOGGING_CONFIG.fileName,
+}: CreateAppLoggerOptions): AppLogger => {
+	const configuration: AppLoggerConfiguration = {
+		filePath: path.join(logDirectory, fileName),
+		fileName,
 		maximumFileSizeBytes,
-		retainedArchiveCount: LOGGING_CONFIG.retainedArchiveCount,
+		retainedArchiveCount,
 		maximumWriteAttempts,
 		retryDelayMs
 	};
-	const backend = backendFactory(createSpotLogId(logDirectory));
+	const backend = backendFactory(createLogId(logDirectory));
 	const pendingWrites = new Set<Promise<void>>();
 
 	configureLoggerBackend(backend, configuration);
 	const startupFailureMessage = getStartupFailureMessage(logDirectory, configuration.filePath);
 
-	const getStatus = (): SpotLoggerStatus => {
+	const getStatus = (): AppLoggerStatus => {
 		if(startupFailureMessage) {
 			return {
 				state: 'unavailable',
@@ -288,9 +281,9 @@ export const createSpotLogger = ({
 	};
 
 	const write = async(
-		level: SpotLogLevel,
+		level: AppLogLevel,
 		message: string,
-		fields?: SpotLogFields
+		fields?: AppLogFields
 	): Promise<void> => {
 		for(let attempt = 1; attempt <= maximumWriteAttempts; attempt += 1) {
 			try {
@@ -310,9 +303,9 @@ export const createSpotLogger = ({
 	};
 
 	const queueWrite = (
-		level: SpotLogLevel,
+		level: AppLogLevel,
 		message: string,
-		fields?: SpotLogFields
+		fields?: AppLogFields
 	): void => {
 		const pendingWrite = write(level, message, fields).finally(() => {
 			pendingWrites.delete(pendingWrite);
@@ -345,12 +338,12 @@ export const createSpotLogger = ({
 	};
 };
 
-export const initializeSpotLogger = (options: CreateSpotLoggerOptions): SpotLogger => {
-	activeSpotLogger = createSpotLogger(options);
+export const initializeAppLogger = (options: CreateAppLoggerOptions): AppLogger => {
+	activeAppLogger = createAppLogger(options);
 
-	return activeSpotLogger;
+	return activeAppLogger;
 };
 
-export const resetSpotLoggerForTests = (): void => {
-	activeSpotLogger = createUninitializedSpotLogger();
+export const resetAppLoggerForTests = (): void => {
+	activeAppLogger = createUninitializedAppLogger();
 };

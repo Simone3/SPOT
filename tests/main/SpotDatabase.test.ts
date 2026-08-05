@@ -1,8 +1,9 @@
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { initializeSpotTestLogger } from '../testUtils';
 import { LOGGING_CONFIG, STORAGE_CONFIG } from 'src/config/AppConfig';
-import { initializeSpotLogger, resetSpotLoggerForTests, spotLogger as processSpotLogger, type SpotLogEntry } from 'src/main/logging/SpotLogger';
+import { appLogger as processAppLogger, resetAppLoggerForTests, type AppLogEntry } from 'src/framework/main/logging/AppLogger';
 import { openSpotDatabase } from 'src/main/storage/SpotDatabase';
 
 interface TableColumnRow {
@@ -21,7 +22,7 @@ const makeTempStorageDirectory = (): string => {
 	return mkdtempSync(path.join(tmpdir(), 'spot-storage-'));
 };
 
-const readSpotLogEntries = (storageDirectory: string): SpotLogEntry[] => {
+const readSpotLogEntries = (storageDirectory: string): AppLogEntry[] => {
 	const content = readFileSync(path.join(storageDirectory, LOGGING_CONFIG.fileName), 'utf8').trim();
 
 	if(!content) {
@@ -29,7 +30,7 @@ const readSpotLogEntries = (storageDirectory: string): SpotLogEntry[] => {
 	}
 
 	return content.split(/\r?\n/).map((line) => {
-		return JSON.parse(line) as SpotLogEntry;
+		return JSON.parse(line) as AppLogEntry;
 	});
 };
 
@@ -37,8 +38,8 @@ describe('SpotDatabase', () => {
 	const tempStorageDirectories: string[] = [];
 
 	afterEach(async() => {
-		await processSpotLogger.flush();
-		resetSpotLoggerForTests();
+		await processAppLogger.flush();
+		resetAppLoggerForTests();
 
 		while(tempStorageDirectories.length > 0) {
 			const tempStorageDirectory = tempStorageDirectories.pop()!;
@@ -159,7 +160,7 @@ describe('SpotDatabase', () => {
 		const storageDirectory = makeTempStorageDirectory();
 		tempStorageDirectories.push(storageDirectory);
 		const appliedAt = new Date('2026-06-06T12:00:00.000Z');
-		initializeSpotLogger({
+		initializeSpotTestLogger({
 			logDirectory: storageDirectory,
 			retryDelayMs: 0,
 			now: () => {
@@ -183,7 +184,7 @@ describe('SpotDatabase', () => {
 		finally {
 			spotDatabase.close();
 		}
-		await processSpotLogger.flush();
+		await processAppLogger.flush();
 
 		expect(readSpotLogEntries(storageDirectory)).toEqual(expect.arrayContaining([
 			expect.objectContaining({

@@ -1,3 +1,4 @@
+import { createInvalidChangeError } from 'src/framework/main/storage/InvalidChangeError';
 import type { PersistedTask, PersistedTaskChange, Task, TaskPriorityValue, TaskStatus } from 'src/types/TaskTypes';
 
 export interface TaskRow {
@@ -50,10 +51,6 @@ interface AnyTaskFieldColumnMapping {
 	fromRow: (row: TaskRow) => PersistedTask[PersistedTaskFieldName];
 }
 
-interface InvalidTaskChangeError extends Error {
-	invalidTaskChange: true;
-}
-
 const TASK_STATUSES = new Set<TaskStatus>([ 'ACTIVE', 'COMPLETED' ]);
 
 const TASK_PRIORITIES = new Set<TaskPriorityValue>([ 'URGENT', 'HIGH', 'NORMAL', 'LOW' ]);
@@ -96,26 +93,6 @@ export const createImmutableTaskFieldChangeMessage = (taskField: string, columnN
 
 export const createMissingRequiredTaskFieldMessage = (taskField: string): string => {
 	return `Task change field "${taskField}" cannot be undefined.`;
-};
-
-/**
- * Marks a command the database refuses and would refuse again in exactly the same way, so that React drops it instead of
- * retrying it forever in front of every change the user makes afterwards.
- * @param message Failure message.
- * @returns The error carrying the invalid-command marker.
- */
-export const createInvalidTaskChangeError = (message: string): InvalidTaskChangeError => {
-	const error = new Error(message) as InvalidTaskChangeError;
-	error.invalidTaskChange = true;
-	return error;
-};
-
-export const isInvalidTaskChangeError = (error: unknown): error is InvalidTaskChangeError => {
-	return Boolean(
-		error &&
-		typeof error === 'object' &&
-		(error as Partial<InvalidTaskChangeError>).invalidTaskChange
-	);
 };
 
 const getTaskStatusFromRow = (row: TaskRow): TaskStatus => {
@@ -322,7 +299,7 @@ const getTaskChangeFieldValue = (
 
 	// The same change would always be refused in the same way, so it must not look like a database failure the queue can retry
 	if(value === undefined && mapping.required) {
-		throw createInvalidTaskChangeError(createMissingRequiredTaskFieldMessage(mapping.taskField));
+		throw createInvalidChangeError(createMissingRequiredTaskFieldMessage(mapping.taskField));
 	}
 
 	return value;
@@ -347,7 +324,7 @@ export const taskChangeToTaskUpdateColumns = (
 		}
 
 		if(!mapping.mutable) {
-			throw createInvalidTaskChangeError(createImmutableTaskFieldChangeMessage(mapping.taskField, mapping.columnName));
+			throw createInvalidChangeError(createImmutableTaskFieldChangeMessage(mapping.taskField, mapping.columnName));
 		}
 
 		columns.push({

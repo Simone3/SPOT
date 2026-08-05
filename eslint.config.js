@@ -12,6 +12,16 @@ const reactHooksPlugin = require('eslint-plugin-react-hooks');
 
 const sharedFiles = [ 'src/**/*.ts', 'src/**/*.tsx', 'tests/**/*.ts', 'tests/**/*.tsx' ];
 const testFiles = [ 'tests/**/*.test.ts', 'tests/**/*.test.tsx' ];
+const frameworkFiles = [ 'src/framework/**/*.ts', 'src/framework/**/*.tsx' ];
+
+// "src/framework" is the reusable scaffolding: it is meant to be lifted into another application as it is, so it must never
+// reach back into SPOT. Everything it needs about SPOT arrives through its options.
+const frameworkForbiddenImportPatterns = [
+	{
+		group: [ 'src/components/**', 'src/contexts/**', 'src/logic/**', 'src/main/**', 'src/types/**', 'src/utils/**', 'src/config/**', 'src/index*' ],
+		message: 'src/framework must not import application code. Pass what it needs in through its options instead.'
+	}
+];
 const importResolverExtensions = [ '.js', '.jsx', '.ts', '.tsx', '.d.ts', '.json', '.css', '.svg', '.png' ];
 
 const warnifyRuleConfig = (ruleConfig) => {
@@ -502,6 +512,12 @@ module.exports = defineConfig([
 			...reactSafetyRules,
 			...reactHooksRules,
 			'react/display-name': 'off'
+		}
+	},
+	{
+		files: frameworkFiles,
+		rules: {
+			'no-restricted-imports': [ 'warn', { patterns: frameworkForbiddenImportPatterns }]
 		}
 	},
 	{

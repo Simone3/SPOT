@@ -34,6 +34,7 @@ npm test -- tests/logic/SomeFile.spec.ts
 - Do not add frameworks such as Vite or Next.js. Plain React + TypeScript + CSS only.
 - Leave ignored files and `.gitignore` patterns alone.
 - Do not add an external SQLite dependency. The implementation uses Electron's bundled `node:sqlite`; any exception must be documented in `DOCUMENTATION.md`.
+- `src/framework` is reusable scaffolding meant to be lifted into another application as it is. It must NEVER import from `src/components`, `src/contexts`, `src/logic`, `src/main`, `src/types`, `src/utils`, or `src/config`. Anything it needs about SPOT is passed in through its options. ESLint enforces this.
 
 ## Code Conventions
 
@@ -41,6 +42,8 @@ npm test -- tests/logic/SomeFile.spec.ts
 - Define TypeScript types in the owning `.ts`/`.tsx` file whenever practical. Shared cross-owner types live under `src/types` in semantic files such as `TaskTypes.ts`, `DomainTypes.ts`, `FilterTypes.ts`.
 - Prefer existing project patterns over new abstractions, but do centralize behavior into shared components/utilities when convenient.
 - Tunable constants (sizes, delays, retry policies, file and directory names) belong in `src/config/AppConfig.ts`, not inline in modules. Message strings stay in the module that owns them.
+- `src/framework` never reads `AppConfig`: it takes those values as parameters, and the SPOT adapters pass them in. It holds no module-level state either, so everything is created by a factory. The one exception is the process-wide `appLogger`, which the application initializes once at startup.
+- Put new code in `src/framework` only when it would be just as useful to a different application, and in SPOT otherwise. When in doubt, put it in SPOT: moving it later is easy, untangling it is not.
 - Match the existing code style exactly, including spacing and newline conventions. Read a neighboring file before writing a new one.
 - Preserve the storage command names: `task.create`, `task.update`, `task.delete`, `tasks.updateMany`.
 - Database failures are user-facing: surface task-save feedback on write failure and reconcile state. Operational-log failures are best-effort and ignored by React when SQLite succeeds. Backup failures are user-facing too, but as a soft notice: they must never be routed through the database error path, because the tasks are already saved locally.
@@ -49,7 +52,9 @@ npm test -- tests/logic/SomeFile.spec.ts
 
 ## Testing
 
-Testing stays minimal but meaningful: focused unit tests for important logic plus 1-2 smoke tests for critical user flows. New logic in `src/logic`, `src/utils`, and `src/main/storage` should come with unit tests.
+Testing stays minimal but meaningful: focused unit tests for important logic plus 1-2 smoke tests for critical user flows. New logic in `src/logic`, `src/utils`, `src/main/storage`, and `src/framework` should come with unit tests.
+
+Tests for `src/framework` live in `tests/framework` and must depend only on framework modules, so they travel with the folder. SPOT tests live in `tests/main`, `tests/logic`, `tests/components`, and `tests/utils`.
 
 All three checks must pass before a feature or fix is considered done:
 

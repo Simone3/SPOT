@@ -1,11 +1,30 @@
 import { appendFileSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { EOL, tmpdir } from 'node:os';
 import path from 'node:path';
-import { LOGGING_CONFIG } from 'src/config/AppConfig';
-import { createSpotLogger, initializeSpotLogger, resetSpotLoggerForTests, SPOT_LOG_WRITE_FAILED_MESSAGE, SPOT_LOGGER_NOT_INITIALIZED_MESSAGE, spotLogger as processSpotLogger, type CreateSpotLoggerBackend, type SpotLogEntry } from 'src/main/logging/SpotLogger';
+import { appLogger as processAppLogger, createAppLogger, initializeAppLogger, LOG_WRITE_FAILED_MESSAGE, LOGGER_NOT_INITIALIZED_MESSAGE, resetAppLoggerForTests, type AppLogEntry, type CreateAppLoggerBackend, type CreateAppLoggerOptions } from 'src/framework/main/logging/AppLogger';
+
+const TEST_LOG_FILE_NAME = 'app-logs.ndjson';
+
+const TEST_RETAINED_ARCHIVE_COUNT = 1;
+
+// The framework logger takes every setting from its caller, so the tests supply one baseline and override only what they exercise
+const createTestLoggerOptions = (options: Partial<CreateAppLoggerOptions> & Pick<CreateAppLoggerOptions, 'logDirectory'>): CreateAppLoggerOptions => {
+	return {
+		fileName: TEST_LOG_FILE_NAME,
+		maximumFileSizeBytes: 1024 * 1024,
+		retainedArchiveCount: TEST_RETAINED_ARCHIVE_COUNT,
+		maximumWriteAttempts: 3,
+		retryDelayMs: 25,
+		...options
+	};
+};
+
+const createTestLogger = (options: Partial<CreateAppLoggerOptions> & Pick<CreateAppLoggerOptions, 'logDirectory'>) => {
+	return createAppLogger(createTestLoggerOptions(options));
+};
 
 const makeTempLogDirectory = (): string => {
-	return mkdtempSync(path.join(tmpdir(), 'spot-logger-'));
+	return mkdtempSync(path.join(tmpdir(), 'app-logger-'));
 };
 
 const sleep = (durationMs: number): Promise<void> => {
@@ -35,19 +54,19 @@ const waitForExpectation = async(expectation: () => void): Promise<void> => {
 	throw new Error(String(lastError));
 };
 
-const readSpotLogEntries = (logDirectory: string): SpotLogEntry[] => {
-	const content = readFileSync(path.join(logDirectory, LOGGING_CONFIG.fileName), 'utf8').trim();
+const readAppLogEntries = (logDirectory: string): AppLogEntry[] => {
+	const content = readFileSync(path.join(logDirectory, TEST_LOG_FILE_NAME), 'utf8').trim();
 
 	if(!content) {
 		return [];
 	}
 
 	return content.split(/\r?\n/).map((line) => {
-		return JSON.parse(line) as SpotLogEntry;
+		return JSON.parse(line) as AppLogEntry;
 	});
 };
 
-const createFakeBackendFactory = (write: (message: string) => void): CreateSpotLoggerBackend => {
+const createFakeBackendFactory = (write: (message: string) => void): CreateAppLoggerBackend => {
 	return () => {
 		return {
 			debug: write,
@@ -81,12 +100,12 @@ const createFakeBackendFactory = (write: (message: string) => void): CreateSpotL
 	};
 };
 
-describe('SpotLogger', () => {
+describe('AppLogger', () => {
 	const tempStorageDirectories: string[] = [];
 
 	afterEach(async() => {
-		await processSpotLogger.flush();
-		resetSpotLoggerForTests();
+		await processAppLogger.flush();
+		resetAppLoggerForTests();
 
 		while(tempStorageDirectories.length > 0) {
 			const tempStorageDirectory = tempStorageDirectories.pop()!;
@@ -95,39 +114,39 @@ describe('SpotLogger', () => {
 	});
 
 	test('keeps the process-wide logger safe before initialization', async() => {
-		expect(processSpotLogger.getStatus()).toEqual({
+		expect(processAppLogger.getStatus()).toEqual({
 			state: 'unavailable',
-			message: SPOT_LOGGER_NOT_INITIALIZED_MESSAGE
+			message: LOGGER_NOT_INITIALIZED_MESSAGE
 		});
 		expect(() => {
-			processSpotLogger.info('Ignored before startup initialization');
+			processAppLogger.info('Ignored before startup initialization');
 		}).not.toThrow();
-		await expect(processSpotLogger.flush()).resolves.toBeUndefined();
+		await expect(processAppLogger.flush()).resolves.toBeUndefined();
 		expect(() => {
-			processSpotLogger.getConfiguration();
-		}).toThrow(SPOT_LOGGER_NOT_INITIALIZED_MESSAGE);
+			processAppLogger.getConfiguration();
+		}).toThrow(LOGGER_NOT_INITIALIZED_MESSAGE);
 	});
 
 	test('exposes initialized logging through a stable process-wide utility', () => {
-		const processLogger = processSpotLogger;
+		const processLogger = processAppLogger;
 		const logDirectory = makeTempLogDirectory();
 		tempStorageDirectories.push(logDirectory);
 		const createdAt = new Date('2026-06-06T12:00:00.000Z');
 
-		initializeSpotLogger({
+		initializeAppLogger(createTestLoggerOptions({
 			logDirectory,
 			retryDelayMs: 0,
 			now: () => {
 				return createdAt;
 			}
-		});
+		}));
 
-		expect(processSpotLogger).toBe(processLogger);
-		processSpotLogger.info('Process logger initialized', {
+		expect(processAppLogger).toBe(processLogger);
+		processAppLogger.info('Process logger initialized', {
 			type: 'main.startup'
 		});
 
-		expect(readSpotLogEntries(logDirectory)).toEqual([
+		expect(readAppLogEntries(logDirectory)).toEqual([
 			{
 				createdAt: createdAt.toISOString(),
 				level: 'info',
@@ -141,7 +160,7 @@ describe('SpotLogger', () => {
 		const logDirectory = makeTempLogDirectory();
 		tempStorageDirectories.push(logDirectory);
 		const createdAt = new Date('2026-06-06T12:00:00.000Z');
-		const spotLogger = createSpotLogger({
+		const logger = createTestLogger({
 			logDirectory,
 			retryDelayMs: 0,
 			now: () => {
@@ -149,22 +168,22 @@ describe('SpotLogger', () => {
 			}
 		});
 
-		spotLogger.info('React storage command received', {
+		logger.info('React storage command received', {
 			type: 'react.command',
 			command: 'task.create'
 		});
-		spotLogger.warn('Storage warning', {
+		logger.warn('Storage warning', {
 			type: 'storage.warning'
 		});
-		spotLogger.error('Storage SQL query failed', {
+		logger.error('Storage SQL query failed', {
 			type: 'sql.query',
 			elapsedMillis: 3
 		});
-		spotLogger.debug('Storage debug detail', {
+		logger.debug('Storage debug detail', {
 			type: 'storage.debug'
 		});
 
-		expect(readSpotLogEntries(logDirectory)).toEqual([
+		expect(readAppLogEntries(logDirectory)).toEqual([
 			{
 				createdAt: createdAt.toISOString(),
 				level: 'info',
@@ -192,7 +211,7 @@ describe('SpotLogger', () => {
 				type: 'storage.debug'
 			}
 		]);
-		expect(spotLogger.getStatus()).toEqual({
+		expect(logger.getStatus()).toEqual({
 			state: 'healthy'
 		});
 	});
@@ -202,7 +221,7 @@ describe('SpotLogger', () => {
 		tempStorageDirectories.push(parentDirectory);
 		const logDirectory = path.join(parentDirectory, 'storage');
 		const createdAt = new Date('2026-06-06T12:00:00.000Z');
-		const spotLogger = createSpotLogger({
+		const logger = createTestLogger({
 			logDirectory,
 			retryDelayMs: 0,
 			now: () => {
@@ -210,14 +229,14 @@ describe('SpotLogger', () => {
 			}
 		});
 
-		spotLogger.info('Logger directory created', {
+		logger.info('Logger directory created', {
 			type: 'main.startup'
 		});
 
-		expect(spotLogger.getStatus()).toEqual({
+		expect(logger.getStatus()).toEqual({
 			state: 'healthy'
 		});
-		expect(readSpotLogEntries(logDirectory)).toEqual([
+		expect(readAppLogEntries(logDirectory)).toEqual([
 			{
 				createdAt: createdAt.toISOString(),
 				level: 'info',
@@ -233,7 +252,7 @@ describe('SpotLogger', () => {
 		const logDirectory = path.join(parentDirectory, 'not-a-directory');
 		writeFileSync(logDirectory, 'file', 'utf8');
 
-		const spotLogger = createSpotLogger({
+		const logger = createTestLogger({
 			logDirectory,
 			maximumWriteAttempts: 1,
 			backendFactory: createFakeBackendFactory(() => {
@@ -242,74 +261,74 @@ describe('SpotLogger', () => {
 			retryDelayMs: 0
 		});
 
-		expect(spotLogger.getStatus()).toEqual({
+		expect(logger.getStatus()).toEqual({
 			state: 'unavailable',
 			message: expect.stringContaining('Could not open')
 		});
-		expect(spotLogger.getStatus()).toEqual({
+		expect(logger.getStatus()).toEqual({
 			state: 'unavailable',
-			message: expect.stringContaining(SPOT_LOG_WRITE_FAILED_MESSAGE)
+			message: expect.stringContaining(LOG_WRITE_FAILED_MESSAGE)
 		});
 		expect(() => {
-			spotLogger.info('Startup logging is unavailable');
+			logger.info('Startup logging is unavailable');
 		}).not.toThrow();
 	});
 
 	test('configures size-based rolling with bounded retention', () => {
 		const logDirectory = makeTempLogDirectory();
 		tempStorageDirectories.push(logDirectory);
-		const spotLogger = createSpotLogger({
+		const logger = createTestLogger({
 			logDirectory,
 			maximumFileSizeBytes: 180,
 			retryDelayMs: 0
 		});
 
 		for(let index = 0; index < 8; index += 1) {
-			spotLogger.info('Storage SQL query completed', {
+			logger.info('Storage SQL query completed', {
 				type: 'sql.query',
 				query: `SELECT '${'x'.repeat(80)}-${index}'`
 			});
 		}
 
-		const configuration = spotLogger.getConfiguration();
+		const configuration = logger.getConfiguration();
 		const logFiles = readdirSync(logDirectory).filter((fileName) => {
-			return fileName.startsWith('spot-logs');
+			return fileName.startsWith('app-logs');
 		});
 
 		expect(configuration.maximumFileSizeBytes).toBe(180);
-		expect(configuration.retainedArchiveCount).toBe(LOGGING_CONFIG.retainedArchiveCount);
-		expect(logFiles).toContain(LOGGING_CONFIG.fileName);
-		expect(logFiles).toContain('spot-logs.old.ndjson');
-		expect(logFiles.length).toBeLessThanOrEqual(LOGGING_CONFIG.retainedArchiveCount + 1);
+		expect(configuration.retainedArchiveCount).toBe(TEST_RETAINED_ARCHIVE_COUNT);
+		expect(logFiles).toContain(TEST_LOG_FILE_NAME);
+		expect(logFiles).toContain('app-logs.old.ndjson');
+		expect(logFiles.length).toBeLessThanOrEqual(TEST_RETAINED_ARCHIVE_COUNT + 1);
 	});
 
 	test('retries a failed write until a later attempt reaches the file', async() => {
 		const logDirectory = makeTempLogDirectory();
 		tempStorageDirectories.push(logDirectory);
-		const spotLogPath = path.join(logDirectory, LOGGING_CONFIG.fileName);
+		const appLogPath = path.join(logDirectory, TEST_LOG_FILE_NAME);
 		let attempts = 0;
 		const backendFactory = createFakeBackendFactory((message) => {
 			attempts += 1;
 
 			if(attempts > 1) {
-				appendFileSync(spotLogPath, `${message}${EOL}`, 'utf8');
+				appendFileSync(appLogPath, `${message}${EOL}`, 'utf8');
 			}
 		});
-		const spotLogger = createSpotLogger({
+		const logger = createTestLogger({
 			logDirectory,
 			maximumWriteAttempts: 3,
 			retryDelayMs: 0,
 			backendFactory
 		});
 
-		spotLogger.info('Storage SQL query completed', {
+		logger.info('Storage SQL query completed', {
 			type: 'sql.query',
 			query: 'SELECT retry_success'
 		});
 
 		await waitForExpectation(() => {
 			expect(attempts).toBe(2);
-			expect(readSpotLogEntries(logDirectory)).toEqual([
+			expect(readAppLogEntries(logDirectory)).toEqual([
 				expect.objectContaining({
 					level: 'info',
 					message: 'Storage SQL query completed',
@@ -323,31 +342,31 @@ describe('SpotLogger', () => {
 	test('flushes pending retry writes before resolving', async() => {
 		const logDirectory = makeTempLogDirectory();
 		tempStorageDirectories.push(logDirectory);
-		const spotLogPath = path.join(logDirectory, LOGGING_CONFIG.fileName);
+		const appLogPath = path.join(logDirectory, TEST_LOG_FILE_NAME);
 		let attempts = 0;
 		const backendFactory = createFakeBackendFactory((message) => {
 			attempts += 1;
 
 			if(attempts > 1) {
-				appendFileSync(spotLogPath, `${message}${EOL}`, 'utf8');
+				appendFileSync(appLogPath, `${message}${EOL}`, 'utf8');
 			}
 		});
-		const spotLogger = createSpotLogger({
+		const logger = createTestLogger({
 			logDirectory,
 			maximumWriteAttempts: 3,
 			retryDelayMs: 0,
 			backendFactory
 		});
 
-		spotLogger.info('Storage SQL query completed', {
+		logger.info('Storage SQL query completed', {
 			type: 'sql.query',
 			query: 'SELECT flush_retry_success'
 		});
 
-		await spotLogger.flush();
+		await logger.flush();
 
 		expect(attempts).toBe(2);
-		expect(readSpotLogEntries(logDirectory)).toEqual([
+		expect(readAppLogEntries(logDirectory)).toEqual([
 			expect.objectContaining({
 				level: 'info',
 				message: 'Storage SQL query completed',
@@ -364,7 +383,7 @@ describe('SpotLogger', () => {
 		const backendFactory = createFakeBackendFactory(() => {
 			attempts += 1;
 		});
-		const spotLogger = createSpotLogger({
+		const logger = createTestLogger({
 			logDirectory,
 			maximumWriteAttempts: 2,
 			retryDelayMs: 0,
@@ -372,7 +391,7 @@ describe('SpotLogger', () => {
 		});
 
 		expect(() => {
-			spotLogger.info('Storage SQL query completed', {
+			logger.info('Storage SQL query completed', {
 				type: 'sql.query',
 				query: 'SELECT retry_failure'
 			});
@@ -382,7 +401,7 @@ describe('SpotLogger', () => {
 			expect(attempts).toBe(2);
 		});
 
-		expect(spotLogger.getStatus()).toEqual({
+		expect(logger.getStatus()).toEqual({
 			state: 'healthy'
 		});
 	});
@@ -394,22 +413,22 @@ describe('SpotLogger', () => {
 		const backendFactory = createFakeBackendFactory(() => {
 			attempts += 1;
 		});
-		const spotLogger = createSpotLogger({
+		const logger = createTestLogger({
 			logDirectory,
 			maximumWriteAttempts: 2,
 			retryDelayMs: 0,
 			backendFactory
 		});
 
-		spotLogger.info('Storage SQL query completed', {
+		logger.info('Storage SQL query completed', {
 			type: 'sql.query',
 			query: 'SELECT flush_retry_failure'
 		});
 
-		await spotLogger.flush();
+		await logger.flush();
 
 		expect(attempts).toBe(2);
-		expect(spotLogger.getStatus()).toEqual({
+		expect(logger.getStatus()).toEqual({
 			state: 'healthy'
 		});
 	});

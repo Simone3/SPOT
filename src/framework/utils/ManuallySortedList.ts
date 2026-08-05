@@ -1,10 +1,16 @@
-import { TASKS_CONFIG } from 'src/config/AppConfig';
-
 export interface ManuallySortedItem {
 	sortPosition: number;
 }
 
 type CloneManuallySortedItem<TElement> = (element: TElement) => TElement;
+
+// "sortPositionStep" is the gap left between two adjacent sort positions, so that later insertions usually fit without renumbering anything
+export interface ManuallySortedListOptions<TElement> {
+	sortPositionStep: number;
+
+	// Called before an item's sort position changes, for callers that must not mutate the items they were given
+	cloneElement?: CloneManuallySortedItem<TElement>;
+}
 
 const setSortPosition = <TElement extends ManuallySortedItem>(list: TElement[], index: number, sortPosition: number, cloneElement?: CloneManuallySortedItem<TElement>): void => {
 	const element = cloneElement ? cloneElement(list[index]) : list[index];
@@ -22,10 +28,10 @@ const setSortPosition = <TElement extends ManuallySortedItem>(list: TElement[], 
  * @param list Sorted list to repair.
  * @param referenceSortPosition Sort position before the unsorted section.
  * @param unsortedStartIndex First unsorted item index.
- * @param cloneElement Optional callback to clone each item before its sort position changes.
+ * @param options Sort position step and optional item clone callback.
  * @returns The next index to inspect.
  */
-const fixSortPositionsInUnsortedSection = <TElement extends ManuallySortedItem>(list: TElement[], referenceSortPosition: number, unsortedStartIndex: number, cloneElement?: CloneManuallySortedItem<TElement>): number => {
+const fixSortPositionsInUnsortedSection = <TElement extends ManuallySortedItem>(list: TElement[], referenceSortPosition: number, unsortedStartIndex: number, options: ManuallySortedListOptions<TElement>): number => {
 	let i = unsortedStartIndex + 1;
 	let unsortedCount = 1;
 	while(i < list.length) {
@@ -34,7 +40,7 @@ const fixSortPositionsInUnsortedSection = <TElement extends ManuallySortedItem>(
 			// Recompute sort positions for all elements in between with proportionally distributed sortPosition between referenceSortPosition and the found sortPosition
 			const sortFixStep = (list[i].sortPosition - referenceSortPosition - 1) / (unsortedCount + 1);
 			for(let j = 0; j < unsortedCount; j++) {
-				setSortPosition(list, unsortedStartIndex + j, referenceSortPosition + Math.ceil((j + 1) * sortFixStep), cloneElement);
+				setSortPosition(list, unsortedStartIndex + j, referenceSortPosition + Math.ceil((j + 1) * sortFixStep), options.cloneElement);
 			}
 			return i + 1;
 		}
@@ -47,7 +53,7 @@ const fixSortPositionsInUnsortedSection = <TElement extends ManuallySortedItem>(
 
 	// We reached the end of the list without closing the "unsorted section": reload all trailing elements with the default step
 	for(let j = unsortedStartIndex; j < list.length; j++) {
-		setSortPosition(list, j, list[j - 1].sortPosition + TASKS_CONFIG.sortPositionStep, cloneElement);
+		setSortPosition(list, j, list[j - 1].sortPosition + options.sortPositionStep, options.cloneElement);
 	}
 	return i;
 };
@@ -59,10 +65,10 @@ const fixSortPositionsInUnsortedSection = <TElement extends ManuallySortedItem>(
  * @param list List receiving the item.
  * @param element Item to insert.
  * @param index Destination index.
- * @param cloneElement Optional callback to clone each item before its sort position changes.
+ * @param options Sort position step and optional item clone callback.
  * @returns The updated list.
  */
-export const insertIntoManuallySortedList = <TElement extends ManuallySortedItem>(list: TElement[], element: TElement, index: number, cloneElement?: CloneManuallySortedItem<TElement>): TElement[] => {
+export const insertIntoManuallySortedList = <TElement extends ManuallySortedItem>(list: TElement[], element: TElement, index: number, options: ManuallySortedListOptions<TElement>): TElement[] => {
 	if(!Array.isArray(list)) {
 		throw Error('List is not an array');
 	}
@@ -70,27 +76,27 @@ export const insertIntoManuallySortedList = <TElement extends ManuallySortedItem
 	// Empty list: start with position 0
 	if(list.length === 0) {
 		list.push(element);
-		setSortPosition(list, 0, 0, cloneElement);
+		setSortPosition(list, 0, 0, options.cloneElement);
 		return list;
 	}
 
 	// Add at the start of the list: position is the current first element minus the step
 	if(index <= 0) {
 		list.unshift(element);
-		setSortPosition(list, 0, list[1].sortPosition - TASKS_CONFIG.sortPositionStep, cloneElement);
+		setSortPosition(list, 0, list[1].sortPosition - options.sortPositionStep, options.cloneElement);
 		return list;
 	}
 
 	// Add at the end of the list: position is the current last element plus the step
 	if(index >= list.length) {
 		list.push(element);
-		setSortPosition(list, list.length - 1, list[list.length - 2].sortPosition + TASKS_CONFIG.sortPositionStep, cloneElement);
+		setSortPosition(list, list.length - 1, list[list.length - 2].sortPosition + options.sortPositionStep, options.cloneElement);
 		return list;
 	}
 
 	// Add in the middle of the list and then compute sortPosition to fit adjacent elements (possibly changing sortPosition of following elements if there's no space to fit the new one)
 	list.splice(index, 0, element);
-	fixSortPositionsInUnsortedSection(list, list[index - 1].sortPosition, index, cloneElement);
+	fixSortPositionsInUnsortedSection(list, list[index - 1].sortPosition, index, options);
 	return list;
 };
 
@@ -101,10 +107,10 @@ export const insertIntoManuallySortedList = <TElement extends ManuallySortedItem
  * @param list List containing the item.
  * @param fromIndex Current item index.
  * @param toIndex Destination item index.
- * @param cloneElement Optional callback to clone each item before its sort position changes.
+ * @param options Sort position step and optional item clone callback.
  * @returns The updated list.
  */
-export const moveInManuallySortedList = <TElement extends ManuallySortedItem>(list: TElement[], fromIndex: number, toIndex: number, cloneElement?: CloneManuallySortedItem<TElement>): TElement[] => {
+export const moveInManuallySortedList = <TElement extends ManuallySortedItem>(list: TElement[], fromIndex: number, toIndex: number, options: ManuallySortedListOptions<TElement>): TElement[] => {
 	if(!Array.isArray(list)) {
 		throw Error('List is not an array');
 	}
@@ -119,17 +125,17 @@ export const moveInManuallySortedList = <TElement extends ManuallySortedItem>(li
 
 	// Remove the element and re-add it at the requested index (this can probably be implemented more efficiently but enough for now...)
 	const [ element ] = list.splice(fromIndex, 1);
-	insertIntoManuallySortedList(list, element, toIndex, cloneElement);
+	insertIntoManuallySortedList(list, element, toIndex, options);
 	return list;
 };
 
 /**
- * Given a SORTED list, recomputes the "sortPosition" fields whenever necessary (i.e. where tasks are out of order with non-ascending "sortPosition" fields)
+ * Given a SORTED list, recomputes the "sortPosition" fields whenever necessary (i.e. where items are out of order with non-ascending "sortPosition" fields)
  * @param list Sorted list to repair.
- * @param cloneElement Optional callback to clone each item before its sort position changes.
+ * @param options Sort position step and optional item clone callback.
  * @returns The updated list.
  */
-export const recomputeSortPositions = <TElement extends ManuallySortedItem>(list: TElement[], cloneElement?: CloneManuallySortedItem<TElement>): TElement[] => {
+export const recomputeSortPositions = <TElement extends ManuallySortedItem>(list: TElement[], options: ManuallySortedListOptions<TElement>): TElement[] => {
 	if(list.length <= 1) {
 		return list;
 	}
@@ -138,7 +144,7 @@ export const recomputeSortPositions = <TElement extends ManuallySortedItem>(list
 	while(i < list.length) {
 		if(list[i - 1].sortPosition >= list[i].sortPosition) {
 			// Current element is unsorted, call the utility to close this "unsorted section" (possibly spanning more than one element)
-			i = fixSortPositionsInUnsortedSection(list, list[i - 1].sortPosition, i, cloneElement);
+			i = fixSortPositionsInUnsortedSection(list, list[i - 1].sortPosition, i, options);
 		}
 		else {
 			// All good with current sorting, move on

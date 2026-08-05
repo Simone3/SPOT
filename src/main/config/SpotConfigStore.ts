@@ -1,57 +1,40 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import path from 'node:path';
-import { spotLogger } from 'src/main/logging/SpotLogger';
+import type { BackupDirectoryStore } from 'src/framework/main/config/BackupLocationManager';
+import { createJsonConfigStore, type JsonConfigStore } from 'src/framework/main/config/JsonConfigStore';
 
 export interface SpotConfig {
 	backupDirectory?: string;
 }
 
-export interface SpotConfigStore {
-	read: () => SpotConfig;
-	write: (config: SpotConfig) => void;
-}
+export type SpotConfigStore = JsonConfigStore<SpotConfig>;
 
-const parseSpotConfig = (content: string): SpotConfig => {
-	const parsedContent: unknown = JSON.parse(content);
-
-	if(!parsedContent || typeof parsedContent !== 'object') {
+// Called with "undefined" when the configuration file is missing or unreadable, which is why every field is optional here
+const parseSpotConfig = (content: unknown): SpotConfig => {
+	if(!content || typeof content !== 'object') {
 		return {};
 	}
 
-	const { backupDirectory } = parsedContent as Partial<Record<keyof SpotConfig, unknown>>;
+	const { backupDirectory } = content as Partial<Record<keyof SpotConfig, unknown>>;
 
 	return {
 		backupDirectory: typeof backupDirectory === 'string' && backupDirectory ? backupDirectory : undefined
 	};
 };
 
-// A missing or unreadable configuration file is treated as an empty configuration, so a corrupted file behaves like a first startup instead of blocking the app
 export const createSpotConfigStore = (configFilePath: string): SpotConfigStore => {
-	const read = (): SpotConfig => {
-		try {
-			return parseSpotConfig(readFileSync(configFilePath, 'utf8'));
-		}
-		catch {
-			return {};
-		}
-	};
+	return createJsonConfigStore({
+		filePath: configFilePath,
+		parse: parseSpotConfig
+	});
+};
 
-	const write = (config: SpotConfig): void => {
-		try {
-			mkdirSync(path.dirname(configFilePath), { recursive: true });
-			writeFileSync(configFilePath, `${JSON.stringify(config, undefined, '\t')}\n`, 'utf8');
-		}
-		catch(error) {
-			spotLogger.error('Could not write the SPOT configuration file', {
-				type: 'config.write',
-				configFilePath,
-				error: String(error)
-			});
-		}
-	};
-
+// The backup folder is the only setting the backup location manager needs, so it reaches the configuration file through this narrow view of it
+export const createSpotBackupDirectoryStore = (configStore: SpotConfigStore): BackupDirectoryStore => {
 	return {
-		read,
-		write
+		read: () => {
+			return configStore.read().backupDirectory;
+		},
+		write: (directory: string) => {
+			configStore.write({ backupDirectory: directory });
+		}
 	};
 };

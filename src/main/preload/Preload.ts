@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
+import { subscribeToChannel } from 'src/framework/preload/IpcBridge';
 import { SPOT_BACKUP_LOCATION_IPC_CHANNELS } from 'src/types/BackupLocationIpcChannels';
 import type { SpotBackupLocationApi } from 'src/types/BackupLocationTypes';
 import { SPOT_STORAGE_IPC_CHANNELS } from 'src/types/TaskStorageIpcChannels';
@@ -30,26 +31,10 @@ const spotStorage: SpotStorageApi = {
 		return ipcRenderer.invoke(SPOT_STORAGE_IPC_CHANNELS.getStorageStatus);
 	},
 	onFlushPendingTaskChanges: (listener) => {
-		const flushListener = (): void => {
-			listener();
-		};
-
-		ipcRenderer.on(SPOT_STORAGE_IPC_CHANNELS.flushPendingTaskChanges, flushListener);
-
-		return () => {
-			ipcRenderer.removeListener(SPOT_STORAGE_IPC_CHANNELS.flushPendingTaskChanges, flushListener);
-		};
+		return subscribeToChannel(ipcRenderer, SPOT_STORAGE_IPC_CHANNELS.flushPendingTaskChanges, listener);
 	},
 	onBackupStatusChanged: (listener) => {
-		const backupStatusListener = (_event: unknown, status: BackupStatus): void => {
-			listener(status);
-		};
-
-		ipcRenderer.on(SPOT_STORAGE_IPC_CHANNELS.backupStatusChanged, backupStatusListener);
-
-		return () => {
-			ipcRenderer.removeListener(SPOT_STORAGE_IPC_CHANNELS.backupStatusChanged, backupStatusListener);
-		};
+		return subscribeToChannel<BackupStatus>(ipcRenderer, SPOT_STORAGE_IPC_CHANNELS.backupStatusChanged, listener);
 	},
 	notifyPendingTaskChangesFlushed: () => {
 		return ipcRenderer.invoke(SPOT_STORAGE_IPC_CHANNELS.pendingTaskChangesFlushed);

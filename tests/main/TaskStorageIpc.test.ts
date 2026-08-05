@@ -1,7 +1,7 @@
 import type { App, IpcMain, IpcMainInvokeEvent } from 'electron';
 import { makeTask } from '../testUtils';
 import { SHUTDOWN_CONFIG } from 'src/config/AppConfig';
-import { resetSpotLoggerForTests, spotLogger } from 'src/main/logging/SpotLogger';
+import { appLogger, resetAppLoggerForTests } from 'src/framework/main/logging/AppLogger';
 import { registerTaskStorageIpcHandlers, SPOT_STORAGE_IPC_CHANNELS, TASK_STORAGE_SHUTDOWN_MESSAGE } from 'src/main/ipc/TaskStorageIpc';
 import type { TaskStorage } from 'src/main/storage/TaskStorage';
 import type { LoadTasksResult, StorageStatus, TaskStorageCommand, TaskStorageCommandResult } from 'src/types/TaskStorageTypes';
@@ -118,7 +118,7 @@ describe('TaskStorageIpc', () => {
 	afterEach(() => {
 		jest.useRealTimers();
 		jest.restoreAllMocks();
-		resetSpotLoggerForTests();
+		resetAppLoggerForTests();
 	});
 
 	test('registers storage handlers on the narrow IPC channels', async() => {
@@ -166,7 +166,7 @@ describe('TaskStorageIpc', () => {
 		const prepareForShutdown = jest.fn(async() => {
 			return undefined;
 		});
-		const flushLogger = jest.spyOn(spotLogger, 'flush').mockResolvedValue(undefined);
+		const flushLogger = jest.spyOn(appLogger, 'flush').mockResolvedValue(undefined);
 		const event = {} as IpcMainInvokeEvent;
 		const beforeQuitEvent = {
 			preventDefault: jest.fn()
@@ -258,7 +258,7 @@ describe('TaskStorageIpc', () => {
 
 			return undefined;
 		});
-		jest.spyOn(spotLogger, 'flush').mockResolvedValue(undefined);
+		jest.spyOn(appLogger, 'flush').mockResolvedValue(undefined);
 		const flushTarget = {
 			send: jest.fn(),
 			isDestroyed: () => {
@@ -310,7 +310,7 @@ describe('TaskStorageIpc', () => {
 		const { handlers, ipcMain } = createMockIpcMain();
 		const { app, handlers: appHandlers } = createMockApp();
 		const { status, taskStorage } = createMockTaskStorage();
-		jest.spyOn(spotLogger, 'flush').mockResolvedValue(undefined);
+		jest.spyOn(appLogger, 'flush').mockResolvedValue(undefined);
 		const flushTarget = {
 			send: jest.fn()
 		};
@@ -408,7 +408,7 @@ describe('TaskStorageIpc', () => {
 		const { ipcMain } = createMockIpcMain();
 		const { app, handlers: appHandlers } = createMockApp();
 		const { taskStorage } = createMockTaskStorage();
-		jest.spyOn(spotLogger, 'flush').mockResolvedValue(undefined);
+		jest.spyOn(appLogger, 'flush').mockResolvedValue(undefined);
 		const flushTarget = {
 			send: jest.fn()
 		};
@@ -435,7 +435,7 @@ describe('TaskStorageIpc', () => {
 		const prepareForShutdown = jest.fn(async() => {
 			return undefined;
 		});
-		jest.spyOn(spotLogger, 'flush').mockResolvedValue(undefined);
+		jest.spyOn(appLogger, 'flush').mockResolvedValue(undefined);
 		const flushTarget = {
 			send: jest.fn()
 		};
@@ -531,7 +531,7 @@ describe('TaskStorageIpc', () => {
 		(app.quit as jest.Mock).mockImplementation(() => {
 			quitDeferred.resolve();
 		});
-		jest.spyOn(spotLogger, 'flush').mockResolvedValue(undefined);
+		jest.spyOn(appLogger, 'flush').mockResolvedValue(undefined);
 
 		registerTaskStorageIpcHandlers({
 			app,

@@ -1,20 +1,25 @@
-import path from 'node:path';
-import { STORAGE_CONFIG } from 'src/config/AppConfig';
-import { createSpotConfigStore, type SpotConfigStore } from 'src/main/config/SpotConfigStore';
-import type { SpotRuntimePaths } from 'src/main/config/SpotRuntimePaths';
-import { spotLogger } from 'src/main/logging/SpotLogger';
-import { ensureBackupDirectory, validateBackupDirectory } from 'src/main/storage/BackupDirectory';
-import type { TaskStorage } from 'src/main/storage/TaskStorage';
-import type { BackupLocation, SetBackupDirectoryResult } from 'src/types/BackupLocationTypes';
+import type { RuntimePaths } from 'src/framework/main/config/RuntimePaths';
+import { appLogger } from 'src/framework/main/logging/AppLogger';
+import { ensureBackupDirectory, validateBackupDirectory } from 'src/framework/main/storage/BackupDirectory';
+import { getErrorMessage } from 'src/framework/utils/ErrorUtils';
+import type { BackupLocation, SetBackupDirectoryResult } from 'src/framework/types/BackupTypes';
 
-type BackupLocationTaskStorage = Pick<TaskStorage, 'setBackupDirectory'>;
+interface BackupLocationStorage {
+	setBackupDirectory: (directory: string) => void;
+}
+
+// Where the selected folder is remembered between runs. Reading and writing only the folder keeps the manager out of the application configuration file shape.
+export interface BackupDirectoryStore {
+	read: () => string | undefined;
+	write: (directory: string) => void;
+}
 
 export interface CreateBackupLocationManagerOptions {
-	runtimePaths: SpotRuntimePaths;
-	taskStorage: BackupLocationTaskStorage;
+	runtimePaths: RuntimePaths;
+	storage: BackupLocationStorage;
+	directoryStore: BackupDirectoryStore;
 	runExclusively?: <TResult>(operation: () => Promise<TResult>) => Promise<TResult>;
 	onBackupDirectoryChanged?: () => void;
-	configStore?: SpotConfigStore;
 }
 
 export interface BackupLocationManager {
@@ -28,31 +33,23 @@ interface ApplyBackupDirectoryOptions {
 	persist: boolean;
 }
 
-const getErrorMessage = (error: unknown): string => {
-	if(error instanceof Error) {
-		return error.message;
-	}
-
-	return String(error);
-};
-
 // Owns the folder that receives the rotated database backups. Changing it never touches the database itself, which always stays in the local
-// database directory, so a folder that turns out to be unusable only costs the backups: SPOT falls back to the default folder and keeps working.
+// database directory, so a folder that turns out to be unusable only costs the backups: the application falls back to the default folder and keeps working.
 export const createBackupLocationManager = ({
 	runtimePaths,
-	taskStorage,
+	storage,
+	directoryStore,
 	runExclusively = (operation) => {
 		return operation();
 	},
-	onBackupDirectoryChanged,
-	configStore = createSpotConfigStore(runtimePaths.configFilePath)
+	onBackupDirectoryChanged
 }: CreateBackupLocationManagerOptions): BackupLocationManager => {
 	const createLocation = (directory: string, message?: string): BackupLocation => {
 		return {
 			directory,
 			defaultDirectory: runtimePaths.defaultBackupDirectory,
 			databaseDirectory: runtimePaths.databaseDirectory,
-			databasePath: path.join(runtimePaths.databaseDirectory, STORAGE_CONFIG.databaseFileName),
+			databasePath: runtimePaths.databasePath,
 			isDevelopment: runtimePaths.isDevelopment,
 			message
 		};
@@ -89,7 +86,7 @@ export const createBackupLocationManager = ({
 		const previousDirectory = location.directory;
 
 		await runExclusively(() => {
-			taskStorage.setBackupDirectory(directory);
+			storage.setBackupDirectory(directory);
 
 			return Promise.resolve();
 		});
@@ -97,10 +94,10 @@ export const createBackupLocationManager = ({
 		location = createLocation(directory);
 
 		if(persist) {
-			configStore.write({ backupDirectory: directory });
+			directoryStore.write(directory);
 		}
 
-		spotLogger.info('Backup folder selected', {
+		appLogger.info('Backup folder selected', {
 			type: 'config.backupDirectory',
 			previousDirectory,
 			directory,
@@ -118,7 +115,7 @@ export const createBackupLocationManager = ({
 
 	// Development runs always restart on the development backup folder, ignoring any folder selected during a previous development session
 	const initialize = async(): Promise<BackupLocation> => {
-		const savedDirectory = runtimePaths.isDevelopment ? undefined : configStore.read().backupDirectory;
+		const savedDirectory = runtimePaths.isDevelopment ? undefined : directoryStore.read();
 		const result = await applyBackupDirectory(savedDirectory || runtimePaths.defaultBackupDirectory, { persist: false });
 
 		if(result.ok || !savedDirectory) {
@@ -126,7 +123,7 @@ export const createBackupLocationManager = ({
 		}
 
 		// The saved folder may be on a drive that is not available right now: backups fall back to the default folder without any user action
-		spotLogger.warn('The saved backup folder cannot be used', {
+		appLogger.warn('The saved backup folder cannot be used', {
 			type: 'config.backupDirectory',
 			directory: savedDirectory,
 			error: result.message

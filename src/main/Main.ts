@@ -1,16 +1,17 @@
 import path from 'node:path';
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
-import { WINDOW_CONFIG } from 'src/config/AppConfig';
-import { createBackupLocationManager } from 'src/main/config/BackupLocationManager';
+import { BACKUP_CONFIG, LOGGING_CONFIG, WINDOW_CONFIG } from 'src/config/AppConfig';
+import { createBackupLocationManager } from 'src/framework/main/config/BackupLocationManager';
+import { initializeAppLogger } from 'src/framework/main/logging/AppLogger';
+import { createBackupScheduler, type BackupScheduler } from 'src/framework/main/storage/BackupScheduler';
+import type { BackupStatus } from 'src/framework/types/StorageTypes';
+import { createSpotBackupDirectoryStore, createSpotConfigStore } from 'src/main/config/SpotConfigStore';
 import { resolveSpotRuntimePaths } from 'src/main/config/SpotRuntimePaths';
 import { registerBackupLocationIpcHandlers } from 'src/main/ipc/BackupLocationIpc';
 import { registerTaskStorageIpcHandlers } from 'src/main/ipc/TaskStorageIpc';
-import { initializeSpotLogger } from 'src/main/logging/SpotLogger';
-import { createBackupScheduler, type BackupScheduler } from 'src/main/storage/BackupScheduler';
 import { createTaskStorage } from 'src/main/storage/TaskStorage';
 import { resolveWindowLoadTarget } from 'src/main/window/WindowLoadTarget';
 import { SPOT_STORAGE_IPC_CHANNELS } from 'src/types/TaskStorageIpcChannels';
-import type { BackupStatus } from 'src/types/TaskStorageTypes';
 
 let mainWindow: BrowserWindow | undefined;
 
@@ -66,8 +67,13 @@ const createWindow = ({ requestRendererFlushBeforeWindowClose }: CreateWindowOpt
 void app.whenReady().then(async() => {
 	const runtimePaths = resolveSpotRuntimePaths(app);
 
-	initializeSpotLogger({
-		logDirectory: runtimePaths.logDirectory
+	initializeAppLogger({
+		logDirectory: runtimePaths.logDirectory,
+		fileName: LOGGING_CONFIG.fileName,
+		maximumFileSizeBytes: LOGGING_CONFIG.maximumFileSizeBytes,
+		retainedArchiveCount: LOGGING_CONFIG.retainedArchiveCount,
+		maximumWriteAttempts: LOGGING_CONFIG.maximumWriteAttempts,
+		retryDelayMs: LOGGING_CONFIG.retryDelayMs
 	});
 
 	const taskStorage = createTaskStorage({
@@ -90,7 +96,7 @@ void app.whenReady().then(async() => {
 			return mainWindow?.webContents;
 		},
 		onTaskCommandApplied: () => {
-			backupScheduler?.notifyTasksChanged();
+			backupScheduler?.notifyDataChanged();
 		},
 		onBeforeStorageShutdown: () => {
 			return backupScheduler?.runFinalBackup() ?? Promise.resolve();
@@ -98,7 +104,9 @@ void app.whenReady().then(async() => {
 	});
 
 	backupScheduler = createBackupScheduler({
-		taskStorage,
+		storage: taskStorage,
+		delayAfterChangeMs: BACKUP_CONFIG.delayAfterChangeMs,
+		shutdownTimeoutMs: BACKUP_CONFIG.shutdownTimeoutMs,
 		runExclusively,
 		onBackupStatusChanged: (status: BackupStatus) => {
 			if(mainWindow && !mainWindow.isDestroyed()) {
@@ -109,10 +117,11 @@ void app.whenReady().then(async() => {
 
 	const backupLocationManager = createBackupLocationManager({
 		runtimePaths,
-		taskStorage,
+		storage: taskStorage,
+		directoryStore: createSpotBackupDirectoryStore(createSpotConfigStore(runtimePaths.configFilePath)),
 		runExclusively,
 		onBackupDirectoryChanged: () => {
-			backupScheduler?.notifyTasksChanged();
+			backupScheduler?.notifyDataChanged();
 		}
 	});
 

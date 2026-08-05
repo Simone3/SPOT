@@ -1,4 +1,8 @@
+import type { BackupStatus, StorageCommandResult, StorageFailure, StorageStatus } from 'src/framework/types/StorageTypes';
 import type { PersistedTask, PersistedTaskChange, Task } from 'src/types/TaskTypes';
+
+// The storage envelope is framework-owned: only the commands and the loaded records are SPOT concepts
+export type { BackupHealth, BackupResult, BackupStatus, StorageDatabaseHealth, StorageDatabaseStatus, StorageFailure, StorageFailureReason, StorageStatus } from 'src/framework/types/StorageTypes';
 
 export type TaskStorageCommandName = 'task.create' | 'task.update' | 'task.delete' | 'tasks.updateMany';
 
@@ -34,60 +38,13 @@ export interface TaskUpdateManyCommand {
 
 export type TaskStorageCommand = TaskCreateCommand | TaskUpdateCommand | TaskDeleteCommand | TaskUpdateManyCommand;
 
-export type StorageDatabaseHealth = 'not-configured' | 'healthy' | 'unavailable';
-
-export interface StorageDatabaseStatus {
-	state: StorageDatabaseHealth;
-	message?: string;
-}
-
-// The backup folder is a write-only destination for rotated copies, so a failing backup never means the tasks themselves are at risk
-export type BackupHealth = 'idle' | 'ok' | 'failed';
-
-export interface BackupStatus {
-	state: BackupHealth;
-	directory: string;
-	lastBackupAt?: string;
-	lastBackupPath?: string;
-	message?: string;
-}
-
-export type BackupResult = {
-	ok: true;
-	backupPath: string;
-	status: BackupStatus;
-} | {
-	ok: false;
-	message: string;
-	status: BackupStatus;
-};
-
-export interface StorageStatus {
-	database: StorageDatabaseStatus;
-	storageDirectory?: string;
-	databasePath?: string;
-	backup?: BackupStatus;
-}
-
-export type StorageFailureReason = 'not-implemented' | 'database-error' | 'invalid-command' | 'shutdown';
-
-export interface StorageFailure {
-	ok: false;
-	reason: StorageFailureReason;
-	message: string;
-	status: StorageStatus;
-}
-
 export type LoadTasksResult = {
 	ok: true;
 	tasks: Task[];
 	status: StorageStatus;
 } | StorageFailure;
 
-export type TaskStorageCommandResult = {
-	ok: true;
-	status: StorageStatus;
-} | StorageFailure;
+export type TaskStorageCommandResult = StorageCommandResult;
 
 export interface SpotStorageApi {
 	loadTasks: () => Promise<LoadTasksResult>;

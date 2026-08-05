@@ -1,5 +1,6 @@
+import { TASKS_CONFIG } from 'src/config/AppConfig';
+import { insertIntoManuallySortedList, moveInManuallySortedList, recomputeSortPositions } from 'src/framework/utils/ManuallySortedList';
 import type { Task, TaskChange, TaskPriorityValue, TasksContainer } from 'src/types/TaskTypes';
-import { insertIntoManuallySortedList, moveInManuallySortedList, recomputeSortPositions } from 'src/logic/ManuallySortedList';
 
 const PRIORITIES_SORT: Record<TaskPriorityValue, number> = {
 	LOW: 0,
@@ -149,7 +150,10 @@ export const forceSortActiveTasksByImportance = (tasksContainer: TasksContainer)
 	tasksContainer.active.sort(activeTasksImportanceCompareFunction);
 
 	// Re-compute sort positions where needed
-	recomputeSortPositions(tasksContainer.active, cloneTask);
+	recomputeSortPositions(tasksContainer.active, {
+		sortPositionStep: TASKS_CONFIG.sortPositionStep,
+		cloneElement: cloneTask
+	});
 };
 
 /**
@@ -187,7 +191,9 @@ const insertCompletedTask = (tasksContainer: TasksContainer, task: Task): void =
  */
 const insertActiveTask = (tasksContainer: TasksContainer, task: Task): void => {
 	task.completionDate = undefined;
-	insertIntoManuallySortedList(tasksContainer.active, task, 0);
+	insertIntoManuallySortedList(tasksContainer.active, task, 0, {
+		sortPositionStep: TASKS_CONFIG.sortPositionStep
+	});
 };
 
 /**
@@ -223,7 +229,10 @@ export const addNewTask = (tasksContainer: TasksContainer): Task => {
  * @param toIndex Destination active task index.
  */
 export const moveActiveTask = (tasksContainer: TasksContainer, fromIndex: number, toIndex: number): void => {
-	moveInManuallySortedList(tasksContainer.active, fromIndex, toIndex, cloneTask);
+	moveInManuallySortedList(tasksContainer.active, fromIndex, toIndex, {
+		sortPositionStep: TASKS_CONFIG.sortPositionStep,
+		cloneElement: cloneTask
+	});
 };
 
 /**

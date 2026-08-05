@@ -20,9 +20,11 @@ describe('SpotRuntimePaths', () => {
 
 		expect(resolveSpotRuntimePaths(app)).toEqual({
 			isDevelopment: false,
+			rootDirectory: userDataPath,
 			configFilePath: path.join(userDataPath, APP_CONFIG_FILE.fileName),
 			logDirectory: path.join(userDataPath, LOGGING_CONFIG.directoryName),
 			databaseDirectory: path.join(userDataPath, STORAGE_CONFIG.directoryName),
+			databasePath: path.join(userDataPath, STORAGE_CONFIG.directoryName, STORAGE_CONFIG.databaseFileName),
 			defaultBackupDirectory: path.join(userDataPath, BACKUP_CONFIG.directoryName)
 		});
 		expect(app.getPath).toHaveBeenCalledWith('userData');
@@ -33,9 +35,11 @@ describe('SpotRuntimePaths', () => {
 
 		expect(resolveSpotRuntimePaths(createMockApp(false))).toEqual({
 			isDevelopment: true,
+			rootDirectory: developmentPath,
 			configFilePath: path.join(developmentPath, APP_CONFIG_FILE.fileName),
 			logDirectory: path.join(developmentPath, LOGGING_CONFIG.directoryName),
 			databaseDirectory: path.join(developmentPath, STORAGE_CONFIG.directoryName),
+			databasePath: path.join(developmentPath, STORAGE_CONFIG.directoryName, STORAGE_CONFIG.databaseFileName),
 			defaultBackupDirectory: path.join(developmentPath, BACKUP_CONFIG.directoryName)
 		});
 	});

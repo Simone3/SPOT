@@ -1,22 +1,23 @@
-import { BACKUP_CONFIG } from 'src/config/AppConfig';
-import { spotLogger } from 'src/main/logging/SpotLogger';
-import type { TaskStorage } from 'src/main/storage/TaskStorage';
-import type { BackupStatus } from 'src/types/TaskStorageTypes';
+import { appLogger } from 'src/framework/main/logging/AppLogger';
+import { getErrorMessage } from 'src/framework/utils/ErrorUtils';
+import type { BackupResult, BackupStatus } from 'src/framework/types/StorageTypes';
 
-type BackupSchedulerStorage = Pick<TaskStorage, 'createBackup'>;
+interface BackupSchedulerStorage {
+	createBackup: () => Promise<BackupResult>;
+}
 
 export interface CreateBackupSchedulerOptions {
-	taskStorage: BackupSchedulerStorage;
+	storage: BackupSchedulerStorage;
+	delayAfterChangeMs: number;
+	shutdownTimeoutMs: number;
 
-	// Backups run on the same chain as the task commands, so a snapshot is never taken while a write transaction is open
+	// Backups run on the same chain as the storage commands, so a snapshot is never taken while a write transaction is open
 	runExclusively?: <TResult>(operation: () => Promise<TResult>) => Promise<TResult>;
 	onBackupStatusChanged?: (status: BackupStatus) => void;
-	delayAfterChangeMs?: number;
-	shutdownTimeoutMs?: number;
 }
 
 export interface BackupScheduler {
-	notifyTasksChanged: () => void;
+	notifyDataChanged: () => void;
 	runBackupNow: () => Promise<void>;
 	runFinalBackup: () => Promise<void>;
 	cancelScheduledBackup: () => void;
@@ -36,16 +37,16 @@ const runWithTimeout = async(operation: Promise<void>, timeoutMs: number): Promi
 	}
 };
 
-// Decides when the local database is copied to the backup folder: once the task edits have been quiet for a while, and once more on shutdown.
-// Backups are best effort by design, so a failing one is logged and reported but never blocks a task command or a quit.
+// Decides when the local database is copied to the backup folder: once the changes have been quiet for a while, and once more on shutdown.
+// Backups are best effort by design, so a failing one is logged and reported but never blocks a storage command or a quit.
 export const createBackupScheduler = ({
-	taskStorage,
+	storage,
+	delayAfterChangeMs,
+	shutdownTimeoutMs,
 	runExclusively = (operation) => {
 		return operation();
 	},
-	onBackupStatusChanged,
-	delayAfterChangeMs = BACKUP_CONFIG.delayAfterChangeMs,
-	shutdownTimeoutMs = BACKUP_CONFIG.shutdownTimeoutMs
+	onBackupStatusChanged
 }: CreateBackupSchedulerOptions): BackupScheduler => {
 	let scheduledBackup: ReturnType<typeof setTimeout> | undefined;
 	let hasUnbackedUpChanges = false;
@@ -62,7 +63,7 @@ export const createBackupScheduler = ({
 
 	const runBackup = async(): Promise<void> => {
 		const result = await runExclusively(() => {
-			return taskStorage.createBackup();
+			return storage.createBackup();
 		});
 
 		// A backup that could not be written is worth retrying, so the changes it should have captured stay marked as pending.
@@ -89,9 +90,9 @@ export const createBackupScheduler = ({
 			.catch((error: unknown) => {
 				hasUnbackedUpChanges = true;
 
-				spotLogger.error('The scheduled database backup failed', {
+				appLogger.error('The scheduled database backup failed', {
 					type: 'storage.backup',
-					error: error instanceof Error ? error.message : String(error)
+					error: getErrorMessage(error)
 				});
 			})
 			.finally(() => {
@@ -105,7 +106,7 @@ export const createBackupScheduler = ({
 		return backup;
 	};
 
-	const notifyTasksChanged = (): void => {
+	const notifyDataChanged = (): void => {
 		hasUnbackedUpChanges = true;
 		cancelScheduledBackup();
 
@@ -123,7 +124,7 @@ export const createBackupScheduler = ({
 	};
 
 	return {
-		notifyTasksChanged,
+		notifyDataChanged,
 		runBackupNow,
 		runFinalBackup,
 		cancelScheduledBackup

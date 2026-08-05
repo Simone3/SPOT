@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { IpcMain, IpcMainInvokeEvent, OpenDialogReturnValue } from 'electron';
-import type { BackupLocationManager } from 'src/main/config/BackupLocationManager';
+import type { BackupLocationManager } from 'src/framework/main/config/BackupLocationManager';
 import { registerBackupLocationIpcHandlers, SPOT_BACKUP_LOCATION_IPC_CHANNELS } from 'src/main/ipc/BackupLocationIpc';
 import type { BackupLocation, ChooseBackupDirectoryResult, SetBackupDirectoryResult } from 'src/types/BackupLocationTypes';
 

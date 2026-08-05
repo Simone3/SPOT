@@ -12,7 +12,7 @@ export const createMissingBackupDirectoryMessage = (directory: string): string =
 };
 
 export const createUnusableBackupDirectoryMessage = (directory: string): string => {
-	return `The backup folder "${directory}" cannot be read and written by SPOT.`;
+	return `The backup folder "${directory}" cannot be read and written.`;
 };
 
 export const createNotABackupDirectoryMessage = (directory: string): string => {

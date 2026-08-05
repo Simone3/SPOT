@@ -1,9 +1,21 @@
-import { BACKUP_CONFIG } from 'src/config/AppConfig';
-import { resetSpotLoggerForTests } from 'src/main/logging/SpotLogger';
-import { createBackupScheduler } from 'src/main/storage/BackupScheduler';
-import type { BackupResult, BackupStatus } from 'src/types/TaskStorageTypes';
+import { resetAppLoggerForTests } from 'src/framework/main/logging/AppLogger';
+import { createBackupScheduler, type CreateBackupSchedulerOptions } from 'src/framework/main/storage/BackupScheduler';
+import type { BackupResult, BackupStatus } from 'src/framework/types/StorageTypes';
 
-const BACKUP_DIRECTORY = '/tmp/spot-backups';
+const BACKUP_DIRECTORY = '/tmp/app-backups';
+
+const DELAY_AFTER_CHANGE_MS = 120000;
+
+const SHUTDOWN_TIMEOUT_MS = 5000;
+
+// The framework scheduler takes its delays from its caller, so the tests supply them once and override only what they exercise
+const createTestScheduler = (options: Partial<CreateBackupSchedulerOptions> & Pick<CreateBackupSchedulerOptions, 'storage'>) => {
+	return createBackupScheduler({
+		delayAfterChangeMs: DELAY_AFTER_CHANGE_MS,
+		shutdownTimeoutMs: SHUTDOWN_TIMEOUT_MS,
+		...options
+	});
+};
 
 const createSuccessfulBackup = (): BackupResult => {
 	return {
@@ -46,21 +58,21 @@ describe('BackupScheduler', () => {
 
 	afterEach(() => {
 		jest.useRealTimers();
-		resetSpotLoggerForTests();
+		resetAppLoggerForTests();
 	});
 
 	test('waits for the task changes to settle before backing up', async() => {
 		const taskStorage = createFakeTaskStorage();
-		const scheduler = createBackupScheduler({ taskStorage });
+		const scheduler = createTestScheduler({ storage: taskStorage });
 
-		scheduler.notifyTasksChanged();
-		jest.advanceTimersByTime(BACKUP_CONFIG.delayAfterChangeMs - 1);
+		scheduler.notifyDataChanged();
+		jest.advanceTimersByTime(DELAY_AFTER_CHANGE_MS - 1);
 
 		expect(taskStorage.createBackup).not.toHaveBeenCalled();
 
 		// A later change restarts the wait instead of adding a second backup
-		scheduler.notifyTasksChanged();
-		jest.advanceTimersByTime(BACKUP_CONFIG.delayAfterChangeMs - 1);
+		scheduler.notifyDataChanged();
+		jest.advanceTimersByTime(DELAY_AFTER_CHANGE_MS - 1);
 
 		expect(taskStorage.createBackup).not.toHaveBeenCalled();
 
@@ -72,9 +84,9 @@ describe('BackupScheduler', () => {
 
 	test('does not back up again when nothing changed since the last backup', async() => {
 		const taskStorage = createFakeTaskStorage();
-		const scheduler = createBackupScheduler({ taskStorage });
+		const scheduler = createTestScheduler({ storage: taskStorage });
 
-		scheduler.notifyTasksChanged();
+		scheduler.notifyDataChanged();
 		await scheduler.runBackupNow();
 		await scheduler.runBackupNow();
 
@@ -84,14 +96,14 @@ describe('BackupScheduler', () => {
 	test('reports the outcome of every backup it runs', async() => {
 		const taskStorage = createFakeTaskStorage([ createFailedBackup(), createSuccessfulBackup() ]);
 		const reportedStatuses: BackupStatus[] = [];
-		const scheduler = createBackupScheduler({
-			taskStorage,
+		const scheduler = createTestScheduler({
+			storage: taskStorage,
 			onBackupStatusChanged: (status) => {
 				reportedStatuses.push(status);
 			}
 		});
 
-		scheduler.notifyTasksChanged();
+		scheduler.notifyDataChanged();
 		await scheduler.runBackupNow();
 
 		// The failed backup left the changes pending, so the next run retries them without a new task change
@@ -110,9 +122,9 @@ describe('BackupScheduler', () => {
 
 			return operation();
 		};
-		const scheduler = createBackupScheduler({ taskStorage, runExclusively });
+		const scheduler = createTestScheduler({ storage: taskStorage, runExclusively });
 
-		scheduler.notifyTasksChanged();
+		scheduler.notifyDataChanged();
 		await scheduler.runBackupNow();
 
 		expect(trackExclusiveRun).toHaveBeenCalledTimes(1);
@@ -120,14 +132,14 @@ describe('BackupScheduler', () => {
 
 	test('backs up once more on shutdown and cancels the pending schedule', async() => {
 		const taskStorage = createFakeTaskStorage();
-		const scheduler = createBackupScheduler({ taskStorage });
+		const scheduler = createTestScheduler({ storage: taskStorage });
 
-		scheduler.notifyTasksChanged();
+		scheduler.notifyDataChanged();
 		await scheduler.runFinalBackup();
 
 		expect(taskStorage.createBackup).toHaveBeenCalledTimes(1);
 
-		jest.advanceTimersByTime(BACKUP_CONFIG.delayAfterChangeMs);
+		jest.advanceTimersByTime(DELAY_AFTER_CHANGE_MS);
 
 		expect(taskStorage.createBackup).toHaveBeenCalledTimes(1);
 	});
@@ -144,9 +156,9 @@ describe('BackupScheduler', () => {
 				});
 			})
 		};
-		const scheduler = createBackupScheduler({ taskStorage, shutdownTimeoutMs: 5000 });
+		const scheduler = createTestScheduler({ storage: taskStorage, shutdownTimeoutMs: SHUTDOWN_TIMEOUT_MS });
 
-		scheduler.notifyTasksChanged();
+		scheduler.notifyDataChanged();
 
 		const finalBackup = scheduler.runFinalBackup();
 		jest.advanceTimersByTime(5000);

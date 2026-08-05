@@ -1,11 +1,12 @@
 import { copyFileSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { initializeSpotTestLogger } from '../testUtils';
 import { BACKUP_CONFIG, LOGGING_CONFIG, STORAGE_CONFIG } from 'src/config/AppConfig';
-import { initializeSpotLogger, resetSpotLoggerForTests, spotLogger, type CreateSpotLoggerBackend, type CreateSpotLoggerOptions } from 'src/main/logging/SpotLogger';
+import { appLogger, resetAppLoggerForTests, type CreateAppLoggerBackend, type CreateAppLoggerOptions } from 'src/framework/main/logging/AppLogger';
+import { isBackupFileName } from 'src/framework/main/storage/DatabaseBackup';
 import { openSpotDatabase } from 'src/main/storage/SpotDatabase';
 import { TASK_INSERT_COLUMN_NAMES, TASK_SELECT_COLUMN_NAMES, createImmutableTaskFieldChangeMessage, createMissingRequiredTaskFieldMessage, taskRowToColumnValues, taskToTaskRow, type TaskRow } from 'src/main/storage/TaskRowMapping';
-import { isBackupFileName } from 'src/main/storage/DatabaseBackup';
 import { createTaskStorage, type CreateTaskStorageOptions, type OperationalLogEntry, type TaskStorage, type TaskStorageCommand } from 'src/main/storage/TaskStorage';
 import type { PersistedTask } from 'src/types/TaskTypes';
 
@@ -106,7 +107,7 @@ const readOperationalLogEntries = (storageDirectory: string): OperationalLogEntr
 	});
 };
 
-const createNoopBackendFactory = (): CreateSpotLoggerBackend => {
+const createNoopBackendFactory = (): CreateAppLoggerBackend => {
 	return () => {
 		return {
 			debug: () => {
@@ -149,7 +150,7 @@ const createNoopBackendFactory = (): CreateSpotLoggerBackend => {
 };
 
 type CreateTrackedTaskStorageOptions = Partial<CreateTaskStorageOptions> & {
-	logger?: Omit<CreateSpotLoggerOptions, 'logDirectory'>;
+	logger?: Partial<Omit<CreateAppLoggerOptions, 'logDirectory'>>;
 };
 
 describe('TaskStorage', () => {
@@ -167,7 +168,7 @@ describe('TaskStorage', () => {
 		const { logger, ...taskStorageOptions } = options;
 		const databaseDirectory = taskStorageOptions.databaseDirectory ?? makeTrackedStorageDirectory();
 
-		initializeSpotLogger({
+		initializeSpotTestLogger({
 			logDirectory: databaseDirectory,
 			now: taskStorageOptions.now,
 			...logger
@@ -189,8 +190,8 @@ describe('TaskStorage', () => {
 			await taskStorage.prepareForShutdown();
 		}
 
-		await spotLogger.flush();
-		resetSpotLoggerForTests();
+		await appLogger.flush();
+		resetAppLoggerForTests();
 
 		while(tempStorageDirectories.length > 0) {
 			const tempStorageDirectory = tempStorageDirectories.pop()!;
@@ -232,7 +233,9 @@ describe('TaskStorage', () => {
 				directory: backupDirectory
 			}
 		});
-		expect(readdirSync(backupDirectory).filter(isBackupFileName)).toHaveLength(1);
+		expect(readdirSync(backupDirectory).filter((fileName) => {
+			return isBackupFileName(BACKUP_CONFIG, fileName);
+		})).toHaveLength(1);
 
 		// The backup has to be a database SPOT could open again, not just a file with the right name
 		const restoredDirectory = makeTrackedStorageDirectory();
@@ -655,7 +658,7 @@ describe('TaskStorage', () => {
 			expect.objectContaining({
 				createdAt: createdAt.toISOString(),
 				level: 'info',
-				message: 'React storage command received',
+				message: 'Renderer storage command received',
 				type: 'react.command',
 				command: 'task.create',
 				payload: {

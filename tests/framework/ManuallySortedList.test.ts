@@ -1,7 +1,24 @@
-import { insertIntoManuallySortedList, moveInManuallySortedList, recomputeSortPositions, type ManuallySortedItem } from 'src/logic/ManuallySortedList';
+import { insertIntoManuallySortedList as insertIntoList, moveInManuallySortedList as moveInList, recomputeSortPositions as recomputeListSortPositions, type ManuallySortedItem } from 'src/framework/utils/ManuallySortedList';
 
 type TestItem = ManuallySortedItem & {
 	id: number;
+};
+
+const SORT_OPTIONS = {
+	sortPositionStep: 1000
+};
+
+// The framework takes the sort position step from its caller: these tests always use the same one, so the call sites stay about the sorting itself
+const insertIntoManuallySortedList = <TElement extends ManuallySortedItem>(list: TElement[], element: TElement, index: number): TElement[] => {
+	return insertIntoList(list, element, index, SORT_OPTIONS);
+};
+
+const moveInManuallySortedList = <TElement extends ManuallySortedItem>(list: TElement[], fromIndex: number, toIndex: number): TElement[] => {
+	return moveInList(list, fromIndex, toIndex, SORT_OPTIONS);
+};
+
+const recomputeSortPositions = <TElement extends ManuallySortedItem>(list: TElement[]): TElement[] => {
+	return recomputeListSortPositions(list, SORT_OPTIONS);
 };
 
 const randomIndex = (length: number): number => {

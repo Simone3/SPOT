@@ -1,64 +1,69 @@
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { APP_CONFIG_FILE, BACKUP_CONFIG, LOGGING_CONFIG, STORAGE_CONFIG } from 'src/config/AppConfig';
-import { createBackupLocationManager } from 'src/main/config/BackupLocationManager';
-import type { SpotConfig, SpotConfigStore } from 'src/main/config/SpotConfigStore';
-import type { SpotRuntimePaths } from 'src/main/config/SpotRuntimePaths';
-import { resetSpotLoggerForTests } from 'src/main/logging/SpotLogger';
-import type { TaskStorage } from 'src/main/storage/TaskStorage';
+import { createBackupLocationManager, type BackupDirectoryStore } from 'src/framework/main/config/BackupLocationManager';
+import type { RuntimePaths } from 'src/framework/main/config/RuntimePaths';
+import { resetAppLoggerForTests } from 'src/framework/main/logging/AppLogger';
 
-interface FakeTaskStorage {
+const DATABASE_FILE_NAME = 'app.sqlite';
+
+interface FakeStorage {
 	selectedDirectories: string[];
-	taskStorage: Pick<TaskStorage, 'setBackupDirectory'>;
+	storage: {
+		setBackupDirectory: (directory: string) => void;
+	};
 }
 
 const tempDirectories: string[] = [];
 
 const makeTempDirectory = (): string => {
-	const directory = mkdtempSync(path.join(tmpdir(), 'spot-backup-location-'));
+	const directory = mkdtempSync(path.join(tmpdir(), 'backup-location-'));
 	tempDirectories.push(directory);
 
 	return directory;
 };
 
-const createRuntimePaths = (rootDirectory: string, isDevelopment = false): SpotRuntimePaths => {
+const createRuntimePaths = (rootDirectory: string, isDevelopment = false): RuntimePaths => {
+	const databaseDirectory = path.join(rootDirectory, 'storage');
+
 	return {
 		isDevelopment,
-		configFilePath: path.join(rootDirectory, APP_CONFIG_FILE.fileName),
-		logDirectory: path.join(rootDirectory, LOGGING_CONFIG.directoryName),
-		databaseDirectory: path.join(rootDirectory, STORAGE_CONFIG.directoryName),
-		defaultBackupDirectory: path.join(rootDirectory, BACKUP_CONFIG.directoryName)
+		rootDirectory,
+		configFilePath: path.join(rootDirectory, 'app-config.json'),
+		logDirectory: path.join(rootDirectory, 'logs'),
+		databaseDirectory,
+		databasePath: path.join(databaseDirectory, DATABASE_FILE_NAME),
+		defaultBackupDirectory: path.join(rootDirectory, 'backups')
 	};
 };
 
-const createFakeConfigStore = (config: SpotConfig = {}): {
-	configStore: SpotConfigStore;
-	getConfig: () => SpotConfig;
+const createFakeDirectoryStore = (savedDirectory?: string): {
+	directoryStore: BackupDirectoryStore;
+	getSavedDirectory: () => string | undefined;
 } => {
-	let currentConfig = config;
+	let currentDirectory = savedDirectory;
 
 	return {
-		configStore: {
+		directoryStore: {
 			read: () => {
-				return currentConfig;
+				return currentDirectory;
 			},
-			write: jest.fn((nextConfig: SpotConfig) => {
-				currentConfig = nextConfig;
+			write: jest.fn((directory: string) => {
+				currentDirectory = directory;
 			})
 		},
-		getConfig: () => {
-			return currentConfig;
+		getSavedDirectory: () => {
+			return currentDirectory;
 		}
 	};
 };
 
-const createFakeTaskStorage = (): FakeTaskStorage => {
+const createFakeStorage = (): FakeStorage => {
 	const selectedDirectories: string[] = [];
 
 	return {
 		selectedDirectories,
-		taskStorage: {
+		storage: {
 			setBackupDirectory: jest.fn((directory: string) => {
 				selectedDirectories.push(directory);
 			})
@@ -68,7 +73,7 @@ const createFakeTaskStorage = (): FakeTaskStorage => {
 
 describe('BackupLocationManager', () => {
 	afterEach(() => {
-		resetSpotLoggerForTests();
+		resetAppLoggerForTests();
 
 		while(tempDirectories.length > 0) {
 			rmSync(tempDirectories.pop()!, { recursive: true, force: true });
@@ -78,9 +83,9 @@ describe('BackupLocationManager', () => {
 	test('starts on the default backup folder and creates it', async() => {
 		const rootDirectory = makeTempDirectory();
 		const runtimePaths = createRuntimePaths(rootDirectory);
-		const { configStore } = createFakeConfigStore();
-		const { selectedDirectories, taskStorage } = createFakeTaskStorage();
-		const manager = createBackupLocationManager({ runtimePaths, taskStorage, configStore });
+		const { directoryStore } = createFakeDirectoryStore();
+		const { selectedDirectories, storage } = createFakeStorage();
+		const manager = createBackupLocationManager({ runtimePaths, storage, directoryStore });
 
 		const location = await manager.initialize();
 
@@ -88,7 +93,7 @@ describe('BackupLocationManager', () => {
 			directory: runtimePaths.defaultBackupDirectory,
 			defaultDirectory: runtimePaths.defaultBackupDirectory,
 			databaseDirectory: runtimePaths.databaseDirectory,
-			databasePath: path.join(runtimePaths.databaseDirectory, STORAGE_CONFIG.databaseFileName)
+			databasePath: runtimePaths.databasePath
 		});
 		expect(selectedDirectories).toEqual([ runtimePaths.defaultBackupDirectory ]);
 		expect(existsSync(runtimePaths.defaultBackupDirectory)).toBe(true);
@@ -98,26 +103,26 @@ describe('BackupLocationManager', () => {
 		const rootDirectory = makeTempDirectory();
 		const savedDirectory = makeTempDirectory();
 		const runtimePaths = createRuntimePaths(rootDirectory);
-		const { configStore } = createFakeConfigStore({ backupDirectory: savedDirectory });
-		const { selectedDirectories, taskStorage } = createFakeTaskStorage();
-		const manager = createBackupLocationManager({ runtimePaths, taskStorage, configStore });
+		const { directoryStore } = createFakeDirectoryStore(savedDirectory);
+		const { selectedDirectories, storage } = createFakeStorage();
+		const manager = createBackupLocationManager({ runtimePaths, storage, directoryStore });
 
 		const location = await manager.initialize();
 
 		expect(location.directory).toBe(savedDirectory);
 		expect(selectedDirectories).toEqual([ savedDirectory ]);
-		expect(configStore.write).not.toHaveBeenCalled();
+		expect(directoryStore.write).not.toHaveBeenCalled();
 	});
 
-	// The tasks live in the local database, so an unreachable backup folder only costs the copies
+	// The records live in the local database, so an unreachable backup folder only costs the copies
 	test('falls back to the default folder when the saved one cannot be used', async() => {
 		const rootDirectory = makeTempDirectory();
 		const blockedDirectory = path.join(makeTempDirectory(), 'blocked');
 		writeFileSync(blockedDirectory, 'not a folder', 'utf8');
 		const runtimePaths = createRuntimePaths(rootDirectory);
-		const { configStore } = createFakeConfigStore({ backupDirectory: blockedDirectory });
-		const { taskStorage } = createFakeTaskStorage();
-		const manager = createBackupLocationManager({ runtimePaths, taskStorage, configStore });
+		const { directoryStore } = createFakeDirectoryStore(blockedDirectory);
+		const { storage } = createFakeStorage();
+		const manager = createBackupLocationManager({ runtimePaths, storage, directoryStore });
 
 		const location = await manager.initialize();
 
@@ -129,9 +134,9 @@ describe('BackupLocationManager', () => {
 		const rootDirectory = makeTempDirectory();
 		const savedDirectory = makeTempDirectory();
 		const runtimePaths = createRuntimePaths(rootDirectory, true);
-		const { configStore } = createFakeConfigStore({ backupDirectory: savedDirectory });
-		const { selectedDirectories, taskStorage } = createFakeTaskStorage();
-		const manager = createBackupLocationManager({ runtimePaths, taskStorage, configStore });
+		const { directoryStore } = createFakeDirectoryStore(savedDirectory);
+		const { selectedDirectories, storage } = createFakeStorage();
+		const manager = createBackupLocationManager({ runtimePaths, storage, directoryStore });
 
 		const location = await manager.initialize();
 
@@ -144,10 +149,10 @@ describe('BackupLocationManager', () => {
 		const rootDirectory = makeTempDirectory();
 		const chosenDirectory = makeTempDirectory();
 		const runtimePaths = createRuntimePaths(rootDirectory);
-		const { configStore, getConfig } = createFakeConfigStore();
-		const { selectedDirectories, taskStorage } = createFakeTaskStorage();
+		const { directoryStore, getSavedDirectory } = createFakeDirectoryStore();
+		const { selectedDirectories, storage } = createFakeStorage();
 		const onBackupDirectoryChanged = jest.fn();
-		const manager = createBackupLocationManager({ runtimePaths, taskStorage, configStore, onBackupDirectoryChanged });
+		const manager = createBackupLocationManager({ runtimePaths, storage, directoryStore, onBackupDirectoryChanged });
 
 		await manager.initialize();
 		const result = await manager.setBackupDirectory(chosenDirectory);
@@ -158,7 +163,7 @@ describe('BackupLocationManager', () => {
 				directory: chosenDirectory
 			}
 		});
-		expect(getConfig()).toEqual({ backupDirectory: chosenDirectory });
+		expect(getSavedDirectory()).toBe(chosenDirectory);
 		expect(selectedDirectories).toEqual([ runtimePaths.defaultBackupDirectory, chosenDirectory ]);
 		expect(onBackupDirectoryChanged).toHaveBeenCalledTimes(2);
 	});
@@ -168,31 +173,31 @@ describe('BackupLocationManager', () => {
 		const blockedDirectory = path.join(makeTempDirectory(), 'blocked');
 		writeFileSync(blockedDirectory, 'not a folder', 'utf8');
 		const runtimePaths = createRuntimePaths(rootDirectory);
-		const { configStore, getConfig } = createFakeConfigStore();
-		const { taskStorage } = createFakeTaskStorage();
-		const manager = createBackupLocationManager({ runtimePaths, taskStorage, configStore });
+		const { directoryStore, getSavedDirectory } = createFakeDirectoryStore();
+		const { storage } = createFakeStorage();
+		const manager = createBackupLocationManager({ runtimePaths, storage, directoryStore });
 
 		await manager.initialize();
 		const result = await manager.setBackupDirectory(blockedDirectory);
 
 		expect(result.ok).toBe(false);
 		expect(manager.getLocation().directory).toBe(runtimePaths.defaultBackupDirectory);
-		expect(getConfig()).toEqual({});
+		expect(getSavedDirectory()).toBeUndefined();
 	});
 
 	test('runs the folder change on the storage chain', async() => {
 		const rootDirectory = makeTempDirectory();
 		const chosenDirectory = makeTempDirectory();
 		const runtimePaths = createRuntimePaths(rootDirectory);
-		const { configStore } = createFakeConfigStore();
-		const { taskStorage } = createFakeTaskStorage();
+		const { directoryStore } = createFakeDirectoryStore();
+		const { storage } = createFakeStorage();
 		const trackExclusiveRun = jest.fn();
 		const runExclusively = <TResult>(operation: () => Promise<TResult>): Promise<TResult> => {
 			trackExclusiveRun();
 
 			return operation();
 		};
-		const manager = createBackupLocationManager({ runtimePaths, taskStorage, configStore, runExclusively });
+		const manager = createBackupLocationManager({ runtimePaths, storage, directoryStore, runExclusively });
 
 		await manager.initialize();
 		await manager.setBackupDirectory(chosenDirectory);
