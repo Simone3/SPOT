@@ -1,0 +1,34 @@
+DOCUMENTATION.md
+  s_1b564e62a5cbc2::t_e3daee51f2cd9d 105,281,294-295,662
+src/config/AppConfig.ts
+  s_1b564e62a5cbc2::t_63948b58c92e2d 19-23
+src/logic/TaskStorageQueue.ts
+  s_1b564e62a5cbc2::t_08bdbce9884cd0 2,23-26,35-37,85-113,171,175-179,187-191,302
+src/main/storage/TaskRowMapping.ts
+  s_1b564e62a5cbc2::t_bb1f605d7627fd 97-100,323,325
+tests/logic/TaskStorageQueue.test.ts
+  s_1b564e62a5cbc2::t_483afa96bc59aa 259-324
+tests/main/TaskStorage.test.ts
+  s_1b564e62a5cbc2::t_f0ffc25522a6ff 7,818-870
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "33a455ae1344b39ef660998fd655e69f3a6b86a3",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_1b564e62a5cbc2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "2815fc5e-a39c-4497-ae94-97d64a9695c4",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
