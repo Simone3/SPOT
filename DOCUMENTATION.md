@@ -17,6 +17,8 @@ SPOT is the Simple Planner & Organizer Tool: a small Electron + React task manag
 
 ## How To Run
 
+Node 24 or later is required, as declared by the `engines.node` field in `package.json`. That floor matches the Node version Electron bundles, so the main process is developed and tested against the runtime it actually ships on. It also clears the minimums that Electron itself, `@electron/fuses`, and `@testing-library/jest-dom` declare.
+
 Install dependencies:
 
 ```sh
