@@ -4,7 +4,7 @@ import path from 'node:path';
 import { BACKUP_CONFIG, LOGGING_CONFIG, STORAGE_CONFIG } from 'src/config/AppConfig';
 import { initializeSpotLogger, resetSpotLoggerForTests, spotLogger, type CreateSpotLoggerBackend, type CreateSpotLoggerOptions } from 'src/main/logging/SpotLogger';
 import { openSpotDatabase } from 'src/main/storage/SpotDatabase';
-import { TASK_INSERT_COLUMN_NAMES, TASK_SELECT_COLUMN_NAMES, createImmutableTaskFieldChangeMessage, taskRowToColumnValues, taskToTaskRow, type TaskRow } from 'src/main/storage/TaskRowMapping';
+import { TASK_INSERT_COLUMN_NAMES, TASK_SELECT_COLUMN_NAMES, createImmutableTaskFieldChangeMessage, createMissingRequiredTaskFieldMessage, taskRowToColumnValues, taskToTaskRow, type TaskRow } from 'src/main/storage/TaskRowMapping';
 import { isBackupFileName } from 'src/main/storage/DatabaseBackup';
 import { createTaskStorage, type CreateTaskStorageOptions, type OperationalLogEntry, type TaskStorage, type TaskStorageCommand } from 'src/main/storage/TaskStorage';
 import type { PersistedTask } from 'src/types/TaskTypes';
@@ -810,6 +810,59 @@ describe('TaskStorage', () => {
 				sort_position: 100,
 				completion_date: null,
 				created_at: '2026-06-06T10:00:00.000Z',
+				updated_at: '2026-06-06T11:00:00.000Z'
+			}
+		]);
+	});
+
+	test('rejects task update commands that clear a required task field', async() => {
+		const storageDirectory = makeTempStorageDirectory();
+		tempStorageDirectories.push(storageDirectory);
+		const task: PersistedTask = {
+			id: 'required-field-task-id',
+			text: 'Required field task',
+			state: 'ACTIVE',
+			priority: 'NORMAL',
+			owner: undefined,
+			dueDate: undefined,
+			tags: [],
+			sortPosition: 100,
+			completionDate: undefined
+		};
+		insertPersistedTask(storageDirectory, task);
+		const taskStorage = createTrackedTaskStorage({
+			databaseDirectory: storageDirectory,
+			now: () => {
+				return new Date('2026-06-06T12:00:00.000Z');
+			}
+		});
+		const command = {
+			command: 'task.update',
+			payload: {
+				taskId: 'required-field-task-id',
+				change: {
+					text: undefined
+				}
+			}
+		} as unknown as TaskStorageCommand;
+
+		const result = await taskStorage.executeTaskCommand(command);
+
+		// The same change would be refused again in exactly the same way, so it must not look like a database failure the renderer retries forever
+		expect(result).toMatchObject({
+			ok: false,
+			reason: 'invalid-command',
+			message: createMissingRequiredTaskFieldMessage('text'),
+			status: {
+				database: {
+					state: 'healthy'
+				}
+			}
+		});
+		expect(readPersistedTaskRows(storageDirectory)).toMatchObject([
+			{
+				id: 'required-field-task-id',
+				text: 'Required field task',
 				updated_at: '2026-06-06T11:00:00.000Z'
 			}
 		]);

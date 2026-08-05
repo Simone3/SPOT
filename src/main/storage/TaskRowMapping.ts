@@ -94,6 +94,10 @@ export const createImmutableTaskFieldChangeMessage = (taskField: string, columnN
 	return `Task field "${taskField}" maps to immutable column "${columnName}" and cannot be changed.`;
 };
 
+export const createMissingRequiredTaskFieldMessage = (taskField: string): string => {
+	return `Task change field "${taskField}" cannot be undefined.`;
+};
+
 /**
  * Marks a command the database refuses and would refuse again in exactly the same way, so that React drops it instead of
  * retrying it forever in front of every change the user makes afterwards.
@@ -316,8 +320,9 @@ const getTaskChangeFieldValue = (
 ): PersistedTask[PersistedTaskFieldName] => {
 	const value = (change as Partial<PersistedTask>)[mapping.taskField];
 
+	// The same change would always be refused in the same way, so it must not look like a database failure the queue can retry
 	if(value === undefined && mapping.required) {
-		throw new Error(`Task change field "${String(mapping.taskField)}" cannot be undefined.`);
+		throw createInvalidTaskChangeError(createMissingRequiredTaskFieldMessage(mapping.taskField));
 	}
 
 	return value;

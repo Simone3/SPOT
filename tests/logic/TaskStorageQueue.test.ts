@@ -256,6 +256,72 @@ describe('TaskStorageQueue', () => {
 		expect(getTaskStorageQueueState().unsavedChangesMessage).toBe('Task storage update failed. Task field "id" cannot be changed.');
 	});
 
+	test('gives up on a write the database keeps failing so later commands are still written', async() => {
+		jest.useFakeTimers();
+		const writtenTaskIds: string[] = [];
+		const executeTaskCommand = jest.fn(async(command: TaskStorageCommand) => {
+			const { taskId } = command.payload as { taskId: string };
+
+			if(taskId === 'first') {
+				return createDatabaseFailure('Disk is full.');
+			}
+
+			writtenTaskIds.push(taskId);
+
+			return healthyResult;
+		});
+		setExecuteTaskCommand(executeTaskCommand);
+
+		sendTaskStorageCommand(createUpdateCommand('first', 'First'));
+		sendTaskStorageCommand(createUpdateCommand('second', 'Second'));
+
+		for(let attempt = 1; attempt < STORAGE_CONFIG.maximumWriteAttempts; attempt++) {
+			await Promise.resolve();
+			await Promise.resolve();
+
+			expect(executeTaskCommand).toHaveBeenCalledTimes(attempt);
+			expect(writtenTaskIds).toEqual([]);
+			jest.advanceTimersByTime(STORAGE_CONFIG.writeRetryDelayMs);
+		}
+
+		jest.useRealTimers();
+		await waitForTaskStorageQueue();
+
+		// The change that cannot be written is given up on, so the queue stops holding back everything the user changed afterwards
+		expect(executeTaskCommand).toHaveBeenCalledTimes(STORAGE_CONFIG.maximumWriteAttempts + 1);
+		expect(writtenTaskIds).toEqual([ 'second' ]);
+		expect(getTaskStorageQueueState().unsavedChangesMessage)
+			.toBe(`Task storage update failed ${STORAGE_CONFIG.maximumWriteAttempts} times and was given up on, so that change is not stored. Disk is full.`);
+	});
+
+	test('does not count writes storage refused while closing against the retry limit', async() => {
+		jest.useFakeTimers();
+		const executeTaskCommand: jest.Mock<Promise<TaskStorageCommandResult>, []> = jest.fn(async() => {
+			if(executeTaskCommand.mock.calls.length > STORAGE_CONFIG.maximumWriteAttempts * 2) {
+				return healthyResult;
+			}
+
+			return createShutdownFailure('Task storage is shutting down.');
+		});
+		setExecuteTaskCommand(executeTaskCommand);
+
+		sendTaskStorageCommand(createUpdateCommand('first', 'First'));
+
+		for(let attempt = 1; attempt <= STORAGE_CONFIG.maximumWriteAttempts * 2; attempt++) {
+			await Promise.resolve();
+			await Promise.resolve();
+
+			expect(executeTaskCommand).toHaveBeenCalledTimes(attempt);
+			jest.advanceTimersByTime(STORAGE_CONFIG.writeRetryDelayMs);
+		}
+
+		jest.useRealTimers();
+		await waitForTaskStorageQueue();
+
+		expect(executeTaskCommand).toHaveBeenCalledTimes(STORAGE_CONFIG.maximumWriteAttempts * 2 + 1);
+		expect(getTaskStorageQueueState().unsavedChangesMessage).toBeUndefined();
+	});
+
 	test('keeps warning about a dropped command even after later commands succeed', async() => {
 		const executeTaskCommand: jest.Mock<Promise<TaskStorageCommandResult>, []> = jest.fn(async() => {
 			return executeTaskCommand.mock.calls.length === 1 ? createInvalidCommandFailure('Refused.') : healthyResult;

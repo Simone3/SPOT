@@ -1,5 +1,5 @@
 import { STORAGE_CONFIG } from 'src/config/AppConfig';
-import type { SpotStorageApi, StorageStatus, TaskStorageCommand, TaskStorageCommandResult } from 'src/types/TaskStorageTypes';
+import type { SpotStorageApi, StorageFailure, StorageStatus, TaskStorageCommand, TaskStorageCommandResult } from 'src/types/TaskStorageTypes';
 
 /**
  * What the task page needs to know about storage writes: the latest database status, and whether something the user
@@ -20,6 +20,10 @@ const createUnsavedChangesMessage = (message: string): string => {
 	return `Task storage update failed. ${message}`;
 };
 
+const createAbandonedChangeMessage = (message: string): string => {
+	return `Task storage update failed ${STORAGE_CONFIG.maximumWriteAttempts} times and was given up on, so that change is not stored. ${message}`;
+};
+
 // Storage commands are written one at a time and in order, so a failed one can be retried without letting later ones overtake it
 const queuedCommands: TaskStorageCommand[] = [];
 
@@ -27,6 +31,9 @@ let queueState: TaskStorageQueueState = IDLE_STATE;
 
 // A command the database refused is never written, so its warning cannot be cleared by later commands succeeding
 let droppedCommandMessage: string | undefined;
+
+// How many times in a row the database failed on the command at the front of the queue, so that retries of an error that never clears can be bounded
+let frontCommandDatabaseErrors = 0;
 
 let isWriting = false;
 
@@ -75,8 +82,35 @@ const getErrorMessage = (error: unknown): string => {
 // A database that failed once can work again, so those writes are kept and retried. Storage that refused a command because it is closing
 // never even attempted it, so that command is kept too. A command the database refused as invalid would fail again in exactly the same
 // way, so it is dropped and only reported.
-const isRetryableFailure = (result: TaskStorageCommandResult): boolean => {
-	return !result.ok && (result.reason === 'database-error' || result.reason === 'shutdown');
+const isRetryableFailure = (failure: StorageFailure): boolean => {
+	return failure.reason === 'database-error' || failure.reason === 'shutdown';
+};
+
+// A command refused while storage is closing was never attempted, and the process is going away anyway, so only the failures the database
+// itself reported are counted
+const countWriteResult = (result: TaskStorageCommandResult): void => {
+	frontCommandDatabaseErrors = !result.ok && result.reason === 'database-error' ? frontCommandDatabaseErrors + 1 : 0;
+};
+
+// Not every database error clears: a constraint violation or a full disk fails the same way every time, and retrying it forever would keep
+// every change made afterwards from ever being written, so the change is given up on and reported instead.
+const hasExhaustedWriteAttempts = (): boolean => {
+	return frontCommandDatabaseErrors >= STORAGE_CONFIG.maximumWriteAttempts;
+};
+
+// A change the database gave up on is reported differently from one it refused outright, because the user made a change SPOT tried and failed to store
+const createDroppedCommandMessage = (failure: StorageFailure): string => {
+	if(isRetryableFailure(failure)) {
+		return createAbandonedChangeMessage(failure.message);
+	}
+
+	return createUnsavedChangesMessage(failure.message);
+};
+
+const dropFrontCommand = (message: string): void => {
+	droppedCommandMessage = message;
+	queuedCommands.shift();
+	frontCommandDatabaseErrors = 0;
 };
 
 const writeCommand = async(command: TaskStorageCommand): Promise<TaskStorageCommandResult> => {
@@ -134,15 +168,15 @@ const writeQueuedCommands = async(): Promise<void> => {
 	try {
 		while(queuedCommands.length > 0) {
 			const result = await writeCommand(queuedCommands[0]);
+			countWriteResult(result);
 
 			if(!result.ok) {
-				setQueueState({
-					status: result.status,
-					unsavedChangesMessage: createUnsavedChangesMessage(result.message)
-				});
-
 				// The command stays at the front of the queue, so nothing written later can overtake it
-				if(isRetryableFailure(result)) {
+				if(isRetryableFailure(result) && !hasExhaustedWriteAttempts()) {
+					setQueueState({
+						status: result.status,
+						unsavedChangesMessage: createUnsavedChangesMessage(result.message)
+					});
 					scheduleRetry(() => {
 						void writeQueuedCommands();
 					});
@@ -150,8 +184,11 @@ const writeQueuedCommands = async(): Promise<void> => {
 					return;
 				}
 
-				droppedCommandMessage = createUnsavedChangesMessage(result.message);
-				queuedCommands.shift();
+				dropFrontCommand(createDroppedCommandMessage(result));
+				setQueueState({
+					status: result.status,
+					unsavedChangesMessage: droppedCommandMessage
+				});
 
 				continue;
 			}
@@ -262,6 +299,7 @@ export const resetTaskStorageQueueForTests = (): void => {
 	queuedCommands.length = 0;
 	queueState = IDLE_STATE;
 	droppedCommandMessage = undefined;
+	frontCommandDatabaseErrors = 0;
 	isWriting = false;
 	idleWaiters.clear();
 	stateSubscribers.clear();

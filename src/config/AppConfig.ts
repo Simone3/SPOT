@@ -16,7 +16,11 @@ export const STORAGE_CONFIG = {
 	databaseFileName: 'spot.sqlite',
 	currentSchemaVersion: 1,
 	databaseTimeoutMs: 5000,
-	writeRetryDelayMs: 5000
+	writeRetryDelayMs: 5000,
+
+	// A database error the retries cannot fix, such as a full disk, would otherwise keep the failed write at the front of the queue and leave
+	// every later change unwritten for the rest of the session, so the retries are bounded and the change is then reported as lost
+	maximumWriteAttempts: 5
 } as const;
 
 export const BACKUP_CONFIG = {
