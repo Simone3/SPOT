@@ -136,6 +136,25 @@ describe('SpotDatabase', () => {
 		}
 	});
 
+	test('rethrows the original transaction error even when the rollback fails', () => {
+		const storageDirectory = makeTempStorageDirectory();
+		tempStorageDirectories.push(storageDirectory);
+		const spotDatabase = openSpotDatabase({ storageDirectory });
+
+		try {
+			expect(() => {
+				spotDatabase.runTransaction(() => {
+					// Ends the transaction behind the wrapper, so the rollback in the error path fails on its own
+					spotDatabase.execQuery('COMMIT');
+					throw new Error('Transaction callback failed.');
+				});
+			}).toThrow('Transaction callback failed.');
+		}
+		finally {
+			spotDatabase.close();
+		}
+	});
+
 	test('logs SQL queries through the process-wide logger', async() => {
 		const storageDirectory = makeTempStorageDirectory();
 		tempStorageDirectories.push(storageDirectory);

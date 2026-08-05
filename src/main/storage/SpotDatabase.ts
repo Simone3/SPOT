@@ -143,7 +143,14 @@ const createSpotDatabaseWrapper = (
 			execQuery('COMMIT');
 		}
 		catch(error) {
-			execQuery('ROLLBACK');
+			// A failed rollback is already logged by the query logger, and it must not replace the error that actually broke the transaction, otherwise callers classify the wrong exception
+			try {
+				execQuery('ROLLBACK');
+			}
+			catch {
+				// Intentionally ignored
+			}
+
 			throw error;
 		}
 	};
