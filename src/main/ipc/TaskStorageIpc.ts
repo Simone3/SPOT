@@ -24,6 +24,10 @@ export interface RegisterTaskStorageIpcHandlersOptions {
 	// Called after every command that reached the database, so the backup schedule can be restarted
 	onTaskCommandApplied?: () => void;
 
+	// Called once the renderer saved its buffered changes and before the first task command is refused, so the window can stop
+	// collecting task changes nothing will store anymore
+	onRendererFlushCompleted?: () => void;
+
 	// Called once the in-flight commands are done and before the database is closed, so a last backup can still read it
 	onBeforeStorageShutdown?: () => Promise<void>;
 }
@@ -35,6 +39,7 @@ export const registerTaskStorageIpcHandlers = ({
 	app,
 	getRendererFlushTarget,
 	onTaskCommandApplied,
+	onRendererFlushCompleted,
 	onBeforeStorageShutdown
 }: RegisterTaskStorageIpcHandlersOptions): StorageCommandController => {
 	return registerStorageIpcHandlers<TaskStorageCommand, LoadTasksResult>({
@@ -65,6 +70,7 @@ export const registerTaskStorageIpcHandlers = ({
 		app,
 		getRendererFlushTarget,
 		onCommandApplied: onTaskCommandApplied,
+		onRendererFlushCompleted,
 		onBeforeStorageShutdown
 	});
 };

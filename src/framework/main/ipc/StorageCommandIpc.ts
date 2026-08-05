@@ -56,6 +56,11 @@ export interface RegisterStorageIpcHandlersOptions<TCommand, TLoadResult> {
 	// Called after every command that reached the database, so the backup schedule can be restarted
 	onCommandApplied?: () => void;
 
+	// Called once the renderer had its last chance to save and before the first command is refused, so the application can stop the
+	// user from changing anything else. The drain, the last backup and the database close take seconds, and a window left on screen
+	// keeps collecting changes that are refused, retried after the process is gone, and lost.
+	onRendererFlushCompleted?: () => void;
+
 	// Called once the in-flight commands are done and before the database is closed, so a last backup can still read it
 	onBeforeStorageShutdown?: () => Promise<void>;
 }
@@ -101,6 +106,7 @@ const createStorageCommandController = <TCommand, TLoadResult>({
 	app,
 	getRendererFlushTarget,
 	onCommandApplied,
+	onRendererFlushCompleted,
 	onBeforeStorageShutdown
 }: RegisterStorageIpcHandlersOptions<TCommand, TLoadResult>): Pick<StorageIpcApi<TCommand, TLoadResult>, 'load' | 'execute'> & StorageCommandController & {
 	notifyPendingChangesFlushed: () => void;
@@ -235,6 +241,18 @@ const createStorageCommandController = <TCommand, TLoadResult>({
 		return requestRendererFlushOnce();
 	};
 
+	// From here on nothing the renderer sends can be stored anymore, so the application is asked to stop the user from changing
+	// anything else. Draining, backing up and closing the database takes seconds, and every change made during that time would be
+	// refused, scheduled for a retry the process will not live to run, and lost.
+	const startRefusingCommands = (): void => {
+		if(isShuttingDown) {
+			return;
+		}
+
+		isShuttingDown = true;
+		onRendererFlushCompleted?.();
+	};
+
 	const requestShutdown = (): void => {
 		if(shutdownPromise) {
 			return;
@@ -244,12 +262,12 @@ const createStorageCommandController = <TCommand, TLoadResult>({
 
 		// Without a renderer to wait for, shutdown starts right away and later commands are refused immediately
 		if(!pendingRendererFlush) {
-			isShuttingDown = true;
+			startRefusingCommands();
 		}
 
 		shutdownPromise = (pendingRendererFlush ?? Promise.resolve())
 			.then(() => {
-				isShuttingDown = true;
+				startRefusingCommands();
 
 				return prepareForShutdown();
 			})

@@ -96,6 +96,14 @@ void app.whenReady().then(async() => {
 		onTaskCommandApplied: () => {
 			backupScheduler?.notifyDataChanged();
 		},
+		onRendererFlushCompleted: () => {
+			// Draining, backing up and closing the database takes seconds, and a backup folder that stopped answering uses all of
+			// BACKUP_CONFIG.shutdownTimeoutMs. A window left on screen stays interactive for that whole time while every task change
+			// it collects is refused, so it goes away as soon as the renderer saved what it had.
+			if(mainWindow && !mainWindow.isDestroyed()) {
+				mainWindow.hide();
+			}
+		},
 		onBeforeStorageShutdown: () => {
 			return backupScheduler?.runFinalBackup() ?? Promise.resolve();
 		}

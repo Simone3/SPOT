@@ -521,6 +521,7 @@ describe('PendingTaskChanges', () => {
 	test('reports the flush as done even when something stays buffered for good', async() => {
 		const { spotStorage, requestFlush } = createMockSpotStorage();
 		const task = makeTask({ text: 'Original task' });
+		const reportedErrors = jest.spyOn(console, 'error').mockImplementation(() => {});
 		setWindowSpotStorage(spotStorage);
 		const uninstall = installPendingTaskChangesFlushHandler(spotStorage);
 
@@ -533,6 +534,9 @@ describe('PendingTaskChanges', () => {
 		expect(getPendingTaskChanges(task.id)).toEqual({
 			text: 'Never applied'
 		});
+
+		// Those values go away with the renderer, so giving up on them is never silent
+		expect(reportedErrors).toHaveBeenCalledWith(expect.any(String), [ task.id ]);
 
 		uninstall();
 	});

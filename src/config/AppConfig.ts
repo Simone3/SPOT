@@ -53,9 +53,11 @@ export const TASKS_CONFIG = {
 } as const;
 
 export const SHUTDOWN_CONFIG = {
-	// A write that failed can still be sitting on the retry delay when the flush handshake starts, so the wait has to outlast that delay: a
-	// shorter timeout would give up while the retry that saves the change has not even run yet
-	rendererFlushTimeoutMs: STORAGE_CONFIG.writeRetryDelayMs + 3000,
+	// A write that failed can still be sitting on the retry delay when the flush handshake starts, and every retry that fails again schedules
+	// the next one, so the wait has to cover the whole retry budget of one command and not just a single delay: the renderer cannot ask for
+	// the retry sooner while it is waiting for the queue, so a shorter timeout gives up while the retry that saves the change has not run yet.
+	// The queue gives a change up after that many attempts, so this is what a quit can be held for at worst, and only while writes keep failing.
+	rendererFlushTimeoutMs: STORAGE_CONFIG.writeRetryDelayMs * STORAGE_CONFIG.maximumWriteAttempts + 3000,
 
 	// The window stays interactive while the queued writes are drained, so the renderer flushes again to pick up what the user typed in the
 	// meantime. The rounds are bounded, because someone who keeps typing must not be able to hold the quit open forever.

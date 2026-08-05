@@ -347,6 +347,71 @@ describe('TaskStorageIpc', () => {
 		expect(taskStorage.executeTaskCommand).not.toHaveBeenCalled();
 	});
 
+	test('takes the changes away from the application before it refuses the first command', async() => {
+		const { handlers, ipcMain } = createMockIpcMain();
+		const { app, handlers: appHandlers } = createMockApp();
+		const { taskStorage } = createMockTaskStorage();
+		const shutdownOrder: string[] = [];
+		const prepareForShutdown = jest.fn(async() => {
+			shutdownOrder.push('prepare-for-shutdown');
+
+			return undefined;
+		});
+		const onRendererFlushCompleted = jest.fn(() => {
+			shutdownOrder.push('renderer-flush-completed');
+		});
+		jest.spyOn(appLogger, 'flush').mockResolvedValue(undefined);
+		const flushTarget = {
+			send: jest.fn()
+		};
+		const event = {} as IpcMainInvokeEvent;
+
+		registerTaskStorageIpcHandlers({
+			app,
+			ipcMain,
+			taskStorage: {
+				...taskStorage,
+				prepareForShutdown
+			},
+			getRendererFlushTarget: () => {
+				return flushTarget;
+			},
+			onRendererFlushCompleted
+		});
+
+		appHandlers.get('before-quit')!({ preventDefault: jest.fn() });
+
+		// The renderer is still saving what it buffered, so nothing has been taken away from it yet
+		expect(shutdownOrder).toEqual([]);
+
+		await handlers.get(SPOT_STORAGE_IPC_CHANNELS.pendingTaskChangesFlushed)!(event);
+		await waitForQueuedWork();
+
+		// Draining, backing up and closing the database takes seconds, and every change made in the meantime would be refused
+		expect(shutdownOrder).toEqual([ 'renderer-flush-completed', 'prepare-for-shutdown' ]);
+		expect(onRendererFlushCompleted).toHaveBeenCalledTimes(1);
+	});
+
+	test('takes the changes away from the application right away when there is no renderer to ask', async() => {
+		const { ipcMain } = createMockIpcMain();
+		const { app, handlers: appHandlers } = createMockApp();
+		const { taskStorage } = createMockTaskStorage();
+		const onRendererFlushCompleted = jest.fn();
+		jest.spyOn(appLogger, 'flush').mockResolvedValue(undefined);
+
+		registerTaskStorageIpcHandlers({
+			app,
+			ipcMain,
+			taskStorage,
+			onRendererFlushCompleted
+		});
+
+		appHandlers.get('before-quit')!({ preventDefault: jest.fn() });
+		await waitForQueuedWork();
+
+		expect(onRendererFlushCompleted).toHaveBeenCalledTimes(1);
+	});
+
 	test('saves the task changes still buffered in the renderer before the window closes', async() => {
 		const { handlers, ipcMain } = createMockIpcMain();
 		const { app } = createMockApp();

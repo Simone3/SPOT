@@ -255,6 +255,9 @@ export const installPendingTaskChangesFlushHandler = (spotStorage: SpotStorageAp
 				return;
 			}
 		}
+
+		// The rounds are bounded on purpose, but whatever is still buffered here goes away with the renderer, so it is at least reported
+		console.error('Could not save every buffered task change before the renderer went away', Array.from(pendingTaskChanges.keys()));
 	};
 
 	const unsubscribeFromFlushRequests = spotStorage?.onFlushPendingTaskChanges?.(() => {
