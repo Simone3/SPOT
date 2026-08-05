@@ -668,7 +668,7 @@ Input components:
 
 `TextArea` wraps `MDXEditor`, which reads its `markdown` property only when it mounts and ignores every later change to it. `TextArea` therefore keeps an editor reference and pushes a new value in with `setMarkdown()` when the editor does not already hold it. Without that, an editor would keep showing content that is in no task state and in no database, for instance after tasks are reloaded following a failed write. The comparison against `getMarkdown()` is what keeps the editor untouched while the user types, because the value coming back from the task state is then the one the editor just produced.
 
-`MDXEditor` version `4.0.0` is ESM-only and cannot be loaded by the Jest version that React Scripts `5.0.1` provides, so tests replace `TextArea` with a plain `textarea` mock and this behavior is not covered by the automated tests.
+`MDXEditor` version `4.2.0` is ESM-only and cannot be loaded by the Jest version that React Scripts `5.0.1` provides, so tests replace `TextArea` with a plain `textarea` mock and this behavior is not covered by the automated tests.
 
 Icons are local React components under `src/components/icons`.
 
