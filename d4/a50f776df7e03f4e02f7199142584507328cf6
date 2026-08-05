@@ -1,0 +1,28 @@
+DOCUMENTATION.md
+  s_2d70b02b881615::t_60373990e820e3 310-311,640
+src/logic/PendingTaskChanges.ts
+  s_2d70b02b881615::t_7709d3632aeca5 61-74,96-111,255-256,260-266
+tests/logic/PendingTaskChanges.test.ts
+  s_2d70b02b881615::t_fd6e5c8741c856 357-420
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "d4a50f776df7e03f4e02f7199142584507328cf6",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_2d70b02b881615": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "990bc343-e5bc-4f1d-84af-867d811c867f",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
