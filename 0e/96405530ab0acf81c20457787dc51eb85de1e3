@@ -1,0 +1,28 @@
+DOCUMENTATION.md
+  s_18ae7872930b23::t_4d9907c24773c2 671
+package-lock.json
+  s_18ae7872930b23::t_45baba5f47ac4e 15,24,38,43,49,3314-3323,3785-3787,3791-3793,3795,7796-7798,7809,7812-7814,8408-8410,8413,11714-11716,13009-13011,13015,13017,14263-14265,14269,14272,14278,14280-14281,14285,18411-18413,20734-20736,25094-25096,25645-25647,27246-27248
+package.json
+  s_18ae7872930b23::t_83aa7604feeaae 57,66,80,85,91
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "0e96405530ab0acf81c20457787dc51eb85de1e3",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_18ae7872930b23": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d9f40500-f01d-4c53-b857-88f428b65513",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
