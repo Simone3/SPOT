@@ -518,6 +518,82 @@ describe('PendingTaskChanges', () => {
 		uninstall();
 	});
 
+	test('saves what the user typed while the queued writes were still being drained', async() => {
+		const { spotStorage, requestFlush } = createMockSpotStorage();
+		const task = makeTask({ text: 'Original task' });
+		const healthyResult: TaskStorageCommandResult = {
+			ok: true,
+			status: {
+				database: {
+					state: 'healthy'
+				}
+			}
+		};
+		const firstWriteDeferred = createDeferred<TaskStorageCommandResult>();
+		const executeTaskCommand: jest.Mock<Promise<TaskStorageCommandResult>, []> = jest.fn(() => {
+			return executeTaskCommand.mock.calls.length === 1 ? firstWriteDeferred.promise : Promise.resolve(healthyResult);
+		});
+		setWindowSpotStorage({
+			...spotStorage,
+			executeTaskCommand
+		});
+		const applier = jest.fn<void, AppliedChange>((taskId, pendingChanges) => {
+			sendTaskStorageCommand({
+				command: 'task.update',
+				payload: {
+					taskId,
+					change: pendingChanges.change
+				}
+			});
+		});
+		registerPendingTaskChangesApplier(applier);
+		const uninstall = installPendingTaskChangesFlushHandler(spotStorage);
+
+		changePendingTaskValue(task, 'text', 'Typed before quitting', false);
+		requestFlush();
+		await waitForQueuedWork();
+
+		// The window is still there while the first write is in flight, so the user can keep typing into it
+		changePendingTaskValue(task, 'text', 'Typed while quitting', false);
+		expect(spotStorage.notifyPendingTaskChangesFlushed).not.toHaveBeenCalled();
+
+		firstWriteDeferred.resolve(healthyResult);
+		await waitForQueuedWork();
+
+		expect(applier).toHaveBeenNthCalledWith(2, task.id, {
+			change: {
+				text: 'Typed while quitting'
+			},
+			newTag: ''
+		});
+		expect(executeTaskCommand).toHaveBeenCalledTimes(2);
+		expect(spotStorage.notifyPendingTaskChangesFlushed).toHaveBeenCalledTimes(1);
+
+		uninstall();
+	});
+
+	test('reports the flush as done even when something stays buffered for good', async() => {
+		const { spotStorage, requestFlush } = createMockSpotStorage();
+		const task = makeTask({ text: 'Original task' });
+		setWindowSpotStorage(spotStorage);
+		const uninstall = installPendingTaskChangesFlushHandler(spotStorage);
+
+		// Nothing applies the buffered changes, so they stay buffered no matter how many times they are flushed
+		changePendingTaskValue(task, 'text', 'Never applied', false);
+		requestFlush();
+		await waitForQueuedWork();
+
+		expect(spotStorage.notifyPendingTaskChangesFlushed).toHaveBeenCalledTimes(1);
+		expect(getPendingTaskChanges(task.id)).toEqual({
+			change: {
+				text: 'Never applied'
+			},
+			newTag: ''
+		});
+
+		uninstall();
+	});
+
 	test('installs the page hide flush without the Electron storage API', () => {
 		const uninstall = installPendingTaskChangesFlushHandler(undefined);
 

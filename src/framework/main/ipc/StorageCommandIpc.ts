@@ -225,9 +225,11 @@ const createStorageCommandController = <TCommand, TLoadResult>({
 	// Closing the window destroys the renderer, and on macOS the application even keeps running afterwards, so the buffered
 	// changes have to be saved when the window goes away and not only when the application quits
 	const requestRendererFlushBeforeWindowClose = (): Promise<void> | undefined => {
-		// The window closes as part of a quit that already runs the same handshake and closes the database right after it
+		// A quit runs the same handshake, so the window must not ask for a second one. It still has to wait for the one already running,
+		// though: destroying the window while the renderer is flushing would tear it down halfway through and lose what it had left to write.
+		// Once that handshake is done, and when the quit had no renderer to ask in the first place, the window closes right away.
 		if(shutdownPromise) {
-			return undefined;
+			return rendererFlushPromise;
 		}
 
 		return requestRendererFlushOnce();

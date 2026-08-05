@@ -7,6 +7,8 @@ import { getErrorMessage } from 'src/framework/utils/ErrorUtils';
 import type { BackupFileNaming } from 'src/framework/types/BackupTypes';
 import type { BackupResult, BackupStatus, LoadRecordsResult, OperationalLogEntry, OperationalLogWriteResult, StorageCommandResult, StorageDatabaseStatus, StorageFailure, StorageStatus } from 'src/framework/types/StorageTypes';
 
+export const STORAGE_CLOSED_MESSAGE = 'Storage is closed.';
+
 export interface DatabaseStorage<TCommand, TRecord> {
 	loadRecords: () => Promise<LoadRecordsResult<TRecord>>;
 	executeCommand: (command: TCommand) => Promise<StorageCommandResult>;
@@ -26,7 +28,7 @@ export interface CreateDatabaseStorageOptions<TCommand, TRecord> {
 	backupNaming: BackupFileNaming;
 	retainedBackupCount: number;
 
-	// Opens the database this storage owns. It is called lazily and again after a shutdown, so it must be safe to call more than once.
+	// Opens the database this storage owns. It is called lazily, on the first operation that needs it, and never again once shutdown closed it.
 	openDatabase: () => AppDatabase;
 	readRecords: (database: AppDatabase) => TRecord[];
 	executeCommand: (database: AppDatabase, command: TCommand) => void;
@@ -56,6 +58,7 @@ export const createDatabaseStorage = <TCommand, TRecord>({
 	now
 }: CreateDatabaseStorageOptions<TCommand, TRecord>): DatabaseStorage<TCommand, TRecord> => {
 	let database: AppDatabase | undefined;
+	let isClosed = false;
 	let backupDirectory = initialBackupDirectory;
 	let backupStatus: BackupStatus = {
 		state: 'idle',
@@ -67,6 +70,13 @@ export const createDatabaseStorage = <TCommand, TRecord>({
 	};
 
 	const getDatabase = (): AppDatabase => {
+		// Shutdown closes the connection on purpose, right before the process goes away. Opening it again to answer a command that arrived
+		// late, or to report a status, would leave behind a database nobody closes a second time and a write-ahead log that is never
+		// checkpointed, so storage stays closed instead and says so.
+		if(isClosed) {
+			throw new Error(STORAGE_CLOSED_MESSAGE);
+		}
+
 		if(!database) {
 			database = openDatabase();
 		}
@@ -215,6 +225,7 @@ export const createDatabaseStorage = <TCommand, TRecord>({
 
 	const prepareForShutdown = (): Promise<void> => {
 		const databaseToClose = database;
+		isClosed = true;
 		database = undefined;
 		databaseToClose?.close();
 

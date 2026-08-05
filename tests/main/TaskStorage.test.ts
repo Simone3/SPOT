@@ -5,6 +5,7 @@ import { initializeSpotTestLogger } from '../testUtils';
 import { BACKUP_CONFIG, LOGGING_CONFIG, STORAGE_CONFIG } from 'src/config/AppConfig';
 import { appLogger, resetAppLoggerForTests, type CreateAppLoggerBackend, type CreateAppLoggerOptions } from 'src/framework/main/logging/AppLogger';
 import { isBackupFileName } from 'src/framework/main/storage/DatabaseBackup';
+import { STORAGE_CLOSED_MESSAGE } from 'src/framework/main/storage/DatabaseStorage';
 import { openSpotDatabase } from 'src/main/storage/SpotDatabase';
 import { TASK_INSERT_COLUMN_NAMES, TASK_SELECT_COLUMN_NAMES, createImmutableTaskFieldChangeMessage, createMissingRequiredTaskFieldMessage, taskRowToColumnValues, taskToTaskRow, type TaskRow } from 'src/main/storage/TaskRowMapping';
 import { createTaskStorage, type CreateTaskStorageOptions, type OperationalLogEntry, type TaskStorage, type TaskStorageCommand } from 'src/main/storage/TaskStorage';
@@ -324,14 +325,53 @@ describe('TaskStorage', () => {
 		await taskStorage.loadTasks();
 		await taskStorage.loadTasks();
 		await taskStorage.prepareForShutdown();
-		await taskStorage.loadTasks();
-		await taskStorage.prepareForShutdown();
 
 		const schemaVersionReads = readOperationalLogEntries(storageDirectory).filter((entry) => {
 			return entry.type === 'sql.query' && entry.query === 'SELECT version FROM schema_migrations ORDER BY version ASC';
 		});
 
-		expect(schemaVersionReads).toHaveLength(2);
+		expect(schemaVersionReads).toHaveLength(1);
+	});
+
+	test('never opens the database again once shutdown closed it', async() => {
+		const storageDirectory = makeTempStorageDirectory();
+		tempStorageDirectories.push(storageDirectory);
+		const taskStorage = createTrackedTaskStorage({ databaseDirectory: storageDirectory });
+
+		await taskStorage.loadTasks();
+		await taskStorage.prepareForShutdown();
+
+		// A command or a status query arriving after the quit drain must not reopen a connection nobody closes a second time, which
+		// would leave the write-ahead log behind without ever checkpointing it
+		const statusAfterShutdown = await taskStorage.getStorageStatus();
+		const loadResultAfterShutdown = await taskStorage.loadTasks();
+		const commandResultAfterShutdown = await taskStorage.executeTaskCommand({
+			command: 'task.delete',
+			payload: {
+				taskId: 'any-task'
+			}
+		});
+
+		expect(statusAfterShutdown.database).toEqual({
+			state: 'unavailable',
+			message: STORAGE_CLOSED_MESSAGE
+		});
+		expect(loadResultAfterShutdown).toMatchObject({
+			ok: false,
+			reason: 'database-error',
+			message: STORAGE_CLOSED_MESSAGE
+		});
+		expect(commandResultAfterShutdown).toMatchObject({
+			ok: false,
+			reason: 'database-error',
+			message: STORAGE_CLOSED_MESSAGE
+		});
+
+		const schemaVersionReads = readOperationalLogEntries(storageDirectory).filter((entry) => {
+			return entry.type === 'sql.query' && entry.query === 'SELECT version FROM schema_migrations ORDER BY version ASC';
+		});
+
+		expect(schemaVersionReads).toHaveLength(1);
 	});
 
 	test('loads stored task rows from SQLite', async() => {

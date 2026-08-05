@@ -1,4 +1,4 @@
-import { TASKS_CONFIG } from 'src/config/AppConfig';
+import { SHUTDOWN_CONFIG, TASKS_CONFIG } from 'src/config/AppConfig';
 import { retryTaskStorageQueueNow, waitForTaskStorageQueue } from 'src/logic/TaskStorageQueue';
 import type { SpotStorageApi } from 'src/types/TaskStorageTypes';
 import type { Task, TaskChange } from 'src/types/TaskTypes';
@@ -174,6 +174,14 @@ export const subscribeToPendingTaskChanges = (taskId: string, subscriber: () => 
 };
 
 /**
+ * Tells whether any task still has values waiting to be saved.
+ * @returns Whether something is still buffered.
+ */
+export const hasPendingTaskChanges = (): boolean => {
+	return pendingTaskChanges.size !== 0;
+};
+
+/**
  * Returns the buffered changes of one task.
  * The returned object is replaced only when the buffered changes change, so it can be used as a render snapshot.
  * @param taskId Task to read.
@@ -281,13 +289,26 @@ export const installPendingTaskChangesFlushHandler = (spotStorage: SpotStorageAp
 
 	window.addEventListener('pagehide', flushOnPageHide);
 
+	// The window stays interactive until the main process is told the buffer reached storage, and that wait lasts seconds whenever a write
+	// failed and is being retried. Flushing only once would lose everything typed while the queue was still busy, so the buffer is flushed
+	// again after every wait, for a bounded number of rounds.
+	const flushEverythingAndWaitForStorage = async(): Promise<void> => {
+		for(let round = 0; round < SHUTDOWN_CONFIG.maximumRendererFlushRounds; round += 1) {
+			flushPendingTaskChanges();
+
+			// The main process waits for a bounded time, so a write that failed earlier is retried now instead of at the end of its retry delay
+			retryTaskStorageQueueNow();
+
+			await waitForTaskStorageQueue();
+
+			if(!hasPendingTaskChanges()) {
+				return;
+			}
+		}
+	};
+
 	const unsubscribeFromFlushRequests = spotStorage?.onFlushPendingTaskChanges?.(() => {
-		flushPendingTaskChanges();
-
-		// The main process waits for a bounded time, so a write that failed earlier is retried now instead of at the end of its retry delay
-		retryTaskStorageQueueNow();
-
-		void waitForTaskStorageQueue().then(() => {
+		void flushEverythingAndWaitForStorage().then(() => {
 			return spotStorage.notifyPendingTaskChangesFlushed();
 		}, () => {
 			return spotStorage.notifyPendingTaskChangesFlushed();

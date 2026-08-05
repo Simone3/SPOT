@@ -57,5 +57,9 @@ export const TASKS_CONFIG = {
 export const SHUTDOWN_CONFIG = {
 	// A write that failed can still be sitting on the retry delay when the flush handshake starts, so the wait has to outlast that delay: a
 	// shorter timeout would give up while the retry that saves the change has not even run yet
-	rendererFlushTimeoutMs: STORAGE_CONFIG.writeRetryDelayMs + 3000
+	rendererFlushTimeoutMs: STORAGE_CONFIG.writeRetryDelayMs + 3000,
+
+	// The window stays interactive while the queued writes are drained, so the renderer flushes again to pick up what the user typed in the
+	// meantime. The rounds are bounded, because someone who keeps typing must not be able to hold the quit open forever.
+	maximumRendererFlushRounds: 3
 } as const;

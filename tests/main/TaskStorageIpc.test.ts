@@ -404,14 +404,15 @@ describe('TaskStorageIpc', () => {
 		expect(app.quit).not.toHaveBeenCalled();
 	});
 
-	test('closes the window right away when it closes as part of a quit', () => {
-		const { ipcMain } = createMockIpcMain();
+	test('waits for the quit flush when the window is closed while it is still running', async() => {
+		const { handlers, ipcMain } = createMockIpcMain();
 		const { app, handlers: appHandlers } = createMockApp();
 		const { taskStorage } = createMockTaskStorage();
 		jest.spyOn(appLogger, 'flush').mockResolvedValue(undefined);
 		const flushTarget = {
 			send: jest.fn()
 		};
+		const event = {} as IpcMainInvokeEvent;
 
 		const { requestRendererFlushBeforeWindowClose } = registerTaskStorageIpcHandlers({
 			app,
@@ -424,6 +425,42 @@ describe('TaskStorageIpc', () => {
 
 		appHandlers.get('before-quit')!({ preventDefault: jest.fn() });
 
+		// Destroying the window now would tear the renderer down halfway through the flush the quit is waiting for, so the close
+		// joins that handshake instead of asking for a second one
+		const windowClosePromise = requestRendererFlushBeforeWindowClose();
+
+		expect(windowClosePromise).toBeDefined();
+		expect(flushTarget.send).toHaveBeenCalledTimes(1);
+
+		await handlers.get(SPOT_STORAGE_IPC_CHANNELS.pendingTaskChangesFlushed)!(event);
+
+		await expect(windowClosePromise).resolves.toBeUndefined();
+	});
+
+	test('closes the window right away once the quit flush is done', async() => {
+		const { handlers, ipcMain } = createMockIpcMain();
+		const { app, handlers: appHandlers } = createMockApp();
+		const { taskStorage } = createMockTaskStorage();
+		jest.spyOn(appLogger, 'flush').mockResolvedValue(undefined);
+		const flushTarget = {
+			send: jest.fn()
+		};
+		const event = {} as IpcMainInvokeEvent;
+
+		const { requestRendererFlushBeforeWindowClose } = registerTaskStorageIpcHandlers({
+			app,
+			ipcMain,
+			taskStorage,
+			getRendererFlushTarget: () => {
+				return flushTarget;
+			}
+		});
+
+		appHandlers.get('before-quit')!({ preventDefault: jest.fn() });
+		await handlers.get(SPOT_STORAGE_IPC_CHANNELS.pendingTaskChangesFlushed)!(event);
+		await waitForQueuedWork();
+
+		// The renderer has nothing left to write, and the quit closes the database right after, so the window does not wait again
 		expect(requestRendererFlushBeforeWindowClose()).toBeUndefined();
 		expect(flushTarget.send).toHaveBeenCalledTimes(1);
 	});
