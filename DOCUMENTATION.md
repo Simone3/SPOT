@@ -10,7 +10,7 @@ SPOT is the Simple Planner & Organizer Tool: a small Electron + React task manag
 - Main-process storage modules exist under `src/main/storage`. Storage initializes SQLite in the local database folder, owns one lazy database connection per storage instance, loads task rows, executes task write commands, writes through the process-wide operational logger, reports database health, writes rotated backup copies, and closes the database during shutdown. Electron exposes that boundary through storage IPC and `window.spotStorage`; React uses it for startup loading, task mutations, non-healthy database status feedback, and backup failure notices.
 - The database always lives in the Electron user-data folder and cannot be moved. The user only chooses the backup folder, which receives rotated write-only copies of the database and defaults to `<userData>/backups`. Startup never blocks on a folder choice. Configuration and log files also always stay in the Electron user-data folder.
 - Electron main and preload TypeScript sources are bundled by `scripts/build-electron.js` into ignored `dist/electron` files before Electron starts or packages. The bundling step uses exact-version `esbuild` to remove the former custom runtime TypeScript/module resolver.
-- Electron loads the built React `build/index.html` file in both development and packaged mode. `package.json` sets CRA's `homepage` to `.` so production asset URLs stay relative under file loading.
+- Electron loads the built React `build/index.html` file in both development and packaged mode. `vite.config.mts` sets `base` to `./` so asset URLs stay relative under file loading, and points `build.outDir` at `build` so the main process and the packaging step keep finding the renderer where they always did.
 - The Notes and Tags routes exist as placeholder pages. The Settings route owns the database and backup folder settings.
 - The implemented persistence architecture is one local SQLite database as the source of truth, one append-only rolled `spot-logs.ndjson` operational log, and a rotated set of backup copies in the backup folder.
 - The implemented persistence behavior is documented below. Startup loading, task mutations, shutdown draining, packaged React loading, and user-facing database health feedback are wired in Electron.
@@ -59,7 +59,8 @@ npm run make
 - `DOCUMENTATION.md` is this detailed project reference.
 - `eslint.config.js` contains the flat ESLint configuration used by `npm run lint`.
 - `scripts/build-electron.js` bundles Electron main and preload TypeScript sources into ignored `dist/electron` runtime files.
-- `public/index.html` is the React renderer HTML template.
+- `vite.config.mts` configures the Vite renderer build and the Vitest test run. It is an ES module because `package.json` has no `"type": "module"`, so the `.mts` extension is what keeps the native config loader from treating it as CommonJS.
+- `index.html` is the React renderer HTML template and the Vite entry point, so it lives in the repository root and loads `src/index.tsx` directly.
 - `src/index.tsx` mounts the React app and defines routes.
 - `src/index.css` defines global layout and theme variables.
 - `src/config/AppConfig.ts` holds the app-wide configuration constants shared by the Electron main process and the React renderer.
@@ -97,7 +98,7 @@ npm run make
 - `src/main/storage/TaskRepository.ts` owns SQLite task queries and task repository helpers that can run against an existing database wrapper or a short scoped repository session.
 - `src/main/window/WindowLoadTarget.ts` resolves the built React `build/index.html` file from the Electron app root.
 - `src/types` contains shared TypeScript types and constants split into semantic files for tasks, task storage, task-storage IPC channels, backup location, backup-location IPC channels, domains, and filters. The storage and backup types re-export the framework contracts and add only what is specific to SPOT. Types that have one clear owner stay in the owning `.ts` or `.tsx` file instead.
-- `src/react-app-env.d.ts` contains the React Scripts TypeScript reference plus renderer-side declarations for `window.versions`, `window.spotStorage`, and `window.spotBackupLocation`.
+- `src/vite-env.d.ts` contains the Vite client TypeScript reference, which declares the CSS and asset imports, plus renderer-side declarations for `window.versions`, `window.spotStorage`, and `window.spotBackupLocation`.
 - `src/components/common` contains layout and shared UI primitives.
 - `src/components/inputs` contains reusable inputs.
 - `src/components/tasks` contains the current task-management UI.
@@ -110,7 +111,7 @@ npm run make
 
 ## Source Imports
 
-React source files use absolute imports rooted at `src/...`, including local CSS imports, instead of relative `./` or `../` paths. `tsconfig.json` sets `baseUrl` to the repository root so TypeScript, React Scripts, Jest, and ESLint can resolve those imports consistently.
+React source files use absolute imports rooted at `src/...`, including local CSS imports, instead of relative `./` or `../` paths. `tsconfig.json` sets `baseUrl` to the repository root so TypeScript and ESLint resolve those imports, and `vite.config.mts` declares the matching `src` alias so Vite and Vitest resolve them the same way at build and test time.
 
 ## Framework Layer
 
@@ -670,7 +671,7 @@ Input components:
 
 `TextArea` wraps `MDXEditor`, which reads its `markdown` property only when it mounts and ignores every later change to it. `TextArea` therefore keeps an editor reference and pushes a new value in with `setMarkdown()` when the editor does not already hold it. Without that, an editor would keep showing content that is in no task state and in no database, for instance after tasks are reloaded following a failed write. The comparison against `getMarkdown()` is what keeps the editor untouched while the user types, because the value coming back from the task state is then the one the editor just produced.
 
-`MDXEditor` version `4.2.0` is ESM-only and cannot be loaded by the Jest version that React Scripts `5.0.1` provides, so tests replace `TextArea` with a plain `textarea` mock and this behavior is not covered by the automated tests.
+Tests replace `TextArea` with a plain `textarea` mock, so the behavior above is not covered by the automated tests. That mock was originally forced by `MDXEditor` version `4.2.0` being ESM-only, which the Jest version bundled with React Scripts could not load. Vitest loads ESM natively, so the obstacle is gone and the mock is now only a convenience: covering this behavior for real is possible whenever it is worth doing.
 
 Icons are local React components under `src/components/icons`.
 
@@ -725,6 +726,10 @@ Tests that cover `src/framework` live in `tests/framework` and depend only on fr
 - generic logging success, public log levels, startup file-open failures, bounded retry failures, retry recovery, shutdown flush behavior, and size-based rolling with bounded retention
 - the manually sorted list utility: insertion at every position, moves, and sort position renumbering
 - date handling: day-granularity comparison, whole-day offsets, relative labels and the weekday horizon, labels that are not supplied falling through, relative labels following the clock past midnight, stored `YYYY-MM-DD` conversion in both directions, and the next working day
+
+Tests run on Vitest, configured in the `test` section of `vite.config.mts`: it reuses the same `src` alias as the build, runs in `jsdom`, and exposes `describe`, `test`, `expect` and `vi` as globals. `tests/setupTests.ts` is the shared setup file, and `tests/vitest-env.d.ts` is what makes those globals visible to TypeScript.
+
+`tests/setupTests.ts` defines a global `jest` object holding a single `advanceTimersByTime` helper that forwards to `vi`. That is not leftover Jest: Testing Library decides whether fake timers are installed by probing for a global `jest`, and without one its `findBy` queries poll on timers Vitest has already frozen and hang until the test times out. The test suite itself uses `vi` everywhere.
 
 Validation commands:
 

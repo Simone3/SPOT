@@ -2,16 +2,13 @@
 	"name": "spot",
 	"version": "1.0.0",
 	"description": "Simple Planner & Organizer Tool",
-	"homepage": ".",
 	"main": "dist/electron/main.js",
 	"scripts": {
 		"build": "npm run build-react && npm run build-electron",
-		"build-react": "react-scripts build",
+		"build-react": "vite build",
 		"build-electron": "node scripts/build-electron.js",
-		"test-react": "react-scripts test --watchAll=false --roots tests --testMatch '<rootDir>/tests/**/*.{spec,test}.{js,jsx,ts,tsx}' --setupFilesAfterEnv '<rootDir>/tests/setupTests.ts'",
-		"eject-react": "react-scripts eject",
 		"start": "npm run build && electron-forge start",
-		"test": "react-scripts test --watchAll=false --roots tests --testMatch '<rootDir>/tests/**/*.{spec,test}.{js,jsx,ts,tsx}' --setupFilesAfterEnv '<rootDir>/tests/setupTests.ts'",
+		"test": "vitest run",
 		"prepackage": "npm run build",
 		"package": "electron-forge package",
 		"premake": "npm run build",
@@ -38,18 +35,6 @@
 	"bugs": {
 		"url": "https://github.com/Simone3/SPOT/issues"
 	},
-	"browserslist": {
-		"production": [
-			">0.2%",
-			"not dead",
-			"not op_mini all"
-		],
-		"development": [
-			"last 1 chrome version",
-			"last 1 firefox version",
-			"last 1 safari version"
-		]
-	},
 	"dependencies": {
 		"@dnd-kit/react": "0.5.0",
 		"@fontsource/inter": "5.3.0",
@@ -62,8 +47,7 @@
 		"react": "19.2.8",
 		"react-datepicker": "9.1.0",
 		"react-dom": "19.2.8",
-		"react-router-dom": "7.18.2",
-		"react-scripts": "5.0.1"
+		"react-router-dom": "7.18.2"
 	},
 	"devDependencies": {
 		"@electron-forge/cli": "7.11.2",
@@ -76,23 +60,26 @@
 		"@electron/fuses": "1.8.0",
 		"@eslint/js": "9.39.4",
 		"@stylistic/eslint-plugin": "5.10.0",
-		"@types/jest": "30.0.0",
 		"@types/node": "24.13.3",
 		"@types/react": "19.2.18",
 		"@types/react-dom": "19.2.4",
 		"@typescript-eslint/eslint-plugin": "8.66.0",
 		"@typescript-eslint/parser": "8.66.0",
+		"@vitejs/plugin-react": "6.0.5",
+		"@vitest/eslint-plugin": "1.6.26",
 		"electron": "43.3.0",
 		"esbuild": "0.28.1",
 		"eslint": "9.39.4",
 		"eslint-import-resolver-typescript": "4.4.5",
 		"eslint-plugin-import": "2.32.0",
-		"eslint-plugin-jest": "29.16.0",
 		"eslint-plugin-jsdoc": "63.3.3",
 		"eslint-plugin-react": "7.37.5",
 		"eslint-plugin-react-hooks": "7.1.1",
 		"globals": "17.9.0",
-		"typescript": "4.9.5"
+		"jsdom": "30.0.1",
+		"typescript": "5.9.3",
+		"vite": "8.2.0",
+		"vitest": "4.1.10"
 	},
 	"engines": {
 		"node": ">=24"

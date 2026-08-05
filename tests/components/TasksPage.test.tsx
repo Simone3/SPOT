@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { act, fireEvent, render, screen, type RenderResult } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { makeTask } from '../testUtils';
@@ -9,7 +10,10 @@ import type { Task, TaskChange } from 'src/types/TaskTypes';
 import type { TaskFilterChange } from 'src/types/FilterTypes';
 import type { LoadTasksResult, SpotStorageApi, StorageStatus, TaskStorageCommand, TaskStorageCommandResult } from 'src/types/TaskStorageTypes';
 
-jest.mock('src/components/tasks/TaskFilters', () => {
+vi.mock('src/components/tasks/TaskFilters', async() => {
+	// The mock factory is hoisted above the imports, so the real modules it needs are loaded here rather than referenced from the module scope
+	const React = await vi.importActual<typeof import('react')>('react');
+
 	type MockTaskFiltersProps = {
 		filters: {
 			showCompleted: boolean;
@@ -18,8 +22,6 @@ jest.mock('src/components/tasks/TaskFilters', () => {
 	};
 
 	const MockTaskFilters = ({ filters, onFilterChange }: MockTaskFiltersProps): ReactElement => {
-		const React = jest.requireActual('react') as typeof import('react');
-
 		return React.createElement('div', {
 			'data-testid': 'task-filters'
 		}, [
@@ -39,7 +41,11 @@ jest.mock('src/components/tasks/TaskFilters', () => {
 	};
 });
 
-jest.mock('src/components/tasks/TasksList', () => {
+vi.mock('src/components/tasks/TasksList', async() => {
+	// The mock factory is hoisted above the imports, so the real modules it needs are loaded here rather than referenced from the module scope
+	const React = await vi.importActual<typeof import('react')>('react');
+	const { changePendingTaskValue, flushPendingTaskChangesForTask } = await vi.importActual<typeof import('src/logic/PendingTaskChanges')>('src/logic/PendingTaskChanges');
+
 	type MockTasksListProps = {
 		title: string;
 		tasks: Task[];
@@ -51,8 +57,6 @@ jest.mock('src/components/tasks/TasksList', () => {
 
 	// Task components buffer their changes outside the component tree, so the mocked list edits tasks the same way
 	const onUpdateTask = (task: Task, changedValues: TaskChange): void => {
-		const { changePendingTaskValue, flushPendingTaskChangesForTask } = jest.requireActual('src/logic/PendingTaskChanges') as typeof import('src/logic/PendingTaskChanges');
-
 		Object.entries(changedValues).forEach(([ key, value ]) => {
 			changePendingTaskValue(task, key as keyof Task, value as Task[keyof Task], 'buffered');
 		});
@@ -60,7 +64,6 @@ jest.mock('src/components/tasks/TasksList', () => {
 	};
 
 	const MockTasksList = ({ title, tasks, onAddNewTask, onDeleteTask, onMoveTask, onSortTasksByImportance }: MockTasksListProps): ReactElement => {
-		const React = jest.requireActual('react') as typeof import('react');
 		const children = [
 			React.createElement('h3', { key: 'title' }, title),
 			...tasks.map((task) => {
@@ -166,30 +169,30 @@ const createSuccessfulCommandResult = (): TaskStorageCommandResult => {
 
 const createMockSpotStorage = (
 	loadTasks: SpotStorageApi['loadTasks'],
-	executeTaskCommand: SpotStorageApi['executeTaskCommand'] = jest.fn(async(): Promise<TaskStorageCommandResult> => {
+	executeTaskCommand: SpotStorageApi['executeTaskCommand'] = vi.fn(async(): Promise<TaskStorageCommandResult> => {
 		return createSuccessfulCommandResult();
 	})
 ): SpotStorageApi => {
 	return {
 		loadTasks,
 		executeTaskCommand,
-		getStorageStatus: jest.fn(async() => {
+		getStorageStatus: vi.fn(async() => {
 			return healthyStatus;
 		}),
-		onFlushPendingTaskChanges: jest.fn(() => {
+		onFlushPendingTaskChanges: vi.fn(() => {
 			return () => {};
 		}),
-		onBackupStatusChanged: jest.fn(() => {
+		onBackupStatusChanged: vi.fn(() => {
 			return () => {};
 		}),
-		notifyPendingTaskChangesFlushed: jest.fn(async() => {
+		notifyPendingTaskChangesFlushed: vi.fn(async() => {
 			return undefined;
 		})
 	};
 };
 
-const createLoadTasks = (tasks: Task[]): jest.Mock<Promise<LoadTasksResult>, []> => {
-	return jest.fn(async(): Promise<LoadTasksResult> => {
+const createLoadTasks = (tasks: Task[]): Mock<() => Promise<LoadTasksResult>> => {
+	return vi.fn(async(): Promise<LoadTasksResult> => {
 		return {
 			ok: true,
 			tasks,
@@ -243,8 +246,8 @@ describe('TasksPage', () => {
 		setWindowSpotStorage(originalSpotStorage);
 		resetPendingTaskChangesForTests();
 		resetTaskStorageQueueForTests();
-		jest.restoreAllMocks();
-		jest.useRealTimers();
+		vi.restoreAllMocks();
+		vi.useRealTimers();
 	});
 
 	test('requires the Electron storage API on startup', async() => {
@@ -266,7 +269,7 @@ describe('TasksPage', () => {
 		});
 		let resolveLoadTasks: (result: LoadTasksResult) => void = () => {};
 		let loadTasksPromise: Promise<LoadTasksResult> | undefined;
-		const loadTasks = jest.fn(() => {
+		const loadTasks = vi.fn(() => {
 			loadTasksPromise = new Promise((resolve) => {
 				resolveLoadTasks = resolve;
 			});
@@ -296,7 +299,7 @@ describe('TasksPage', () => {
 	});
 
 	test('shows a startup error when Electron storage loading fails', async() => {
-		const loadTasks = jest.fn(async(): Promise<LoadTasksResult> => {
+		const loadTasks = vi.fn(async(): Promise<LoadTasksResult> => {
 			return {
 				ok: false,
 				reason: 'database-error',
@@ -322,14 +325,14 @@ describe('TasksPage', () => {
 	});
 
 	test('persists created, updated, completed, and deleted tasks through storage commands', async() => {
-		jest.useFakeTimers();
-		jest.setSystemTime(new Date('2026-06-20T10:00:00.000Z'));
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date('2026-06-20T10:00:00.000Z'));
 		const persistedTask = makeTask({
 			id: 'persisted-task',
 			text: 'Persisted startup task',
 			visible: false
 		});
-		const executeTaskCommand = jest.fn(async(command: TaskStorageCommand): Promise<TaskStorageCommandResult> => {
+		const executeTaskCommand = vi.fn(async(command: TaskStorageCommand): Promise<TaskStorageCommandResult> => {
 			void command;
 			return createSuccessfulCommandResult();
 		});
@@ -398,7 +401,7 @@ describe('TasksPage', () => {
 			tags: [ 'urgent' ],
 			visible: false
 		});
-		const executeTaskCommand = jest.fn(async(command: TaskStorageCommand): Promise<TaskStorageCommandResult> => {
+		const executeTaskCommand = vi.fn(async(command: TaskStorageCommand): Promise<TaskStorageCommandResult> => {
 			void command;
 			return createSuccessfulCommandResult();
 		});
@@ -422,7 +425,7 @@ describe('TasksPage', () => {
 			sortPosition: 500,
 			visible: false
 		});
-		const executeTaskCommand = jest.fn(async(command: TaskStorageCommand): Promise<TaskStorageCommandResult> => {
+		const executeTaskCommand = vi.fn(async(command: TaskStorageCommand): Promise<TaskStorageCommandResult> => {
 			void command;
 			return createSuccessfulCommandResult();
 		});
@@ -463,7 +466,7 @@ describe('TasksPage', () => {
 			sortPosition: 100,
 			visible: false
 		});
-		const executeTaskCommand = jest.fn(async(command: TaskStorageCommand): Promise<TaskStorageCommandResult> => {
+		const executeTaskCommand = vi.fn(async(command: TaskStorageCommand): Promise<TaskStorageCommandResult> => {
 			void command;
 			return createSuccessfulCommandResult();
 		});
@@ -512,7 +515,7 @@ describe('TasksPage', () => {
 			visible: false
 		});
 		const commandDeferred = createDeferred<TaskStorageCommandResult>();
-		const executeTaskCommand = jest.fn((command: TaskStorageCommand): Promise<TaskStorageCommandResult> => {
+		const executeTaskCommand = vi.fn((command: TaskStorageCommand): Promise<TaskStorageCommandResult> => {
 			void command;
 			return commandDeferred.promise;
 		});
@@ -562,7 +565,7 @@ describe('TasksPage', () => {
 			}
 		};
 		const commandDeferred = createDeferred<TaskStorageCommandResult>();
-		const executeTaskCommand = jest.fn((command: TaskStorageCommand): Promise<TaskStorageCommandResult> => {
+		const executeTaskCommand = vi.fn((command: TaskStorageCommand): Promise<TaskStorageCommandResult> => {
 			void command;
 			return commandDeferred.promise;
 		});
@@ -610,7 +613,7 @@ describe('TasksPage', () => {
 			status: unavailableStatus
 		};
 		const commandDeferred = createDeferred<TaskStorageCommandResult>();
-		const executeTaskCommand = jest.fn((command: TaskStorageCommand): Promise<TaskStorageCommandResult> => {
+		const executeTaskCommand = vi.fn((command: TaskStorageCommand): Promise<TaskStorageCommandResult> => {
 			void command;
 			return commandDeferred.promise;
 		});
@@ -641,7 +644,7 @@ describe('TasksPage', () => {
 			visible: false
 		});
 		const loadTasks = createLoadTasks([ persistedTask ]);
-		const executeTaskCommand = jest.fn(async(command: TaskStorageCommand): Promise<TaskStorageCommandResult> => {
+		const executeTaskCommand = vi.fn(async(command: TaskStorageCommand): Promise<TaskStorageCommandResult> => {
 			void command;
 			return createSuccessfulCommandResult();
 		});

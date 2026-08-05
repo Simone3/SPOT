@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { STORAGE_CONFIG } from 'src/config/AppConfig';
 import {
 	clearTaskStorageFailures,
@@ -79,11 +80,11 @@ const setExecuteTaskCommand = (executeTaskCommand: SpotStorageApi['executeTaskCo
 		configurable: true,
 		writable: true,
 		value: {
-			loadTasks: jest.fn(),
+			loadTasks: vi.fn(),
 			executeTaskCommand,
-			getStorageStatus: jest.fn(),
-			onFlushPendingTaskChanges: jest.fn(),
-			notifyPendingTaskChangesFlushed: jest.fn()
+			getStorageStatus: vi.fn(),
+			onFlushPendingTaskChanges: vi.fn(),
+			notifyPendingTaskChangesFlushed: vi.fn()
 		}
 	});
 };
@@ -102,13 +103,13 @@ describe('TaskStorageQueue', () => {
 			writable: true,
 			value: originalSpotStorage
 		});
-		jest.useRealTimers();
-		jest.restoreAllMocks();
+		vi.useRealTimers();
+		vi.restoreAllMocks();
 	});
 
 	test('writes queued commands one at a time and in order', async() => {
 		const writtenTaskIds: string[] = [];
-		setExecuteTaskCommand(jest.fn(async(command: TaskStorageCommand) => {
+		setExecuteTaskCommand(vi.fn(async(command: TaskStorageCommand) => {
 			writtenTaskIds.push((command.payload as { taskId: string }).taskId);
 
 			return healthyResult;
@@ -124,8 +125,8 @@ describe('TaskStorageQueue', () => {
 	});
 
 	test('retries a failed write and keeps warning until it goes through', async() => {
-		jest.useFakeTimers();
-		const executeTaskCommand: jest.Mock<Promise<TaskStorageCommandResult>, []> = jest.fn(async() => {
+		vi.useFakeTimers();
+		const executeTaskCommand: Mock<() => Promise<TaskStorageCommandResult>> = vi.fn(async() => {
 			return executeTaskCommand.mock.calls.length === 1 ? createDatabaseFailure('Database is locked.') : healthyResult;
 		});
 		setExecuteTaskCommand(executeTaskCommand);
@@ -137,8 +138,8 @@ describe('TaskStorageQueue', () => {
 		expect(executeTaskCommand).toHaveBeenCalledTimes(1);
 		expect(getTaskStorageQueueState().unsavedChangesMessage).toBe('Task storage update failed. Database is locked.');
 
-		jest.advanceTimersByTime(STORAGE_CONFIG.writeRetryDelayMs);
-		jest.useRealTimers();
+		vi.advanceTimersByTime(STORAGE_CONFIG.writeRetryDelayMs);
+		vi.useRealTimers();
 		await waitForTaskStorageQueue();
 
 		expect(executeTaskCommand).toHaveBeenCalledTimes(2);
@@ -146,9 +147,9 @@ describe('TaskStorageQueue', () => {
 	});
 
 	test('does not let later commands overtake a failed one', async() => {
-		jest.useFakeTimers();
+		vi.useFakeTimers();
 		const writtenTaskIds: string[] = [];
-		const executeTaskCommand = jest.fn(async(command: TaskStorageCommand) => {
+		const executeTaskCommand = vi.fn(async(command: TaskStorageCommand) => {
 			const { taskId } = command.payload as { taskId: string };
 
 			if(taskId === 'first' && executeTaskCommand.mock.calls.length === 1) {
@@ -169,16 +170,16 @@ describe('TaskStorageQueue', () => {
 
 		expect(writtenTaskIds).toEqual([]);
 
-		jest.advanceTimersByTime(STORAGE_CONFIG.writeRetryDelayMs);
-		jest.useRealTimers();
+		vi.advanceTimersByTime(STORAGE_CONFIG.writeRetryDelayMs);
+		vi.useRealTimers();
 		await waitForTaskStorageQueue();
 
 		expect(writtenTaskIds).toEqual([ 'first', 'second' ]);
 	});
 
 	test('retries a write that threw instead of answering', async() => {
-		jest.useFakeTimers();
-		const executeTaskCommand: jest.Mock<Promise<TaskStorageCommandResult>, []> = jest.fn(async() => {
+		vi.useFakeTimers();
+		const executeTaskCommand: Mock<() => Promise<TaskStorageCommandResult>> = vi.fn(async() => {
 			if(executeTaskCommand.mock.calls.length === 1) {
 				throw new Error('The renderer lost the main process.');
 			}
@@ -193,8 +194,8 @@ describe('TaskStorageQueue', () => {
 
 		expect(getTaskStorageQueueState().unsavedChangesMessage).toBe('Task storage update failed. The renderer lost the main process.');
 
-		jest.advanceTimersByTime(STORAGE_CONFIG.writeRetryDelayMs);
-		jest.useRealTimers();
+		vi.advanceTimersByTime(STORAGE_CONFIG.writeRetryDelayMs);
+		vi.useRealTimers();
 		await waitForTaskStorageQueue();
 
 		expect(executeTaskCommand).toHaveBeenCalledTimes(2);
@@ -202,8 +203,8 @@ describe('TaskStorageQueue', () => {
 	});
 
 	test('keeps a command storage refused while closing instead of dropping it', async() => {
-		jest.useFakeTimers();
-		const executeTaskCommand: jest.Mock<Promise<TaskStorageCommandResult>, []> = jest.fn(async() => {
+		vi.useFakeTimers();
+		const executeTaskCommand: Mock<() => Promise<TaskStorageCommandResult>> = vi.fn(async() => {
 			return executeTaskCommand.mock.calls.length === 1 ? createShutdownFailure('Task storage is shutting down.') : healthyResult;
 		});
 		setExecuteTaskCommand(executeTaskCommand);
@@ -214,8 +215,8 @@ describe('TaskStorageQueue', () => {
 
 		expect(getTaskStorageQueueState().unsavedChangesMessage).toBe('Task storage update failed. Task storage is shutting down.');
 
-		jest.advanceTimersByTime(STORAGE_CONFIG.writeRetryDelayMs);
-		jest.useRealTimers();
+		vi.advanceTimersByTime(STORAGE_CONFIG.writeRetryDelayMs);
+		vi.useRealTimers();
 		await waitForTaskStorageQueue();
 
 		expect(executeTaskCommand).toHaveBeenCalledTimes(2);
@@ -223,8 +224,8 @@ describe('TaskStorageQueue', () => {
 	});
 
 	test('retries a failed write immediately when the retry delay cannot be waited out', async() => {
-		jest.useFakeTimers();
-		const executeTaskCommand: jest.Mock<Promise<TaskStorageCommandResult>, []> = jest.fn(async() => {
+		vi.useFakeTimers();
+		const executeTaskCommand: Mock<() => Promise<TaskStorageCommandResult>> = vi.fn(async() => {
 			return executeTaskCommand.mock.calls.length === 1 ? createDatabaseFailure('Database is locked.') : healthyResult;
 		});
 		setExecuteTaskCommand(executeTaskCommand);
@@ -236,7 +237,7 @@ describe('TaskStorageQueue', () => {
 		expect(executeTaskCommand).toHaveBeenCalledTimes(1);
 
 		retryTaskStorageQueueNow();
-		jest.useRealTimers();
+		vi.useRealTimers();
 		await waitForTaskStorageQueue();
 
 		expect(executeTaskCommand).toHaveBeenCalledTimes(2);
@@ -244,7 +245,7 @@ describe('TaskStorageQueue', () => {
 	});
 
 	test('drops a command the database refused instead of retrying it forever', async() => {
-		const executeTaskCommand: jest.Mock<Promise<TaskStorageCommandResult>, []> = jest.fn(async() => {
+		const executeTaskCommand: Mock<() => Promise<TaskStorageCommandResult>> = vi.fn(async() => {
 			return createInvalidCommandFailure('Task field "id" cannot be changed.');
 		});
 		setExecuteTaskCommand(executeTaskCommand);
@@ -257,9 +258,9 @@ describe('TaskStorageQueue', () => {
 	});
 
 	test('gives up on a write the database keeps failing so later commands are still written', async() => {
-		jest.useFakeTimers();
+		vi.useFakeTimers();
 		const writtenTaskIds: string[] = [];
-		const executeTaskCommand = jest.fn(async(command: TaskStorageCommand) => {
+		const executeTaskCommand = vi.fn(async(command: TaskStorageCommand) => {
 			const { taskId } = command.payload as { taskId: string };
 
 			if(taskId === 'first') {
@@ -281,10 +282,10 @@ describe('TaskStorageQueue', () => {
 
 			expect(executeTaskCommand).toHaveBeenCalledTimes(attempt);
 			expect(writtenTaskIds).toEqual([]);
-			jest.advanceTimersByTime(STORAGE_CONFIG.writeRetryDelayMs);
+			vi.advanceTimersByTime(STORAGE_CONFIG.writeRetryDelayMs);
 		}
 
-		jest.useRealTimers();
+		vi.useRealTimers();
 		await waitForTaskStorageQueue();
 
 		// The change that cannot be written is given up on, so the queue stops holding back everything the user changed afterwards
@@ -295,8 +296,8 @@ describe('TaskStorageQueue', () => {
 	});
 
 	test('does not count writes storage refused while closing against the retry limit', async() => {
-		jest.useFakeTimers();
-		const executeTaskCommand: jest.Mock<Promise<TaskStorageCommandResult>, []> = jest.fn(async() => {
+		vi.useFakeTimers();
+		const executeTaskCommand: Mock<() => Promise<TaskStorageCommandResult>> = vi.fn(async() => {
 			if(executeTaskCommand.mock.calls.length > STORAGE_CONFIG.maximumWriteAttempts * 2) {
 				return healthyResult;
 			}
@@ -312,10 +313,10 @@ describe('TaskStorageQueue', () => {
 			await Promise.resolve();
 
 			expect(executeTaskCommand).toHaveBeenCalledTimes(attempt);
-			jest.advanceTimersByTime(STORAGE_CONFIG.writeRetryDelayMs);
+			vi.advanceTimersByTime(STORAGE_CONFIG.writeRetryDelayMs);
 		}
 
-		jest.useRealTimers();
+		vi.useRealTimers();
 		await waitForTaskStorageQueue();
 
 		expect(executeTaskCommand).toHaveBeenCalledTimes(STORAGE_CONFIG.maximumWriteAttempts * 2 + 1);
@@ -323,7 +324,7 @@ describe('TaskStorageQueue', () => {
 	});
 
 	test('keeps warning about a dropped command even after later commands succeed', async() => {
-		const executeTaskCommand: jest.Mock<Promise<TaskStorageCommandResult>, []> = jest.fn(async() => {
+		const executeTaskCommand: Mock<() => Promise<TaskStorageCommandResult>> = vi.fn(async() => {
 			return executeTaskCommand.mock.calls.length === 1 ? createInvalidCommandFailure('Refused.') : healthyResult;
 		});
 		setExecuteTaskCommand(executeTaskCommand);
@@ -343,8 +344,8 @@ describe('TaskStorageQueue', () => {
 	});
 
 	test('reports the latest database status to its subscribers', async() => {
-		const subscriber = jest.fn();
-		setExecuteTaskCommand(jest.fn(async() => {
+		const subscriber = vi.fn();
+		setExecuteTaskCommand(vi.fn(async() => {
 			return createDatabaseFailure('Database is locked.');
 		}));
 		const unsubscribe = subscribeToTaskStorageQueue(subscriber);

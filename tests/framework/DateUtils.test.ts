@@ -15,12 +15,12 @@ const LABEL_OPTIONS: SmartDateOptions = {
 
 describe('DateUtils', () => {
 	beforeEach(() => {
-		jest.useFakeTimers();
-		jest.setSystemTime(TODAY);
+		vi.useFakeTimers();
+		vi.setSystemTime(TODAY);
 	});
 
 	afterEach(() => {
-		jest.useRealTimers();
+		vi.useRealTimers();
 	});
 
 	test('compares dates at day granularity', () => {
@@ -73,7 +73,7 @@ describe('DateUtils', () => {
 	test('follows the clock into the next day', () => {
 		expect(DateUtils.toSmartString(new Date('2026-05-10T12:00:00'), LABEL_OPTIONS)).toBe('Today');
 
-		jest.setSystemTime(new Date('2026-05-11T00:30:00'));
+		vi.setSystemTime(new Date('2026-05-11T00:30:00'));
 
 		expect(DateUtils.toSmartString(new Date('2026-05-10T12:00:00'), LABEL_OPTIONS)).toBe('Yesterday');
 		expect(DateUtils.toSmartString(new Date('2026-05-11T12:00:00'), LABEL_OPTIONS)).toBe('Today');

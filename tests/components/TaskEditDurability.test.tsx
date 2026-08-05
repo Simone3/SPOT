@@ -1,12 +1,17 @@
+import type { Mock } from 'vitest';
 import type { ChangeEvent, ReactElement, ReactNode } from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
+import { useSortable } from '@dnd-kit/react/sortable';
 import { makeFormDomains, makeTask } from '../testUtils';
 import { TASKS_CONFIG } from 'src/config/AppConfig';
 import { clearPendingTaskChanges, flushPendingTaskChanges, registerPendingTaskChangesApplier, resetPendingTaskChangesForTests } from 'src/logic/PendingTaskChanges';
 import { TasksList } from 'src/components/tasks/TasksList';
 import type { Task, TaskChange } from 'src/types/TaskTypes';
 
-jest.mock('src/components/inputs/TextArea', () => {
+vi.mock('src/components/inputs/TextArea', async() => {
+	// The mock factory is hoisted above the imports, so React is loaded here rather than referenced from the module scope
+	const React = await vi.importActual<typeof import('react')>('react');
+
 	type MockTextAreaProps = {
 		placeholder?: string;
 		value: string;
@@ -16,8 +21,6 @@ jest.mock('src/components/inputs/TextArea', () => {
 	};
 
 	const MockTextArea = ({ placeholder, value, onChange, onBlur, disabled }: MockTextAreaProps): ReactElement => {
-		const React = jest.requireActual('react') as typeof import('react');
-
 		return React.createElement('textarea', {
 			'aria-label': placeholder || 'Task text',
 			value,
@@ -34,10 +37,11 @@ jest.mock('src/components/inputs/TextArea', () => {
 	};
 });
 
-jest.mock('@dnd-kit/react', () => {
-	const MockDragDropProvider = ({ children }: { children: ReactNode }): ReactElement => {
-		const React = jest.requireActual('react') as typeof import('react');
+vi.mock('@dnd-kit/react', async() => {
+	// The mock factory is hoisted above the imports, so React is loaded here rather than referenced from the module scope
+	const React = await vi.importActual<typeof import('react')>('react');
 
+	const MockDragDropProvider = ({ children }: { children: ReactNode }): ReactElement => {
 		return React.createElement(React.Fragment, null, children);
 	};
 
@@ -47,13 +51,13 @@ jest.mock('@dnd-kit/react', () => {
 	};
 });
 
-jest.mock('@dnd-kit/react/sortable', () => {
+vi.mock('@dnd-kit/react/sortable', () => {
 	return {
 		__esModule: true,
 		isSortable: () => {
 			return false;
 		},
-		useSortable: jest.fn(() => {
+		useSortable: vi.fn(() => {
 			return {
 				ref: () => {},
 				handleRef: () => {}
@@ -64,14 +68,14 @@ jest.mock('@dnd-kit/react/sortable', () => {
 
 interface RenderedTasksList {
 	container: HTMLElement;
-	applyPendingTaskChanges: jest.Mock<void, [ string, TaskChange ]>;
-	onDeleteTask: jest.Mock<void, [ Task ]>;
+	applyPendingTaskChanges: Mock<(taskId: string, changedValues: TaskChange) => void>;
+	onDeleteTask: Mock<(task: Task) => void>;
 	rerenderTasks: (nextTasks: Task[]) => void;
 }
 
 const renderTasksList = (tasks: Task[]): RenderedTasksList => {
-	const applyPendingTaskChanges = jest.fn<void, [ string, TaskChange ]>();
-	const onDeleteTask = jest.fn<void, [ Task ]>();
+	const applyPendingTaskChanges = vi.fn<(taskId: string, changedValues: TaskChange) => void>();
+	const onDeleteTask = vi.fn<(task: Task) => void>();
 
 	registerPendingTaskChangesApplier(applyPendingTaskChanges);
 
@@ -81,10 +85,10 @@ const renderTasksList = (tasks: Task[]): RenderedTasksList => {
 				title='Tasks'
 				tasks={currentTasks}
 				inputDomains={makeFormDomains()}
-				onRefreshTasks={jest.fn()}
-				onMoveTask={jest.fn()}
-				onSortTasksByImportance={jest.fn()}
-				onAddNewTask={jest.fn()}
+				onRefreshTasks={vi.fn()}
+				onMoveTask={vi.fn()}
+				onSortTasksByImportance={vi.fn()}
+				onAddNewTask={vi.fn()}
 				onDeleteTask={onDeleteTask}
 				showActions={true}
 			/>
@@ -128,7 +132,8 @@ const typeNewTag = (value: string): void => {
 
 describe('Task edit durability', () => {
 	beforeEach(() => {
-		const useSortableMock = jest.requireMock('@dnd-kit/react/sortable').useSortable as jest.Mock;
+		// The module above is mocked, so the imported binding is the mock itself
+		const useSortableMock = useSortable as unknown as Mock;
 
 		useSortableMock.mockImplementation(() => {
 			return {
@@ -140,12 +145,12 @@ describe('Task edit durability', () => {
 
 	afterEach(() => {
 		resetPendingTaskChangesForTests();
-		jest.useRealTimers();
-		jest.restoreAllMocks();
+		vi.useRealTimers();
+		vi.restoreAllMocks();
 	});
 
 	test('keeps saving what the user typed after the task disappears from the list', () => {
-		jest.useFakeTimers();
+		vi.useFakeTimers();
 		const task = makeTask({
 			text: 'Original task',
 			visible: true
@@ -160,7 +165,7 @@ describe('Task edit durability', () => {
 		expect(applyPendingTaskChanges).not.toHaveBeenCalled();
 
 		act(() => {
-			jest.advanceTimersByTime(TASKS_CONFIG.flushDelayMs);
+			vi.advanceTimersByTime(TASKS_CONFIG.flushDelayMs);
 		});
 
 		expect(applyPendingTaskChanges).toHaveBeenCalledWith(task.id, {
@@ -169,7 +174,7 @@ describe('Task edit durability', () => {
 	});
 
 	test('never saves the buffered changes of a task that was deleted', () => {
-		jest.useFakeTimers();
+		vi.useFakeTimers();
 		const task = makeTask({
 			text: 'Original task',
 			visible: true
@@ -190,7 +195,7 @@ describe('Task edit durability', () => {
 		fireEvent.click(screen.getByRole('button', { name: 'Delete Task' }));
 
 		act(() => {
-			jest.advanceTimersByTime(TASKS_CONFIG.flushDelayMs);
+			vi.advanceTimersByTime(TASKS_CONFIG.flushDelayMs);
 		});
 		flushPendingTaskChanges();
 
@@ -270,7 +275,7 @@ describe('Task edit durability', () => {
 	});
 
 	test('does not save a tag while the user is still typing it', () => {
-		jest.useFakeTimers();
+		vi.useFakeTimers();
 		const task = makeTask({
 			text: 'Original task',
 			visible: true
@@ -281,7 +286,7 @@ describe('Task edit durability', () => {
 
 		// Typing a tag buffers it without starting a save of its own, so half-typed tags never reach the database
 		act(() => {
-			jest.advanceTimersByTime(TASKS_CONFIG.flushDelayMs);
+			vi.advanceTimersByTime(TASKS_CONFIG.flushDelayMs);
 		});
 
 		expect(applyPendingTaskChanges).not.toHaveBeenCalled();
@@ -310,7 +315,7 @@ describe('Task edit durability', () => {
 	});
 
 	test('saves buffered edits when everything is flushed before the renderer goes away', () => {
-		jest.useFakeTimers();
+		vi.useFakeTimers();
 		const task = makeTask({
 			text: 'Original task',
 			visible: true

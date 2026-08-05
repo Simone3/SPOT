@@ -52,8 +52,8 @@ const domains: FilterDomains = {
 
 describe('TaskFilters', () => {
 	test('renders filter controls and emits focused filter changes', () => {
-		const onFilterChange = jest.fn();
-		const onResetDefaultFilters = jest.fn();
+		const onFilterChange = vi.fn();
+		const onResetDefaultFilters = vi.fn();
 
 		render(
 			<TaskFilters

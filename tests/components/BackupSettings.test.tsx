@@ -27,16 +27,16 @@ const createMockBackupLocationApi = (
 	overrides: Partial<SpotBackupLocationApi> = {}
 ): SpotBackupLocationApi => {
 	return {
-		getBackupLocation: jest.fn(async() => {
+		getBackupLocation: vi.fn(async() => {
 			return backupLocation;
 		}),
-		chooseBackupDirectory: jest.fn(async() => {
+		chooseBackupDirectory: vi.fn(async() => {
 			return {
 				ok: true as const,
 				directory: '/tmp/spot-new-backups'
 			};
 		}),
-		setBackupDirectory: jest.fn(async() => {
+		setBackupDirectory: vi.fn(async() => {
 			return {
 				ok: true as const,
 				location: {
@@ -45,7 +45,7 @@ const createMockBackupLocationApi = (
 				}
 			};
 		}),
-		setDefaultBackupDirectory: jest.fn(async() => {
+		setDefaultBackupDirectory: vi.fn(async() => {
 			return {
 				ok: true as const,
 				location: {
@@ -65,10 +65,10 @@ const createMockStorageApi = (backup: BackupStatus | undefined): Pick<SpotStorag
 	};
 
 	return {
-		getStorageStatus: jest.fn(async() => {
+		getStorageStatus: vi.fn(async() => {
 			return status;
 		}),
-		onBackupStatusChanged: jest.fn(() => {
+		onBackupStatusChanged: vi.fn(() => {
 			return () => {
 				return undefined;
 			};
@@ -86,7 +86,7 @@ describe('BackupSettings', () => {
 	afterEach(() => {
 		setWindowApi('spotBackupLocation', originalBackupLocationApi);
 		setWindowApi('spotStorage', originalStorageApi);
-		jest.restoreAllMocks();
+		vi.restoreAllMocks();
 	});
 
 	// The whole point of the settings panel is telling the user where the tasks really are

@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { makeTask } from '../testUtils';
 import { TASKS_CONFIG } from 'src/config/AppConfig';
 import {
@@ -35,8 +36,8 @@ const waitForQueuedWork = (): Promise<void> => {
 	});
 };
 
-const registerApplier = (): jest.Mock<void, AppliedChange> => {
-	const applier = jest.fn<void, AppliedChange>();
+const registerApplier = (): Mock<(...args: AppliedChange) => void> => {
+	const applier = vi.fn<(...args: AppliedChange) => void>();
 
 	registerPendingTaskChangesApplier(applier);
 
@@ -49,17 +50,17 @@ const createMockSpotStorage = (): {
 } => {
 	const flushRequestListeners = new Set<() => void>();
 	const spotStorage = {
-		loadTasks: jest.fn(),
-		executeTaskCommand: jest.fn(),
-		getStorageStatus: jest.fn(),
-		onFlushPendingTaskChanges: jest.fn((listener: () => void) => {
+		loadTasks: vi.fn(),
+		executeTaskCommand: vi.fn(),
+		getStorageStatus: vi.fn(),
+		onFlushPendingTaskChanges: vi.fn((listener: () => void) => {
 			flushRequestListeners.add(listener);
 
 			return () => {
 				flushRequestListeners.delete(listener);
 			};
 		}),
-		notifyPendingTaskChangesFlushed: jest.fn(async() => {
+		notifyPendingTaskChangesFlushed: vi.fn(async() => {
 			return undefined;
 		})
 	} as unknown as SpotStorageApi;
@@ -89,12 +90,12 @@ describe('PendingTaskChanges', () => {
 		resetPendingTaskChangesForTests();
 		resetTaskStorageQueueForTests();
 		setWindowSpotStorage(originalSpotStorage);
-		jest.useRealTimers();
-		jest.restoreAllMocks();
+		vi.useRealTimers();
+		vi.restoreAllMocks();
 	});
 
 	test('buffers changed values and saves them after the flush delay', () => {
-		jest.useFakeTimers();
+		vi.useFakeTimers();
 		const task = makeTask({ text: 'Original task' });
 		const applier = registerApplier();
 
@@ -105,10 +106,10 @@ describe('PendingTaskChanges', () => {
 		});
 		expect(applier).not.toHaveBeenCalled();
 
-		jest.advanceTimersByTime(TASKS_CONFIG.flushDelayMs - 1);
+		vi.advanceTimersByTime(TASKS_CONFIG.flushDelayMs - 1);
 		expect(applier).not.toHaveBeenCalled();
 
-		jest.advanceTimersByTime(1);
+		vi.advanceTimersByTime(1);
 		expect(applier).toHaveBeenCalledWith(task.id, {
 			text: 'Edited task'
 		});
@@ -116,18 +117,18 @@ describe('PendingTaskChanges', () => {
 	});
 
 	test('restarts the flush delay on every change and saves them together', () => {
-		jest.useFakeTimers();
+		vi.useFakeTimers();
 		const task = makeTask({ text: 'Original task' });
 		const applier = registerApplier();
 
 		changePendingTaskValue(task, 'text', 'Edited task', 'delayed');
-		jest.advanceTimersByTime(TASKS_CONFIG.flushDelayMs - 1);
+		vi.advanceTimersByTime(TASKS_CONFIG.flushDelayMs - 1);
 		changePendingTaskValue(task, 'owner', 'Alice', 'delayed');
-		jest.advanceTimersByTime(TASKS_CONFIG.flushDelayMs - 1);
+		vi.advanceTimersByTime(TASKS_CONFIG.flushDelayMs - 1);
 
 		expect(applier).not.toHaveBeenCalled();
 
-		jest.advanceTimersByTime(1);
+		vi.advanceTimersByTime(1);
 
 		expect(applier).toHaveBeenCalledTimes(1);
 		expect(applier).toHaveBeenCalledWith(task.id, {
@@ -137,7 +138,7 @@ describe('PendingTaskChanges', () => {
 	});
 
 	test('saves buffered changes immediately when asked to flush', () => {
-		jest.useFakeTimers();
+		vi.useFakeTimers();
 		const task = makeTask({ text: 'Original task' });
 		const applier = registerApplier();
 
@@ -148,13 +149,13 @@ describe('PendingTaskChanges', () => {
 			text: 'Edited task'
 		});
 
-		jest.advanceTimersByTime(TASKS_CONFIG.flushDelayMs);
+		vi.advanceTimersByTime(TASKS_CONFIG.flushDelayMs);
 
 		expect(applier).toHaveBeenCalledTimes(1);
 	});
 
 	test('forgets a value brought back to the one the task state already holds', () => {
-		jest.useFakeTimers();
+		vi.useFakeTimers();
 		const task = makeTask({ text: 'Original task' });
 		const applier = registerApplier();
 
@@ -163,18 +164,18 @@ describe('PendingTaskChanges', () => {
 
 		expect(getPendingTaskChanges(task.id)).toBeUndefined();
 
-		jest.advanceTimersByTime(TASKS_CONFIG.flushDelayMs);
+		vi.advanceTimersByTime(TASKS_CONFIG.flushDelayMs);
 
 		expect(applier).not.toHaveBeenCalled();
 	});
 
 	test('uses the shorter state change delay while the task fades out', () => {
-		jest.useFakeTimers();
+		vi.useFakeTimers();
 		const task = makeTask({ state: 'ACTIVE' });
 		const applier = registerApplier();
 
 		changePendingTaskValue(task, 'state', 'COMPLETED', 'delayed');
-		jest.advanceTimersByTime(TASKS_CONFIG.stateChangeDelayMs);
+		vi.advanceTimersByTime(TASKS_CONFIG.stateChangeDelayMs);
 
 		expect(applier).toHaveBeenCalledWith(task.id, {
 			state: 'COMPLETED'
@@ -198,7 +199,7 @@ describe('PendingTaskChanges', () => {
 	});
 
 	test('drops the buffered changes of a deleted task', () => {
-		jest.useFakeTimers();
+		vi.useFakeTimers();
 		const task = makeTask({ text: 'Original task' });
 		const applier = registerApplier();
 
@@ -207,20 +208,20 @@ describe('PendingTaskChanges', () => {
 
 		expect(getPendingTaskChanges(task.id)).toBeUndefined();
 
-		jest.advanceTimersByTime(TASKS_CONFIG.flushDelayMs);
+		vi.advanceTimersByTime(TASKS_CONFIG.flushDelayMs);
 
 		expect(applier).not.toHaveBeenCalled();
 	});
 
 	test('does not save on its own a tag the user is still typing', () => {
-		jest.useFakeTimers();
+		vi.useFakeTimers();
 		const task = makeTask();
 		const applier = registerApplier();
 
 		changePendingTaskValue(task, 'tags', [ 'half-typed' ], 'buffered');
 
 		// The user may still be typing, so a buffered value never starts a save delay of its own
-		jest.advanceTimersByTime(TASKS_CONFIG.flushDelayMs);
+		vi.advanceTimersByTime(TASKS_CONFIG.flushDelayMs);
 
 		expect(applier).not.toHaveBeenCalled();
 		expect(getPendingTaskChanges(task.id)).toEqual({
@@ -235,7 +236,7 @@ describe('PendingTaskChanges', () => {
 	});
 
 	test('saves a buffered tag together with the change that was already waiting for its delay', () => {
-		jest.useFakeTimers();
+		vi.useFakeTimers();
 		const task = makeTask({ text: 'Original task' });
 		const applier = registerApplier();
 
@@ -243,7 +244,7 @@ describe('PendingTaskChanges', () => {
 		changePendingTaskValue(task, 'tags', [ 'half-typed' ], 'buffered');
 
 		// The buffered tag neither postpones nor cancels the save the text change already scheduled
-		jest.advanceTimersByTime(TASKS_CONFIG.flushDelayMs);
+		vi.advanceTimersByTime(TASKS_CONFIG.flushDelayMs);
 
 		expect(applier).toHaveBeenCalledWith(task.id, {
 			text: 'Edited task',
@@ -253,11 +254,11 @@ describe('PendingTaskChanges', () => {
 	});
 
 	test('keeps buffered changes when there is nobody to apply them', () => {
-		jest.useFakeTimers();
+		vi.useFakeTimers();
 		const task = makeTask({ text: 'Original task' });
 
 		changePendingTaskValue(task, 'text', 'Edited task', 'delayed');
-		jest.advanceTimersByTime(TASKS_CONFIG.flushDelayMs);
+		vi.advanceTimersByTime(TASKS_CONFIG.flushDelayMs);
 		flushPendingTaskChanges();
 
 		expect(getPendingTaskChanges(task.id)).toEqual({
@@ -275,8 +276,8 @@ describe('PendingTaskChanges', () => {
 	test('notifies the subscribers of one task only, with a stable snapshot', () => {
 		const task = makeTask({ text: 'Original task' });
 		const otherTask = makeTask({ text: 'Other task' });
-		const subscriber = jest.fn();
-		const otherSubscriber = jest.fn();
+		const subscriber = vi.fn();
+		const otherSubscriber = vi.fn();
 		registerApplier();
 		const unsubscribe = subscribeToPendingTaskChanges(task.id, subscriber);
 		subscribeToPendingTaskChanges(otherTask.id, otherSubscriber);
@@ -311,10 +312,10 @@ describe('PendingTaskChanges', () => {
 	});
 
 	test('keeps the buffered changes when the applier throws', () => {
-		jest.useFakeTimers();
+		vi.useFakeTimers();
 		const task = makeTask({ text: 'Original task' });
 
-		jest.spyOn(console, 'error').mockImplementation(() => {});
+		vi.spyOn(console, 'error').mockImplementation(() => {});
 		registerPendingTaskChangesApplier(() => {
 			throw new Error('The task state could not be updated.');
 		});
@@ -337,12 +338,12 @@ describe('PendingTaskChanges', () => {
 	});
 
 	test('saves the other tasks when one of them cannot be saved', () => {
-		jest.useFakeTimers();
+		vi.useFakeTimers();
 		const failingTask = makeTask({ text: 'First task' });
 		const otherTask = makeTask({ text: 'Second task' });
 		const appliedChanges: AppliedChange[] = [];
 
-		jest.spyOn(console, 'error').mockImplementation(() => {});
+		vi.spyOn(console, 'error').mockImplementation(() => {});
 		registerPendingTaskChangesApplier((taskId, changedValues) => {
 			if(taskId === failingTask.id) {
 				throw new Error('The task state could not be updated.');
@@ -373,7 +374,7 @@ describe('PendingTaskChanges', () => {
 		const commandDeferred = createDeferred<TaskStorageCommandResult>();
 		setWindowSpotStorage({
 			...spotStorage,
-			executeTaskCommand: jest.fn(() => {
+			executeTaskCommand: vi.fn(() => {
 				return commandDeferred.promise;
 			})
 		});
@@ -410,7 +411,7 @@ describe('PendingTaskChanges', () => {
 	});
 
 	test('retries a write that failed as soon as the main process asks for the flush', async() => {
-		jest.useFakeTimers();
+		vi.useFakeTimers();
 		const { spotStorage, requestFlush } = createMockSpotStorage();
 		const task = makeTask({ text: 'Original task' });
 		const healthyResult: TaskStorageCommandResult = {
@@ -432,7 +433,7 @@ describe('PendingTaskChanges', () => {
 				}
 			}
 		};
-		const executeTaskCommand: jest.Mock<Promise<TaskStorageCommandResult>, []> = jest.fn(async() => {
+		const executeTaskCommand: Mock<() => Promise<TaskStorageCommandResult>> = vi.fn(async() => {
 			return executeTaskCommand.mock.calls.length === 1 ? databaseFailure : healthyResult;
 		});
 		setWindowSpotStorage({
@@ -458,7 +459,7 @@ describe('PendingTaskChanges', () => {
 
 		// The write is sitting on its retry delay, which is longer than the time the main process waits for the flush
 		requestFlush();
-		jest.useRealTimers();
+		vi.useRealTimers();
 		await waitForQueuedWork();
 
 		expect(executeTaskCommand).toHaveBeenCalledTimes(2);
@@ -479,14 +480,14 @@ describe('PendingTaskChanges', () => {
 			}
 		};
 		const firstWriteDeferred = createDeferred<TaskStorageCommandResult>();
-		const executeTaskCommand: jest.Mock<Promise<TaskStorageCommandResult>, []> = jest.fn(() => {
+		const executeTaskCommand: Mock<() => Promise<TaskStorageCommandResult>> = vi.fn(() => {
 			return executeTaskCommand.mock.calls.length === 1 ? firstWriteDeferred.promise : Promise.resolve(healthyResult);
 		});
 		setWindowSpotStorage({
 			...spotStorage,
 			executeTaskCommand
 		});
-		const applier = jest.fn<void, AppliedChange>((taskId, changedValues) => {
+		const applier = vi.fn<(...args: AppliedChange) => void>((taskId, changedValues) => {
 			sendTaskStorageCommand({
 				command: 'task.update',
 				payload: {
@@ -521,7 +522,7 @@ describe('PendingTaskChanges', () => {
 	test('reports the flush as done even when something stays buffered for good', async() => {
 		const { spotStorage, requestFlush } = createMockSpotStorage();
 		const task = makeTask({ text: 'Original task' });
-		const reportedErrors = jest.spyOn(console, 'error').mockImplementation(() => {});
+		const reportedErrors = vi.spyOn(console, 'error').mockImplementation(() => {});
 		setWindowSpotStorage(spotStorage);
 		const uninstall = installPendingTaskChangesFlushHandler(spotStorage);
 

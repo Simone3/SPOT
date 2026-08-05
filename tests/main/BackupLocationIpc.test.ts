@@ -1,6 +1,7 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import type { Mock } from 'vitest';
 import type { IpcMain, IpcMainInvokeEvent, OpenDialogReturnValue } from 'electron';
 import type { BackupLocationManager } from 'src/framework/main/config/BackupLocationManager';
 import { registerBackupLocationIpcHandlers, SPOT_BACKUP_LOCATION_IPC_CHANNELS } from 'src/main/ipc/BackupLocationIpc';
@@ -33,7 +34,7 @@ const createMockIpcMain = (): {
 } => {
 	const handlers = new Map<string, RegisteredIpcHandler>();
 	const ipcMain = {
-		handle: jest.fn((channel: string, handler: RegisteredIpcHandler) => {
+		handle: vi.fn((channel: string, handler: RegisteredIpcHandler) => {
 			handlers.set(channel, handler);
 		})
 	};
@@ -51,24 +52,24 @@ const createMockManager = (location: BackupLocation): BackupLocationManager => {
 	};
 
 	return {
-		initialize: jest.fn(async() => {
+		initialize: vi.fn(async() => {
 			return location;
 		}),
-		getLocation: jest.fn(() => {
+		getLocation: vi.fn(() => {
 			return location;
 		}),
-		setBackupDirectory: jest.fn(async() => {
+		setBackupDirectory: vi.fn(async() => {
 			return setResult;
 		}),
-		setDefaultBackupDirectory: jest.fn(async() => {
+		setDefaultBackupDirectory: vi.fn(async() => {
 			return setResult;
 		})
 	};
 };
 
-const createMockDialog = (dialogResult: OpenDialogReturnValue): { showOpenDialog: jest.Mock } => {
+const createMockDialog = (dialogResult: OpenDialogReturnValue): { showOpenDialog: Mock } => {
 	return {
-		showOpenDialog: jest.fn(async() => {
+		showOpenDialog: vi.fn(async() => {
 			return dialogResult;
 		})
 	};

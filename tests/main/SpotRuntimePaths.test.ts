@@ -7,7 +7,7 @@ const userDataPath = path.join('/tmp', 'spot-user-data');
 
 const createMockApp = (isPackaged: boolean): Pick<App, 'getPath' | 'isPackaged'> => {
 	return {
-		getPath: jest.fn(() => {
+		getPath: vi.fn(() => {
 			return userDataPath;
 		}),
 		isPackaged

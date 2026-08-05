@@ -1,11 +1,16 @@
+import type { Mock } from 'vitest';
 import type { ChangeEvent, ReactElement, ReactNode } from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
+import { useSortable } from '@dnd-kit/react/sortable';
 import { makeFormDomains, makeTask } from '../testUtils';
 import { registerPendingTaskChangesApplier, resetPendingTaskChangesForTests } from 'src/logic/PendingTaskChanges';
 import { TasksList } from 'src/components/tasks/TasksList';
 import type { Task, TaskChange } from 'src/types/TaskTypes';
 
-jest.mock('src/components/inputs/TextArea', () => {
+vi.mock('src/components/inputs/TextArea', async() => {
+	// The mock factory is hoisted above the imports, so React is loaded here rather than referenced from the module scope
+	const React = await vi.importActual<typeof import('react')>('react');
+
 	type MockTextAreaProps = {
 		placeholder?: string;
 		value: string;
@@ -15,8 +20,6 @@ jest.mock('src/components/inputs/TextArea', () => {
 	};
 
 	const MockTextArea = ({ placeholder, value, onChange, onBlur, disabled }: MockTextAreaProps): ReactElement => {
-		const React = jest.requireActual('react') as typeof import('react');
-
 		return React.createElement('textarea', {
 			'aria-label': placeholder || 'Task text',
 			value,
@@ -33,10 +36,11 @@ jest.mock('src/components/inputs/TextArea', () => {
 	};
 });
 
-jest.mock('@dnd-kit/react', () => {
-	const MockDragDropProvider = ({ children }: { children: ReactNode }): ReactElement => {
-		const React = jest.requireActual('react') as typeof import('react');
+vi.mock('@dnd-kit/react', async() => {
+	// The mock factory is hoisted above the imports, so React is loaded here rather than referenced from the module scope
+	const React = await vi.importActual<typeof import('react')>('react');
 
+	const MockDragDropProvider = ({ children }: { children: ReactNode }): ReactElement => {
 		return React.createElement(React.Fragment, null, children);
 	};
 
@@ -46,13 +50,13 @@ jest.mock('@dnd-kit/react', () => {
 	};
 });
 
-jest.mock('@dnd-kit/react/sortable', () => {
+vi.mock('@dnd-kit/react/sortable', () => {
 	return {
 		__esModule: true,
 		isSortable: () => {
 			return false;
 		},
-		useSortable: jest.fn(() => {
+		useSortable: vi.fn(() => {
 			return {
 				ref: () => {},
 				handleRef: () => {}
@@ -61,8 +65,9 @@ jest.mock('@dnd-kit/react/sortable', () => {
 	};
 });
 
-const getUseSortableMock = (): jest.Mock => {
-	return jest.requireMock('@dnd-kit/react/sortable').useSortable as jest.Mock;
+// The module above is mocked, so the imported binding is the mock itself
+const getUseSortableMock = (): Mock => {
+	return useSortable as unknown as Mock;
 };
 
 const renderTasksList = (tasks: Task[]) => {
@@ -70,14 +75,14 @@ const renderTasksList = (tasks: Task[]) => {
 		title: 'Tasks',
 		tasks,
 		inputDomains: makeFormDomains(),
-		onRefreshTasks: jest.fn(),
-		onMoveTask: jest.fn(),
-		onSortTasksByImportance: jest.fn(),
-		onAddNewTask: jest.fn(),
-		onDeleteTask: jest.fn(),
+		onRefreshTasks: vi.fn(),
+		onMoveTask: vi.fn(),
+		onSortTasksByImportance: vi.fn(),
+		onAddNewTask: vi.fn(),
+		onDeleteTask: vi.fn(),
 		showActions: true
 	};
-	const applyPendingTaskChanges = jest.fn<void, [ string, TaskChange ]>();
+	const applyPendingTaskChanges = vi.fn<(taskId: string, changedValues: TaskChange) => void>();
 
 	registerPendingTaskChangesApplier(applyPendingTaskChanges);
 
@@ -102,9 +107,9 @@ describe('TasksList', () => {
 
 	afterEach(() => {
 		resetPendingTaskChangesForTests();
-		jest.useRealTimers();
+		vi.useRealTimers();
 		getUseSortableMock().mockClear();
-		jest.restoreAllMocks();
+		vi.restoreAllMocks();
 	});
 
 	test('renders only visible tasks and wires list-level actions', () => {
@@ -133,8 +138,8 @@ describe('TasksList', () => {
 	});
 
 	test('saves task edits and delays completion while disabling secondary controls', () => {
-		jest.useFakeTimers();
-		const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+		vi.useFakeTimers();
+		const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 		const task = makeTask({
 			text: 'Original task',
 			visible: true
@@ -202,7 +207,7 @@ describe('TasksList', () => {
 		expect(dragHandle).not.toBeDisabled();
 		expect(deleteButton).toHaveAttribute('aria-disabled', 'false');
 		act(() => {
-			jest.advanceTimersByTime(3000);
+			vi.advanceTimersByTime(3000);
 		});
 		expect(applyPendingTaskChanges).not.toHaveBeenCalled();
 
@@ -210,11 +215,11 @@ describe('TasksList', () => {
 
 		expect(taskContainer).toHaveClass('task-container-state-changing');
 		act(() => {
-			jest.advanceTimersByTime(2999);
+			vi.advanceTimersByTime(2999);
 		});
 		expect(applyPendingTaskChanges).not.toHaveBeenCalled();
 		act(() => {
-			jest.advanceTimersByTime(1);
+			vi.advanceTimersByTime(1);
 		});
 		expect(applyPendingTaskChanges).toHaveBeenCalledWith(task.id, {
 			state: 'COMPLETED'

@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import type { App, IpcMain, IpcMainInvokeEvent } from 'electron';
 import { makeTask } from '../testUtils';
 import { SHUTDOWN_CONFIG } from 'src/config/AppConfig';
@@ -33,7 +34,7 @@ const createMockIpcMain = (): {
 } => {
 	const handlers = new Map<string, RegisteredIpcHandler>();
 	const ipcMain = {
-		handle: jest.fn((channel: string, handler: RegisteredIpcHandler) => {
+		handle: vi.fn((channel: string, handler: RegisteredIpcHandler) => {
 			handlers.set(channel, handler);
 		})
 	};
@@ -50,11 +51,11 @@ const createMockApp = (): {
 } => {
 	const handlers = new Map<string, RegisteredAppHandler>();
 	const app = {
-		on: jest.fn((eventName: string, handler: RegisteredAppHandler) => {
+		on: vi.fn((eventName: string, handler: RegisteredAppHandler) => {
 			handlers.set(eventName, handler);
 			return undefined;
 		}),
-		quit: jest.fn()
+		quit: vi.fn()
 	} as unknown as Pick<App, 'on' | 'quit'>;
 
 	return {
@@ -95,13 +96,13 @@ const createMockTaskStorage = (): {
 		status
 	};
 	const taskStorage = {
-		loadTasks: jest.fn(async() => {
+		loadTasks: vi.fn(async() => {
 			return loadTasksResult;
 		}),
-		executeTaskCommand: jest.fn(async() => {
+		executeTaskCommand: vi.fn(async() => {
 			return commandResult;
 		}),
-		getStorageStatus: jest.fn(async() => {
+		getStorageStatus: vi.fn(async() => {
 			return status;
 		})
 	};
@@ -116,8 +117,8 @@ const createMockTaskStorage = (): {
 
 describe('TaskStorageIpc', () => {
 	afterEach(() => {
-		jest.useRealTimers();
-		jest.restoreAllMocks();
+		vi.useRealTimers();
+		vi.restoreAllMocks();
 		resetAppLoggerForTests();
 	});
 
@@ -160,16 +161,16 @@ describe('TaskStorageIpc', () => {
 		const { app, handlers: appHandlers } = createMockApp();
 		const { commandResult, taskStorage } = createMockTaskStorage();
 		const commandDeferred = createDeferred<TaskStorageCommandResult>();
-		taskStorage.executeTaskCommand = jest.fn(() => {
+		taskStorage.executeTaskCommand = vi.fn(() => {
 			return commandDeferred.promise;
 		});
-		const prepareForShutdown = jest.fn(async() => {
+		const prepareForShutdown = vi.fn(async() => {
 			return undefined;
 		});
-		const flushLogger = jest.spyOn(appLogger, 'flush').mockResolvedValue(undefined);
+		const flushLogger = vi.spyOn(appLogger, 'flush').mockResolvedValue(undefined);
 		const event = {} as IpcMainInvokeEvent;
 		const beforeQuitEvent = {
-			preventDefault: jest.fn()
+			preventDefault: vi.fn()
 		};
 		const command: TaskStorageCommand = {
 			command: 'task.update',
@@ -214,7 +215,7 @@ describe('TaskStorageIpc', () => {
 		const { status, taskStorage } = createMockTaskStorage();
 		const event = {} as IpcMainInvokeEvent;
 		const beforeQuitEvent = {
-			preventDefault: jest.fn()
+			preventDefault: vi.fn()
 		};
 		const command: TaskStorageCommand = {
 			command: 'task.update',
@@ -248,26 +249,26 @@ describe('TaskStorageIpc', () => {
 		const { app, handlers: appHandlers } = createMockApp();
 		const { commandResult, taskStorage } = createMockTaskStorage();
 		const shutdownOrder: string[] = [];
-		taskStorage.executeTaskCommand = jest.fn(async() => {
+		taskStorage.executeTaskCommand = vi.fn(async() => {
 			shutdownOrder.push('buffered-command');
 
 			return commandResult;
 		});
-		const prepareForShutdown = jest.fn(async() => {
+		const prepareForShutdown = vi.fn(async() => {
 			shutdownOrder.push('prepare-for-shutdown');
 
 			return undefined;
 		});
-		jest.spyOn(appLogger, 'flush').mockResolvedValue(undefined);
+		vi.spyOn(appLogger, 'flush').mockResolvedValue(undefined);
 		const flushTarget = {
-			send: jest.fn(),
+			send: vi.fn(),
 			isDestroyed: () => {
 				return false;
 			}
 		};
 		const event = {} as IpcMainInvokeEvent;
 		const beforeQuitEvent = {
-			preventDefault: jest.fn()
+			preventDefault: vi.fn()
 		};
 		const bufferedCommand: TaskStorageCommand = {
 			command: 'task.update',
@@ -310,9 +311,9 @@ describe('TaskStorageIpc', () => {
 		const { handlers, ipcMain } = createMockIpcMain();
 		const { app, handlers: appHandlers } = createMockApp();
 		const { status, taskStorage } = createMockTaskStorage();
-		jest.spyOn(appLogger, 'flush').mockResolvedValue(undefined);
+		vi.spyOn(appLogger, 'flush').mockResolvedValue(undefined);
 		const flushTarget = {
-			send: jest.fn()
+			send: vi.fn()
 		};
 		const event = {} as IpcMainInvokeEvent;
 		const command: TaskStorageCommand = {
@@ -334,7 +335,7 @@ describe('TaskStorageIpc', () => {
 			}
 		});
 
-		appHandlers.get('before-quit')!({ preventDefault: jest.fn() });
+		appHandlers.get('before-quit')!({ preventDefault: vi.fn() });
 		await handlers.get(SPOT_STORAGE_IPC_CHANNELS.pendingTaskChangesFlushed)!(event);
 		await waitForQueuedWork();
 
@@ -352,17 +353,17 @@ describe('TaskStorageIpc', () => {
 		const { app, handlers: appHandlers } = createMockApp();
 		const { taskStorage } = createMockTaskStorage();
 		const shutdownOrder: string[] = [];
-		const prepareForShutdown = jest.fn(async() => {
+		const prepareForShutdown = vi.fn(async() => {
 			shutdownOrder.push('prepare-for-shutdown');
 
 			return undefined;
 		});
-		const onRendererFlushCompleted = jest.fn(() => {
+		const onRendererFlushCompleted = vi.fn(() => {
 			shutdownOrder.push('renderer-flush-completed');
 		});
-		jest.spyOn(appLogger, 'flush').mockResolvedValue(undefined);
+		vi.spyOn(appLogger, 'flush').mockResolvedValue(undefined);
 		const flushTarget = {
-			send: jest.fn()
+			send: vi.fn()
 		};
 		const event = {} as IpcMainInvokeEvent;
 
@@ -379,7 +380,7 @@ describe('TaskStorageIpc', () => {
 			onRendererFlushCompleted
 		});
 
-		appHandlers.get('before-quit')!({ preventDefault: jest.fn() });
+		appHandlers.get('before-quit')!({ preventDefault: vi.fn() });
 
 		// The renderer is still saving what it buffered, so nothing has been taken away from it yet
 		expect(shutdownOrder).toEqual([]);
@@ -396,8 +397,8 @@ describe('TaskStorageIpc', () => {
 		const { ipcMain } = createMockIpcMain();
 		const { app, handlers: appHandlers } = createMockApp();
 		const { taskStorage } = createMockTaskStorage();
-		const onRendererFlushCompleted = jest.fn();
-		jest.spyOn(appLogger, 'flush').mockResolvedValue(undefined);
+		const onRendererFlushCompleted = vi.fn();
+		vi.spyOn(appLogger, 'flush').mockResolvedValue(undefined);
 
 		registerTaskStorageIpcHandlers({
 			app,
@@ -406,7 +407,7 @@ describe('TaskStorageIpc', () => {
 			onRendererFlushCompleted
 		});
 
-		appHandlers.get('before-quit')!({ preventDefault: jest.fn() });
+		appHandlers.get('before-quit')!({ preventDefault: vi.fn() });
 		await waitForQueuedWork();
 
 		expect(onRendererFlushCompleted).toHaveBeenCalledTimes(1);
@@ -416,11 +417,11 @@ describe('TaskStorageIpc', () => {
 		const { handlers, ipcMain } = createMockIpcMain();
 		const { app } = createMockApp();
 		const { commandResult, taskStorage } = createMockTaskStorage();
-		const prepareForShutdown = jest.fn(async() => {
+		const prepareForShutdown = vi.fn(async() => {
 			return undefined;
 		});
 		const flushTarget = {
-			send: jest.fn(),
+			send: vi.fn(),
 			isDestroyed: () => {
 				return false;
 			}
@@ -473,9 +474,9 @@ describe('TaskStorageIpc', () => {
 		const { handlers, ipcMain } = createMockIpcMain();
 		const { app, handlers: appHandlers } = createMockApp();
 		const { taskStorage } = createMockTaskStorage();
-		jest.spyOn(appLogger, 'flush').mockResolvedValue(undefined);
+		vi.spyOn(appLogger, 'flush').mockResolvedValue(undefined);
 		const flushTarget = {
-			send: jest.fn()
+			send: vi.fn()
 		};
 		const event = {} as IpcMainInvokeEvent;
 
@@ -488,7 +489,7 @@ describe('TaskStorageIpc', () => {
 			}
 		});
 
-		appHandlers.get('before-quit')!({ preventDefault: jest.fn() });
+		appHandlers.get('before-quit')!({ preventDefault: vi.fn() });
 
 		// Destroying the window now would tear the renderer down halfway through the flush the quit is waiting for, so the close
 		// joins that handshake instead of asking for a second one
@@ -506,9 +507,9 @@ describe('TaskStorageIpc', () => {
 		const { handlers, ipcMain } = createMockIpcMain();
 		const { app, handlers: appHandlers } = createMockApp();
 		const { taskStorage } = createMockTaskStorage();
-		jest.spyOn(appLogger, 'flush').mockResolvedValue(undefined);
+		vi.spyOn(appLogger, 'flush').mockResolvedValue(undefined);
 		const flushTarget = {
-			send: jest.fn()
+			send: vi.fn()
 		};
 		const event = {} as IpcMainInvokeEvent;
 
@@ -521,7 +522,7 @@ describe('TaskStorageIpc', () => {
 			}
 		});
 
-		appHandlers.get('before-quit')!({ preventDefault: jest.fn() });
+		appHandlers.get('before-quit')!({ preventDefault: vi.fn() });
 		await handlers.get(SPOT_STORAGE_IPC_CHANNELS.pendingTaskChangesFlushed)!(event);
 		await waitForQueuedWork();
 
@@ -534,12 +535,12 @@ describe('TaskStorageIpc', () => {
 		const { handlers, ipcMain } = createMockIpcMain();
 		const { app, handlers: appHandlers } = createMockApp();
 		const { taskStorage } = createMockTaskStorage();
-		const prepareForShutdown = jest.fn(async() => {
+		const prepareForShutdown = vi.fn(async() => {
 			return undefined;
 		});
-		jest.spyOn(appLogger, 'flush').mockResolvedValue(undefined);
+		vi.spyOn(appLogger, 'flush').mockResolvedValue(undefined);
 		const flushTarget = {
-			send: jest.fn()
+			send: vi.fn()
 		};
 		const event = {} as IpcMainInvokeEvent;
 
@@ -557,7 +558,7 @@ describe('TaskStorageIpc', () => {
 
 		const windowClosePromise = requestRendererFlushBeforeWindowClose()!;
 
-		appHandlers.get('before-quit')!({ preventDefault: jest.fn() });
+		appHandlers.get('before-quit')!({ preventDefault: vi.fn() });
 
 		expect(flushTarget.send).toHaveBeenCalledTimes(1);
 		expect(prepareForShutdown).not.toHaveBeenCalled();
@@ -575,7 +576,7 @@ describe('TaskStorageIpc', () => {
 		const { handlers, ipcMain } = createMockIpcMain();
 		const { taskStorage } = createMockTaskStorage();
 		const flushTarget = {
-			send: jest.fn()
+			send: vi.fn()
 		};
 		const event = {} as IpcMainInvokeEvent;
 
@@ -610,7 +611,7 @@ describe('TaskStorageIpc', () => {
 			taskStorage,
 			getRendererFlushTarget: () => {
 				return {
-					send: jest.fn(),
+					send: vi.fn(),
 					isDestroyed: () => {
 						return true;
 					}
@@ -622,18 +623,18 @@ describe('TaskStorageIpc', () => {
 	});
 
 	test('does not wait forever when the renderer never reports its buffered changes', async() => {
-		jest.useFakeTimers();
+		vi.useFakeTimers();
 		const { ipcMain } = createMockIpcMain();
 		const { app, handlers: appHandlers } = createMockApp();
 		const { taskStorage } = createMockTaskStorage();
-		const prepareForShutdown = jest.fn(async() => {
+		const prepareForShutdown = vi.fn(async() => {
 			return undefined;
 		});
 		const quitDeferred = createDeferred<void>();
-		(app.quit as jest.Mock).mockImplementation(() => {
+		(app.quit as Mock).mockImplementation(() => {
 			quitDeferred.resolve();
 		});
-		jest.spyOn(appLogger, 'flush').mockResolvedValue(undefined);
+		vi.spyOn(appLogger, 'flush').mockResolvedValue(undefined);
 
 		registerTaskStorageIpcHandlers({
 			app,
@@ -644,16 +645,16 @@ describe('TaskStorageIpc', () => {
 			},
 			getRendererFlushTarget: () => {
 				return {
-					send: jest.fn()
+					send: vi.fn()
 				};
 			}
 		});
 
-		appHandlers.get('before-quit')!({ preventDefault: jest.fn() });
+		appHandlers.get('before-quit')!({ preventDefault: vi.fn() });
 
 		expect(prepareForShutdown).not.toHaveBeenCalled();
 
-		jest.advanceTimersByTime(SHUTDOWN_CONFIG.rendererFlushTimeoutMs);
+		vi.advanceTimersByTime(SHUTDOWN_CONFIG.rendererFlushTimeoutMs);
 		await quitDeferred.promise;
 
 		expect(prepareForShutdown).toHaveBeenCalledTimes(1);
@@ -665,7 +666,7 @@ describe('TaskStorageIpc', () => {
 		const { commandResult, taskStorage } = createMockTaskStorage();
 		const executionOrder: string[] = [];
 		const firstChangeDeferred = createDeferred<void>();
-		taskStorage.executeTaskCommand = jest.fn(async() => {
+		taskStorage.executeTaskCommand = vi.fn(async() => {
 			executionOrder.push('command');
 
 			return commandResult;
@@ -726,7 +727,7 @@ describe('TaskStorageIpc', () => {
 		const { commandResult, taskStorage } = createMockTaskStorage();
 		const firstCommandDeferred = createDeferred<TaskStorageCommandResult>();
 		const executionOrder: string[] = [];
-		taskStorage.executeTaskCommand = jest.fn((command: TaskStorageCommand) => {
+		taskStorage.executeTaskCommand = vi.fn((command: TaskStorageCommand) => {
 			const { taskId } = command.payload as { taskId: string };
 			executionOrder.push(`command-${taskId}`);
 

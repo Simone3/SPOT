@@ -48,7 +48,7 @@ const createFakeDirectoryStore = (savedDirectory?: string): {
 			read: () => {
 				return currentDirectory;
 			},
-			write: jest.fn((directory: string) => {
+			write: vi.fn((directory: string) => {
 				currentDirectory = directory;
 			})
 		},
@@ -64,7 +64,7 @@ const createFakeStorage = (): FakeStorage => {
 	return {
 		selectedDirectories,
 		storage: {
-			setBackupDirectory: jest.fn((directory: string) => {
+			setBackupDirectory: vi.fn((directory: string) => {
 				selectedDirectories.push(directory);
 			})
 		}
@@ -151,7 +151,7 @@ describe('BackupLocationManager', () => {
 		const runtimePaths = createRuntimePaths(rootDirectory);
 		const { directoryStore, getSavedDirectory } = createFakeDirectoryStore();
 		const { selectedDirectories, storage } = createFakeStorage();
-		const onBackupDirectoryChanged = jest.fn();
+		const onBackupDirectoryChanged = vi.fn();
 		const manager = createBackupLocationManager({ runtimePaths, storage, directoryStore, onBackupDirectoryChanged });
 
 		await manager.initialize();
@@ -191,7 +191,7 @@ describe('BackupLocationManager', () => {
 		const runtimePaths = createRuntimePaths(rootDirectory);
 		const { directoryStore } = createFakeDirectoryStore();
 		const { storage } = createFakeStorage();
-		const trackExclusiveRun = jest.fn();
+		const trackExclusiveRun = vi.fn();
 		const runExclusively = <TResult>(operation: () => Promise<TResult>): Promise<TResult> => {
 			trackExclusiveRun();
 

@@ -1,3 +1,4 @@
+import type { Mock } from 'vitest';
 import { resetAppLoggerForTests } from 'src/framework/main/logging/AppLogger';
 import { createBackupScheduler, type CreateBackupSchedulerOptions } from 'src/framework/main/storage/BackupScheduler';
 import type { BackupResult, BackupStatus } from 'src/framework/types/StorageTypes';
@@ -42,10 +43,10 @@ const createFailedBackup = (): BackupResult => {
 };
 
 const createFakeTaskStorage = (results: BackupResult[] = []): {
-	createBackup: jest.Mock<Promise<BackupResult>, []>;
+	createBackup: Mock<() => Promise<BackupResult>>;
 } => {
 	return {
-		createBackup: jest.fn(() => {
+		createBackup: vi.fn(() => {
 			return Promise.resolve(results.shift() ?? createSuccessfulBackup());
 		})
 	};
@@ -53,11 +54,11 @@ const createFakeTaskStorage = (results: BackupResult[] = []): {
 
 describe('BackupScheduler', () => {
 	beforeEach(() => {
-		jest.useFakeTimers();
+		vi.useFakeTimers();
 	});
 
 	afterEach(() => {
-		jest.useRealTimers();
+		vi.useRealTimers();
 		resetAppLoggerForTests();
 	});
 
@@ -66,17 +67,17 @@ describe('BackupScheduler', () => {
 		const scheduler = createTestScheduler({ storage: taskStorage });
 
 		scheduler.notifyDataChanged();
-		jest.advanceTimersByTime(DELAY_AFTER_CHANGE_MS - 1);
+		vi.advanceTimersByTime(DELAY_AFTER_CHANGE_MS - 1);
 
 		expect(taskStorage.createBackup).not.toHaveBeenCalled();
 
 		// A later change restarts the wait instead of adding a second backup
 		scheduler.notifyDataChanged();
-		jest.advanceTimersByTime(DELAY_AFTER_CHANGE_MS - 1);
+		vi.advanceTimersByTime(DELAY_AFTER_CHANGE_MS - 1);
 
 		expect(taskStorage.createBackup).not.toHaveBeenCalled();
 
-		jest.advanceTimersByTime(1);
+		vi.advanceTimersByTime(1);
 		await scheduler.runBackupNow();
 
 		expect(taskStorage.createBackup).toHaveBeenCalledTimes(1);
@@ -116,7 +117,7 @@ describe('BackupScheduler', () => {
 
 	test('runs backups on the storage chain', async() => {
 		const taskStorage = createFakeTaskStorage();
-		const trackExclusiveRun = jest.fn();
+		const trackExclusiveRun = vi.fn();
 		const runExclusively = <TResult>(operation: () => Promise<TResult>): Promise<TResult> => {
 			trackExclusiveRun();
 
@@ -139,7 +140,7 @@ describe('BackupScheduler', () => {
 
 		expect(taskStorage.createBackup).toHaveBeenCalledTimes(1);
 
-		jest.advanceTimersByTime(DELAY_AFTER_CHANGE_MS);
+		vi.advanceTimersByTime(DELAY_AFTER_CHANGE_MS);
 
 		expect(taskStorage.createBackup).toHaveBeenCalledTimes(1);
 	});
@@ -148,7 +149,7 @@ describe('BackupScheduler', () => {
 	test('gives up on a shutdown backup that takes too long', async() => {
 		let finishBackup: (() => void) | undefined;
 		const taskStorage = {
-			createBackup: jest.fn(() => {
+			createBackup: vi.fn(() => {
 				return new Promise<BackupResult>((resolve) => {
 					finishBackup = () => {
 						resolve(createSuccessfulBackup());
@@ -161,7 +162,7 @@ describe('BackupScheduler', () => {
 		scheduler.notifyDataChanged();
 
 		const finalBackup = scheduler.runFinalBackup();
-		jest.advanceTimersByTime(5000);
+		vi.advanceTimersByTime(5000);
 
 		await expect(finalBackup).resolves.toBeUndefined();
 		expect(finishBackup).toBeDefined();

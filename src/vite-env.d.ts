@@ -1,4 +1,4 @@
-/// <reference types="react-scripts" />
+/// <reference types="vite/client" />
 
 import type { SpotBackupLocationApi } from 'src/types/BackupLocationTypes';
 import type { SpotStorageApi } from 'src/types/TaskStorageTypes';

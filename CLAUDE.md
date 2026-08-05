@@ -13,7 +13,7 @@ SPOT (Simple Planner & Organizer Tool) is an Electron + React task manager for m
 ```sh
 npm run lint        # ESLint flat config (eslint.config.js)
 npm run typecheck   # tsc --noEmit
-npm test            # Jest via react-scripts, tests/ only
+npm test            # Vitest, tests/ only
 npm start           # build React + Electron bundles, then electron-forge start
 npm run build       # build-react + build-electron
 ```
@@ -31,7 +31,7 @@ npm test -- tests/logic/SomeFile.spec.ts
 - Keep `CLAUDE.md` and `DOCUMENTATION.md` aligned and up to date. If either becomes stale or contradicts the project state, fix it as part of the task.
 - Do NOT introduce extra libraries unless you justify them briefly and they clearly reduce work or risk.
 - `package.json` dependencies must use exact versions. No `^` or `~`.
-- Do not add frameworks such as Vite or Next.js. Plain React + TypeScript + CSS only.
+- Build and test tooling may own the build: Vite bundles the renderer and Vitest runs the tests. Do NOT add an application framework such as Next.js, Remix or Astro: nothing may own routing, rendering or the component model. The application code stays plain React + TypeScript + CSS.
 - Leave ignored files and `.gitignore` patterns alone.
 - Do not add an external SQLite dependency. The implementation uses Electron's bundled `node:sqlite`; any exception must be documented in `DOCUMENTATION.md`.
 - `src/framework` is reusable scaffolding meant to be lifted into another application as it is. It must NEVER import from `src/components`, `src/contexts`, `src/logic`, `src/main`, `src/types`, `src/utils`, or `src/config`. Anything it needs about SPOT is passed in through its options. ESLint enforces this.

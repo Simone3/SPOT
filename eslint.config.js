@@ -5,7 +5,7 @@ const globals = require('globals');
 const tsPlugin = require('@typescript-eslint/eslint-plugin');
 const tsParser = require('@typescript-eslint/parser');
 const importPlugin = require('eslint-plugin-import');
-const jestPlugin = require('eslint-plugin-jest');
+const vitestPlugin = require('@vitest/eslint-plugin');
 const jsdocPlugin = require('eslint-plugin-jsdoc');
 const reactPlugin = require('eslint-plugin-react');
 const reactHooksPlugin = require('eslint-plugin-react-hooks');
@@ -162,14 +162,14 @@ const stylisticRules = {
 	'@stylistic/yield-star-spacing': [ 'warn', { before: true, after: true }]
 };
 
-const jestRules = {
-	'jest/no-commented-out-tests': 'warn',
-	'jest/no-disabled-tests': 'warn',
-	'jest/no-focused-tests': 'warn',
-	'jest/no-identical-title': 'warn',
-	'jest/no-test-prefixes': 'warn',
-	'jest/valid-describe-callback': 'warn',
-	'jest/valid-expect': 'warn'
+const vitestRules = {
+	'vitest/no-commented-out-tests': 'warn',
+	'vitest/no-disabled-tests': 'warn',
+	'vitest/no-focused-tests': 'warn',
+	'vitest/no-identical-title': 'warn',
+	'vitest/no-test-prefixes': 'warn',
+	'vitest/valid-describe-callback': 'warn',
+	'vitest/valid-expect': 'warn'
 };
 
 const reactSafetyRules = {
@@ -523,20 +523,15 @@ module.exports = defineConfig([
 	{
 		files: testFiles,
 		plugins: {
-			jest: jestPlugin
+			vitest: vitestPlugin
 		},
 		languageOptions: {
 			globals: {
-				...globals.jest
-			}
-		},
-		settings: {
-			jest: {
-				version: require('jest/package.json').version
+				...globals.vitest
 			}
 		},
 		rules: {
-			...jestRules,
+			...vitestRules,
 			'@typescript-eslint/explicit-function-return-type': 'off',
 			'@typescript-eslint/no-deprecated': 'off',
 			'@typescript-eslint/no-floating-promises': 'off',

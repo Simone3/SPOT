@@ -4,7 +4,7 @@ import type { TasksContainer } from 'src/types/TaskTypes';
 
 describe('TasksLogic', () => {
 	afterEach(() => {
-		jest.useRealTimers();
+		vi.useRealTimers();
 	});
 
 	test('shallow-clones task containers while sharing task objects', () => {
@@ -208,8 +208,8 @@ describe('TasksLogic', () => {
 	});
 
 	test('moves tasks between active and completed lists when state changes', () => {
-		jest.useFakeTimers();
-		jest.setSystemTime(new Date('2026-05-10T12:00:00Z'));
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date('2026-05-10T12:00:00Z'));
 
 		const activeTask = makeTask({ id: 'active-task', sortPosition: 100 });
 		const completedTask = makeTask({
