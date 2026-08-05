@@ -1,7 +1,6 @@
 import { makeTask } from '../testUtils';
 import { TASKS_CONFIG } from 'src/config/AppConfig';
 import {
-	changePendingNewTag,
 	changePendingTaskValue,
 	clearPendingTaskChanges,
 	flushPendingTaskChanges,
@@ -10,13 +9,13 @@ import {
 	installPendingTaskChangesFlushHandler,
 	registerPendingTaskChangesApplier,
 	resetPendingTaskChangesForTests,
-	subscribeToPendingTaskChanges,
-	type PendingTaskChanges
+	subscribeToPendingTaskChanges
 } from 'src/logic/PendingTaskChanges';
 import { resetTaskStorageQueueForTests, sendTaskStorageCommand } from 'src/logic/TaskStorageQueue';
 import type { SpotStorageApi, TaskStorageCommandResult } from 'src/types/TaskStorageTypes';
+import type { TaskChange } from 'src/types/TaskTypes';
 
-type AppliedChange = [ string, PendingTaskChanges ];
+type AppliedChange = [ string, TaskChange ];
 
 const createDeferred = <T>(): { promise: Promise<T>; resolve: (value: T) => void } => {
 	let resolve: (value: T) => void = () => {};
@@ -99,13 +98,10 @@ describe('PendingTaskChanges', () => {
 		const task = makeTask({ text: 'Original task' });
 		const applier = registerApplier();
 
-		changePendingTaskValue(task, 'text', 'Edited task', false);
+		changePendingTaskValue(task, 'text', 'Edited task', 'delayed');
 
 		expect(getPendingTaskChanges(task.id)).toEqual({
-			change: {
-				text: 'Edited task'
-			},
-			newTag: ''
+			text: 'Edited task'
 		});
 		expect(applier).not.toHaveBeenCalled();
 
@@ -114,10 +110,7 @@ describe('PendingTaskChanges', () => {
 
 		jest.advanceTimersByTime(1);
 		expect(applier).toHaveBeenCalledWith(task.id, {
-			change: {
-				text: 'Edited task'
-			},
-			newTag: ''
+			text: 'Edited task'
 		});
 		expect(getPendingTaskChanges(task.id)).toBeUndefined();
 	});
@@ -127,9 +120,9 @@ describe('PendingTaskChanges', () => {
 		const task = makeTask({ text: 'Original task' });
 		const applier = registerApplier();
 
-		changePendingTaskValue(task, 'text', 'Edited task', false);
+		changePendingTaskValue(task, 'text', 'Edited task', 'delayed');
 		jest.advanceTimersByTime(TASKS_CONFIG.flushDelayMs - 1);
-		changePendingTaskValue(task, 'owner', 'Alice', false);
+		changePendingTaskValue(task, 'owner', 'Alice', 'delayed');
 		jest.advanceTimersByTime(TASKS_CONFIG.flushDelayMs - 1);
 
 		expect(applier).not.toHaveBeenCalled();
@@ -138,11 +131,8 @@ describe('PendingTaskChanges', () => {
 
 		expect(applier).toHaveBeenCalledTimes(1);
 		expect(applier).toHaveBeenCalledWith(task.id, {
-			change: {
-				text: 'Edited task',
-				owner: 'Alice'
-			},
-			newTag: ''
+			text: 'Edited task',
+			owner: 'Alice'
 		});
 	});
 
@@ -151,14 +141,11 @@ describe('PendingTaskChanges', () => {
 		const task = makeTask({ text: 'Original task' });
 		const applier = registerApplier();
 
-		changePendingTaskValue(task, 'text', 'Edited task', false);
+		changePendingTaskValue(task, 'text', 'Edited task', 'delayed');
 		flushPendingTaskChangesForTask(task.id);
 
 		expect(applier).toHaveBeenCalledWith(task.id, {
-			change: {
-				text: 'Edited task'
-			},
-			newTag: ''
+			text: 'Edited task'
 		});
 
 		jest.advanceTimersByTime(TASKS_CONFIG.flushDelayMs);
@@ -171,8 +158,8 @@ describe('PendingTaskChanges', () => {
 		const task = makeTask({ text: 'Original task' });
 		const applier = registerApplier();
 
-		changePendingTaskValue(task, 'text', 'Edited task', false);
-		changePendingTaskValue(task, 'text', 'Original task', false);
+		changePendingTaskValue(task, 'text', 'Edited task', 'delayed');
+		changePendingTaskValue(task, 'text', 'Original task', 'delayed');
 
 		expect(getPendingTaskChanges(task.id)).toBeUndefined();
 
@@ -186,14 +173,11 @@ describe('PendingTaskChanges', () => {
 		const task = makeTask({ state: 'ACTIVE' });
 		const applier = registerApplier();
 
-		changePendingTaskValue(task, 'state', 'COMPLETED', false);
+		changePendingTaskValue(task, 'state', 'COMPLETED', 'delayed');
 		jest.advanceTimersByTime(TASKS_CONFIG.stateChangeDelayMs);
 
 		expect(applier).toHaveBeenCalledWith(task.id, {
-			change: {
-				state: 'COMPLETED'
-			},
-			newTag: ''
+			state: 'COMPLETED'
 		});
 	});
 
@@ -203,16 +187,13 @@ describe('PendingTaskChanges', () => {
 
 		changePendingTaskValue(task, 'tags', (previousTags) => {
 			return [ ...previousTags, 'urgent' ];
-		}, false);
+		}, 'buffered');
 		changePendingTaskValue(task, 'tags', (previousTags) => {
 			return [ ...previousTags, 'later' ];
-		}, true);
+		}, 'immediate');
 
 		expect(applier).toHaveBeenCalledWith(task.id, {
-			change: {
-				tags: [ 'work', 'urgent', 'later' ]
-			},
-			newTag: ''
+			tags: [ 'work', 'urgent', 'later' ]
 		});
 	});
 
@@ -221,7 +202,7 @@ describe('PendingTaskChanges', () => {
 		const task = makeTask({ text: 'Original task' });
 		const applier = registerApplier();
 
-		changePendingTaskValue(task, 'text', 'Edited and then deleted', false);
+		changePendingTaskValue(task, 'text', 'Edited and then deleted', 'delayed');
 		clearPendingTaskChanges(task.id);
 
 		expect(getPendingTaskChanges(task.id)).toBeUndefined();
@@ -231,58 +212,42 @@ describe('PendingTaskChanges', () => {
 		expect(applier).not.toHaveBeenCalled();
 	});
 
-	test('commits the trailing tag input only on the final flush', () => {
+	test('does not save on its own a tag the user is still typing', () => {
 		jest.useFakeTimers();
 		const task = makeTask();
 		const applier = registerApplier();
 
-		changePendingNewTag(task.id, 'half-typed');
+		changePendingTaskValue(task, 'tags', [ 'half-typed' ], 'buffered');
 
-		// The user may still be typing, so neither the delay nor a normal flush may steal it
+		// The user may still be typing, so a buffered value never starts a save delay of its own
 		jest.advanceTimersByTime(TASKS_CONFIG.flushDelayMs);
-		flushPendingTaskChangesForTask(task.id);
 
 		expect(applier).not.toHaveBeenCalled();
 		expect(getPendingTaskChanges(task.id)).toEqual({
-			change: {},
-			newTag: 'half-typed'
+			tags: [ 'half-typed' ]
 		});
 
 		flushPendingTaskChanges();
 
 		expect(applier).toHaveBeenCalledWith(task.id, {
-			change: {},
-			newTag: 'half-typed'
+			tags: [ 'half-typed' ]
 		});
 	});
 
-	test('keeps the trailing tag input while the other buffered changes are saved', () => {
+	test('saves a buffered tag together with the change that was already waiting for its delay', () => {
 		jest.useFakeTimers();
 		const task = makeTask({ text: 'Original task' });
 		const applier = registerApplier();
 
-		changePendingTaskValue(task, 'text', 'Edited task', false);
-		changePendingNewTag(task.id, 'half-typed');
+		changePendingTaskValue(task, 'text', 'Edited task', 'delayed');
+		changePendingTaskValue(task, 'tags', [ 'half-typed' ], 'buffered');
 
-		// The delayed save of the text must not take away the tag the user is still typing
+		// The buffered tag neither postpones nor cancels the save the text change already scheduled
 		jest.advanceTimersByTime(TASKS_CONFIG.flushDelayMs);
 
 		expect(applier).toHaveBeenCalledWith(task.id, {
-			change: {
-				text: 'Edited task'
-			},
-			newTag: ''
-		});
-		expect(getPendingTaskChanges(task.id)).toEqual({
-			change: {},
-			newTag: 'half-typed'
-		});
-
-		flushPendingTaskChanges();
-
-		expect(applier).toHaveBeenLastCalledWith(task.id, {
-			change: {},
-			newTag: 'half-typed'
+			text: 'Edited task',
+			tags: [ 'half-typed' ]
 		});
 		expect(getPendingTaskChanges(task.id)).toBeUndefined();
 	});
@@ -291,25 +256,19 @@ describe('PendingTaskChanges', () => {
 		jest.useFakeTimers();
 		const task = makeTask({ text: 'Original task' });
 
-		changePendingTaskValue(task, 'text', 'Edited task', false);
+		changePendingTaskValue(task, 'text', 'Edited task', 'delayed');
 		jest.advanceTimersByTime(TASKS_CONFIG.flushDelayMs);
 		flushPendingTaskChanges();
 
 		expect(getPendingTaskChanges(task.id)).toEqual({
-			change: {
-				text: 'Edited task'
-			},
-			newTag: ''
+			text: 'Edited task'
 		});
 
 		const applier = registerApplier();
 		flushPendingTaskChanges();
 
 		expect(applier).toHaveBeenCalledWith(task.id, {
-			change: {
-				text: 'Edited task'
-			},
-			newTag: ''
+			text: 'Edited task'
 		});
 	});
 
@@ -323,7 +282,7 @@ describe('PendingTaskChanges', () => {
 		subscribeToPendingTaskChanges(otherTask.id, otherSubscriber);
 
 		const snapshotBeforeChange = getPendingTaskChanges(task.id);
-		changePendingTaskValue(task, 'text', 'Edited task', false);
+		changePendingTaskValue(task, 'text', 'Edited task', 'delayed');
 
 		expect(subscriber).toHaveBeenCalledTimes(1);
 		expect(otherSubscriber).not.toHaveBeenCalled();
@@ -331,7 +290,7 @@ describe('PendingTaskChanges', () => {
 		expect(getPendingTaskChanges(task.id)).toBe(getPendingTaskChanges(task.id));
 
 		unsubscribe();
-		changePendingTaskValue(task, 'text', 'Edited again', false);
+		changePendingTaskValue(task, 'text', 'Edited again', 'delayed');
 
 		expect(subscriber).toHaveBeenCalledTimes(1);
 	});
@@ -341,14 +300,11 @@ describe('PendingTaskChanges', () => {
 		const applier = registerApplier();
 		const uninstall = installPendingTaskChangesFlushHandler(undefined);
 
-		changePendingTaskValue(task, 'text', 'Typed right before closing the window', false);
+		changePendingTaskValue(task, 'text', 'Typed right before closing the window', 'delayed');
 		window.dispatchEvent(new Event('pagehide'));
 
 		expect(applier).toHaveBeenCalledWith(task.id, {
-			change: {
-				text: 'Typed right before closing the window'
-			},
-			newTag: ''
+			text: 'Typed right before closing the window'
 		});
 
 		uninstall();
@@ -362,8 +318,8 @@ describe('PendingTaskChanges', () => {
 		registerPendingTaskChangesApplier(() => {
 			throw new Error('The task state could not be updated.');
 		});
-		changePendingTaskValue(task, 'text', 'Edited task', false);
-		changePendingNewTag(task.id, 'urgent');
+		changePendingTaskValue(task, 'text', 'Edited task', 'delayed');
+		changePendingTaskValue(task, 'tags', [ 'urgent' ], 'buffered');
 
 		// A single-task save still reports the failure to the caller, while the flush of the whole buffer keeps going through the other tasks
 		expect(() => {
@@ -375,10 +331,8 @@ describe('PendingTaskChanges', () => {
 
 		// A save that did not happen must leave the values where they still are, or they would be lost by the buffer and the task state at once
 		expect(getPendingTaskChanges(task.id)).toEqual({
-			change: {
-				text: 'Edited task'
-			},
-			newTag: 'urgent'
+			text: 'Edited task',
+			tags: [ 'urgent' ]
 		});
 	});
 
@@ -389,31 +343,26 @@ describe('PendingTaskChanges', () => {
 		const appliedChanges: AppliedChange[] = [];
 
 		jest.spyOn(console, 'error').mockImplementation(() => {});
-		registerPendingTaskChangesApplier((taskId, pendingChanges) => {
+		registerPendingTaskChangesApplier((taskId, changedValues) => {
 			if(taskId === failingTask.id) {
 				throw new Error('The task state could not be updated.');
 			}
 
-			appliedChanges.push([ taskId, pendingChanges ]);
+			appliedChanges.push([ taskId, changedValues ]);
 		});
-		changePendingTaskValue(failingTask, 'text', 'Typed right before closing the window', false);
-		changePendingTaskValue(otherTask, 'text', 'Typed in the other task', false);
-		changePendingNewTag(otherTask.id, 'urgent');
+		changePendingTaskValue(failingTask, 'text', 'Typed right before closing the window', 'delayed');
+		changePendingTaskValue(otherTask, 'text', 'Typed in the other task', 'delayed');
+		changePendingTaskValue(otherTask, 'tags', [ 'urgent' ], 'buffered');
 		flushPendingTaskChanges();
 
 		expect(appliedChanges).toEqual([
 			[ otherTask.id, {
-				change: {
-					text: 'Typed in the other task'
-				},
-				newTag: 'urgent'
+				text: 'Typed in the other task',
+				tags: [ 'urgent' ]
 			} ]
 		]);
 		expect(getPendingTaskChanges(failingTask.id)).toEqual({
-			change: {
-				text: 'Typed right before closing the window'
-			},
-			newTag: ''
+			text: 'Typed right before closing the window'
 		});
 		expect(getPendingTaskChanges(otherTask.id)).toBeUndefined();
 	});
@@ -428,18 +377,18 @@ describe('PendingTaskChanges', () => {
 				return commandDeferred.promise;
 			})
 		});
-		registerPendingTaskChangesApplier((taskId, pendingChanges) => {
+		registerPendingTaskChangesApplier((taskId, changedValues) => {
 			sendTaskStorageCommand({
 				command: 'task.update',
 				payload: {
 					taskId,
-					change: pendingChanges.change
+					change: changedValues
 				}
 			});
 		});
 		const uninstall = installPendingTaskChangesFlushHandler(spotStorage);
 
-		changePendingTaskValue(task, 'text', 'Typed right before quitting', false);
+		changePendingTaskValue(task, 'text', 'Typed right before quitting', 'delayed');
 		requestFlush();
 		await waitForQueuedWork();
 
@@ -490,18 +439,18 @@ describe('PendingTaskChanges', () => {
 			...spotStorage,
 			executeTaskCommand
 		});
-		registerPendingTaskChangesApplier((taskId, pendingChanges) => {
+		registerPendingTaskChangesApplier((taskId, changedValues) => {
 			sendTaskStorageCommand({
 				command: 'task.update',
 				payload: {
 					taskId,
-					change: pendingChanges.change
+					change: changedValues
 				}
 			});
 		});
 		const uninstall = installPendingTaskChangesFlushHandler(spotStorage);
 
-		changePendingTaskValue(task, 'text', 'Typed while the database was down', true);
+		changePendingTaskValue(task, 'text', 'Typed while the database was down', 'immediate');
 		await Promise.resolve();
 		await Promise.resolve();
 
@@ -537,34 +486,31 @@ describe('PendingTaskChanges', () => {
 			...spotStorage,
 			executeTaskCommand
 		});
-		const applier = jest.fn<void, AppliedChange>((taskId, pendingChanges) => {
+		const applier = jest.fn<void, AppliedChange>((taskId, changedValues) => {
 			sendTaskStorageCommand({
 				command: 'task.update',
 				payload: {
 					taskId,
-					change: pendingChanges.change
+					change: changedValues
 				}
 			});
 		});
 		registerPendingTaskChangesApplier(applier);
 		const uninstall = installPendingTaskChangesFlushHandler(spotStorage);
 
-		changePendingTaskValue(task, 'text', 'Typed before quitting', false);
+		changePendingTaskValue(task, 'text', 'Typed before quitting', 'delayed');
 		requestFlush();
 		await waitForQueuedWork();
 
 		// The window is still there while the first write is in flight, so the user can keep typing into it
-		changePendingTaskValue(task, 'text', 'Typed while quitting', false);
+		changePendingTaskValue(task, 'text', 'Typed while quitting', 'delayed');
 		expect(spotStorage.notifyPendingTaskChangesFlushed).not.toHaveBeenCalled();
 
 		firstWriteDeferred.resolve(healthyResult);
 		await waitForQueuedWork();
 
 		expect(applier).toHaveBeenNthCalledWith(2, task.id, {
-			change: {
-				text: 'Typed while quitting'
-			},
-			newTag: ''
+			text: 'Typed while quitting'
 		});
 		expect(executeTaskCommand).toHaveBeenCalledTimes(2);
 		expect(spotStorage.notifyPendingTaskChangesFlushed).toHaveBeenCalledTimes(1);
@@ -579,16 +525,13 @@ describe('PendingTaskChanges', () => {
 		const uninstall = installPendingTaskChangesFlushHandler(spotStorage);
 
 		// Nothing applies the buffered changes, so they stay buffered no matter how many times they are flushed
-		changePendingTaskValue(task, 'text', 'Never applied', false);
+		changePendingTaskValue(task, 'text', 'Never applied', 'delayed');
 		requestFlush();
 		await waitForQueuedWork();
 
 		expect(spotStorage.notifyPendingTaskChangesFlushed).toHaveBeenCalledTimes(1);
 		expect(getPendingTaskChanges(task.id)).toEqual({
-			change: {
-				text: 'Never applied'
-			},
-			newTag: ''
+			text: 'Never applied'
 		});
 
 		uninstall();

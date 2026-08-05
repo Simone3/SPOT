@@ -54,7 +54,7 @@ jest.mock('src/components/tasks/TasksList', () => {
 		const { changePendingTaskValue, flushPendingTaskChangesForTask } = jest.requireActual('src/logic/PendingTaskChanges') as typeof import('src/logic/PendingTaskChanges');
 
 		Object.entries(changedValues).forEach(([ key, value ]) => {
-			changePendingTaskValue(task, key as keyof Task, value as Task[keyof Task], false);
+			changePendingTaskValue(task, key as keyof Task, value as Task[keyof Task], 'buffered');
 		});
 		flushPendingTaskChangesForTask(task.id);
 	};
@@ -112,6 +112,14 @@ jest.mock('src/components/tasks/TasksList', () => {
 					onUpdateTask(tasks[0], { state: nextState });
 				}
 			}, stateToggleLabel));
+			children.push(React.createElement('button', {
+				key: 'tag',
+				type: 'button',
+				onClick: () => {
+					// The trailing tag input is an empty tag in the task tags until the user types the next tag into it
+					onUpdateTask(tasks[0], { tags: [ 'urgent', '' ] });
+				}
+			}, `${title} tag`));
 			children.push(React.createElement('button', {
 				key: 'delete',
 				type: 'button',
@@ -381,6 +389,28 @@ describe('TasksPage', () => {
 				taskId: expect.any(String)
 			}
 		});
+	});
+
+	test('never persists the empty tag of a tag input', async() => {
+		const persistedTask = makeTask({
+			id: 'persisted-task',
+			text: 'Persisted startup task',
+			tags: [ 'urgent' ],
+			visible: false
+		});
+		const executeTaskCommand = jest.fn(async(command: TaskStorageCommand): Promise<TaskStorageCommandResult> => {
+			void command;
+			return createSuccessfulCommandResult();
+		});
+		setWindowSpotStorage(createMockSpotStorage(createLoadTasks([ persistedTask ]), executeTaskCommand));
+
+		renderTasksPage();
+		expect(await screen.findByText('Persisted startup task')).toBeInTheDocument();
+
+		// The task already holds the only real tag, so the empty one it is saved with is not a change at all
+		await clickAndSettle(screen.getByRole('button', { name: 'Tasks tag' }));
+
+		expect(executeTaskCommand).not.toHaveBeenCalled();
 	});
 
 	test('persists restored completed tasks through update commands', async() => {

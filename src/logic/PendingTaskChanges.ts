@@ -4,22 +4,18 @@ import type { SpotStorageApi } from 'src/types/TaskStorageTypes';
 import type { Task, TaskChange } from 'src/types/TaskTypes';
 
 /**
- * The task values the user changed but that did not reach the task state yet.
- * "newTag" is the content of the trailing tag input, which is not a task field until it is committed.
+ * When a buffered value has to reach the task state.
+ * "immediate" saves it right away and "delayed" restarts the save delay, while "buffered" only keeps it in the buffer: a value the
+ * user is still typing is saved by the next save, by leaving the input, or by the flush that runs before the renderer goes away.
  */
-export interface PendingTaskChanges {
-	change: TaskChange;
-	newTag: string;
-}
+export type TaskChangeFlushMode = 'immediate' | 'delayed' | 'buffered';
 
-type PendingTaskChangesApplier = (taskId: string, pendingChanges: PendingTaskChanges) => void;
+type PendingTaskChangesApplier = (taskId: string, change: TaskChange) => void;
 
 type PendingTaskValueUpdater<TKey extends keyof Task> = (previousValue: Task[TKey]) => Task[TKey];
 
-const EMPTY_NEW_TAG = '';
-
 // Buffered task changes, kept out of the task components so that they survive re-renders, filtering and unmounts
-const pendingTaskChanges = new Map<string, PendingTaskChanges>();
+const pendingTaskChanges = new Map<string, TaskChange>();
 
 const flushTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
 
@@ -42,14 +38,10 @@ const clearFlushTimeout = (taskId: string): void => {
 	}
 };
 
-const hasBufferedValues = (pendingChanges: PendingTaskChanges): boolean => {
-	return Object.keys(pendingChanges.change).length !== 0 || pendingChanges.newTag !== EMPTY_NEW_TAG;
-};
-
 // The buffer is replaced instead of mutated, so that subscribers can compare snapshots by reference
-const setPendingTaskChanges = (taskId: string, pendingChanges: PendingTaskChanges): void => {
-	if(hasBufferedValues(pendingChanges)) {
-		pendingTaskChanges.set(taskId, pendingChanges);
+const setPendingTaskChanges = (taskId: string, change: TaskChange): void => {
+	if(Object.keys(change).length !== 0) {
+		pendingTaskChanges.set(taskId, change);
 	}
 	else {
 		pendingTaskChanges.delete(taskId);
@@ -58,66 +50,39 @@ const setPendingTaskChanges = (taskId: string, pendingChanges: PendingTaskChange
 	notifyChangeSubscribers(taskId);
 };
 
-// Puts back what a failed save took out of the buffer. Anything buffered in the meantime is newer than the values that were being
-// saved, so it wins field by field, and a trailing tag input the user typed in again is not overwritten by the one that was committed.
-const restorePendingTaskChanges = (taskId: string, flushedChanges: PendingTaskChanges): void => {
-	const currentPendingChanges = pendingTaskChanges.get(taskId);
-
+// Puts back what a failed save took out of the buffer. Anything buffered in the meantime is newer than the values that were
+// being saved, so it wins field by field.
+const restorePendingTaskChanges = (taskId: string, flushedChange: TaskChange): void => {
 	setPendingTaskChanges(taskId, {
-		change: {
-			...flushedChanges.change,
-			...currentPendingChanges?.change
-		},
-		newTag: currentPendingChanges?.newTag || flushedChanges.newTag
+		...flushedChange,
+		...pendingTaskChanges.get(taskId)
 	});
-};
-
-const flushTask = (taskId: string, commitNewTag: boolean): void => {
-	const pendingChanges = pendingTaskChanges.get(taskId);
-
-	// Buffered changes are never dropped when there is nobody to apply them: they stay buffered until there is
-	if(!pendingChanges || !applyPendingTaskChanges) {
-		return;
-	}
-
-	const newTag = commitNewTag ? pendingChanges.newTag.trim() : EMPTY_NEW_TAG;
-
-	if(Object.keys(pendingChanges.change).length === 0 && !newTag) {
-		return;
-	}
-
-	clearFlushTimeout(taskId);
-
-	// Only what is being saved leaves the buffer: a trailing tag input the user is still typing in is not part of this save
-	setPendingTaskChanges(taskId, {
-		change: {},
-		newTag: commitNewTag ? EMPTY_NEW_TAG : pendingChanges.newTag
-	});
-	try {
-		applyPendingTaskChanges(taskId, {
-			change: pendingChanges.change,
-			newTag
-		});
-	}
-	catch(error) {
-		// An applier that threw saved nothing, and the buffer is the only place those values still exist: leaving them out of it
-		// would lose them from the buffer and from the task state at once
-		restorePendingTaskChanges(taskId, {
-			change: pendingChanges.change,
-			newTag: commitNewTag ? pendingChanges.newTag : EMPTY_NEW_TAG
-		});
-
-		throw error;
-	}
 };
 
 /**
  * Saves the buffered changes of one task.
- * The trailing tag input is left alone, because the user may still be typing in it.
  * @param taskId Task to save.
  */
 export const flushPendingTaskChangesForTask = (taskId: string): void => {
-	flushTask(taskId, false);
+	const change = pendingTaskChanges.get(taskId);
+
+	// Buffered changes are never dropped when there is nobody to apply them: they stay buffered until there is
+	if(!change || !applyPendingTaskChanges) {
+		return;
+	}
+
+	clearFlushTimeout(taskId);
+	setPendingTaskChanges(taskId, {});
+	try {
+		applyPendingTaskChanges(taskId, change);
+	}
+	catch(error) {
+		// An applier that threw saved nothing, and the buffer is the only place those values still exist: leaving them out of it
+		// would lose them from the buffer and from the task state at once
+		restorePendingTaskChanges(taskId, change);
+
+		throw error;
+	}
 };
 
 // A pending state change fades the task out before it moves to the other list, so it is saved on the shorter delay
@@ -187,25 +152,24 @@ export const hasPendingTaskChanges = (): boolean => {
  * @param taskId Task to read.
  * @returns The buffered changes, or undefined when the task has none.
  */
-export const getPendingTaskChanges = (taskId: string): PendingTaskChanges | undefined => {
+export const getPendingTaskChanges = (taskId: string): TaskChange | undefined => {
 	return pendingTaskChanges.get(taskId);
 };
 
 /**
- * Buffers a new value for one task field, and either saves it right away or restarts the save delay.
+ * Buffers a new value for one task field, and saves it right away, after the save delay, or not at all.
  * @param task Task as it is in the task state.
  * @param key Task field to change.
  * @param valueOrUpdater New field value, or a callback that receives the currently buffered value.
- * @param flush Whether the buffered changes must be saved immediately.
+ * @param flushMode When the buffered changes must be saved.
  */
 export const changePendingTaskValue = <TKey extends keyof Task>(
 	task: Task,
 	key: TKey,
 	valueOrUpdater: Task[TKey] | PendingTaskValueUpdater<TKey>,
-	flush: boolean
+	flushMode: TaskChangeFlushMode
 ): void => {
-	const currentPendingChanges = pendingTaskChanges.get(task.id);
-	const currentChange = currentPendingChanges?.change ?? {};
+	const currentChange = pendingTaskChanges.get(task.id) ?? {};
 
 	// The buffered value is the one the user last typed, so an updater must continue from it and not from the task state
 	const currentValue = (Object.prototype.hasOwnProperty.call(currentChange, key) ? currentChange[key] : task[key]) as Task[TKey];
@@ -220,30 +184,16 @@ export const changePendingTaskValue = <TKey extends keyof Task>(
 		change[key] = newValue;
 	}
 
-	setPendingTaskChanges(task.id, {
-		change,
-		newTag: currentPendingChanges?.newTag ?? EMPTY_NEW_TAG
-	});
+	setPendingTaskChanges(task.id, change);
 
-	if(flush) {
+	if(flushMode === 'immediate') {
 		flushPendingTaskChangesForTask(task.id);
 	}
-	else {
+	else if(flushMode === 'delayed') {
 		restartFlushTimeout(task, change);
 	}
-};
 
-/**
- * Buffers the content of the trailing tag input of one task.
- * It is not a task change until it is committed, so it does not start the save delay.
- * @param taskId Task to change.
- * @param newTag Content of the trailing tag input.
- */
-export const changePendingNewTag = (taskId: string, newTag: string): void => {
-	setPendingTaskChanges(taskId, {
-		change: pendingTaskChanges.get(taskId)?.change ?? {},
-		newTag
-	});
+	// A buffered change waits for something else to save it, so it neither starts nor postpones a save of its own
 };
 
 /**
@@ -259,14 +209,14 @@ export const clearPendingTaskChanges = (taskId: string): void => {
 };
 
 /**
- * Saves the buffered changes of every task, including the tags still sitting in the trailing tag inputs.
+ * Saves the buffered changes of every task, including the tags the user is still typing into their tag inputs.
  * Used when the renderer is going away and nothing else will save them, so one task that cannot be saved never keeps the
  * other tasks from being saved and the caller is not left with a half-done flush to handle.
  */
 export const flushPendingTaskChanges = (): void => {
 	Array.from(pendingTaskChanges.keys()).forEach((taskId) => {
 		try {
-			flushTask(taskId, true);
+			flushPendingTaskChangesForTask(taskId);
 		}
 		catch(error) {
 			// There is nothing left to fall back on: the values stay buffered, and the failure is only reported

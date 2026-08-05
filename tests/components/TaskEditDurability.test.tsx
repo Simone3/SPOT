@@ -2,9 +2,9 @@ import type { ChangeEvent, ReactElement, ReactNode } from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { makeFormDomains, makeTask } from '../testUtils';
 import { TASKS_CONFIG } from 'src/config/AppConfig';
-import { clearPendingTaskChanges, flushPendingTaskChanges, registerPendingTaskChangesApplier, resetPendingTaskChangesForTests, type PendingTaskChanges } from 'src/logic/PendingTaskChanges';
+import { clearPendingTaskChanges, flushPendingTaskChanges, registerPendingTaskChangesApplier, resetPendingTaskChangesForTests } from 'src/logic/PendingTaskChanges';
 import { TasksList } from 'src/components/tasks/TasksList';
-import type { Task } from 'src/types/TaskTypes';
+import type { Task, TaskChange } from 'src/types/TaskTypes';
 
 jest.mock('src/components/inputs/TextArea', () => {
 	type MockTextAreaProps = {
@@ -64,13 +64,13 @@ jest.mock('@dnd-kit/react/sortable', () => {
 
 interface RenderedTasksList {
 	container: HTMLElement;
-	applyPendingTaskChanges: jest.Mock<void, [ string, PendingTaskChanges ]>;
+	applyPendingTaskChanges: jest.Mock<void, [ string, TaskChange ]>;
 	onDeleteTask: jest.Mock<void, [ Task ]>;
 	rerenderTasks: (nextTasks: Task[]) => void;
 }
 
 const renderTasksList = (tasks: Task[]): RenderedTasksList => {
-	const applyPendingTaskChanges = jest.fn<void, [ string, PendingTaskChanges ]>();
+	const applyPendingTaskChanges = jest.fn<void, [ string, TaskChange ]>();
 	const onDeleteTask = jest.fn<void, [ Task ]>();
 
 	registerPendingTaskChangesApplier(applyPendingTaskChanges);
@@ -164,10 +164,7 @@ describe('Task edit durability', () => {
 		});
 
 		expect(applyPendingTaskChanges).toHaveBeenCalledWith(task.id, {
-			change: {
-				text: 'Edited and then filtered out'
-			},
-			newTag: ''
+			text: 'Edited and then filtered out'
 		});
 	});
 
@@ -212,10 +209,7 @@ describe('Task edit durability', () => {
 		fireEvent.blur(getTaskTextInput());
 
 		expect(applyPendingTaskChanges).toHaveBeenCalledWith(task.id, {
-			change: {
-				text: 'Locally edited task'
-			},
-			newTag: ''
+			text: 'Locally edited task'
 		});
 
 		// The write failed and the parent reloaded the task from the database
@@ -253,10 +247,7 @@ describe('Task edit durability', () => {
 		fireEvent.blur(getTaskTextInput());
 
 		expect(applyPendingTaskChanges).toHaveBeenCalledWith(task.id, {
-			change: {
-				text: 'Still being typed'
-			},
-			newTag: ''
+			text: 'Still being typed'
 		});
 	});
 
@@ -274,12 +265,11 @@ describe('Task edit durability', () => {
 		flushPendingTaskChanges();
 
 		expect(applyPendingTaskChanges).toHaveBeenCalledWith(task.id, {
-			change: {},
-			newTag: 'urgent-tag'
+			tags: [ 'urgent-tag' ]
 		});
 	});
 
-	test('keeps a half-typed tag in its input while another edit is saved', () => {
+	test('does not save a tag while the user is still typing it', () => {
 		jest.useFakeTimers();
 		const task = makeTask({
 			text: 'Original task',
@@ -287,20 +277,36 @@ describe('Task edit durability', () => {
 		});
 		const { applyPendingTaskChanges } = renderTasksList([ task ]);
 
-		typeTaskText('Edited task');
 		typeNewTag('half-typed');
 
+		// Typing a tag buffers it without starting a save of its own, so half-typed tags never reach the database
 		act(() => {
 			jest.advanceTimersByTime(TASKS_CONFIG.flushDelayMs);
 		});
 
-		expect(applyPendingTaskChanges).toHaveBeenCalledWith(task.id, {
-			change: {
-				text: 'Edited task'
-			},
-			newTag: ''
+		expect(applyPendingTaskChanges).not.toHaveBeenCalled();
+
+		// The tag the user is typing keeps its own input, and an empty one is always waiting for the next tag
+		const tagInputs = screen.getAllByPlaceholderText('Add tag...');
+
+		expect(tagInputs).toHaveLength(2);
+		expect(tagInputs[0]).toHaveValue('half-typed');
+		expect(tagInputs[1]).toHaveValue('');
+	});
+
+	test('saves the tag the user typed when they leave its input', () => {
+		const task = makeTask({
+			text: 'Original task',
+			visible: true
 		});
-		expect(screen.getAllByPlaceholderText('Add tag...').at(-1)).toHaveValue('half-typed');
+		const { applyPendingTaskChanges } = renderTasksList([ task ]);
+
+		typeNewTag('urgent-tag');
+		fireEvent.blur(screen.getAllByPlaceholderText('Add tag...')[0]);
+
+		expect(applyPendingTaskChanges).toHaveBeenCalledWith(task.id, {
+			tags: [ 'urgent-tag' ]
+		});
 	});
 
 	test('saves buffered edits when everything is flushed before the renderer goes away', () => {
@@ -317,10 +323,7 @@ describe('Task edit durability', () => {
 		});
 
 		expect(applyPendingTaskChanges).toHaveBeenCalledWith(task.id, {
-			change: {
-				text: 'Typed right before quitting'
-			},
-			newTag: ''
+			text: 'Typed right before quitting'
 		});
 	});
 });

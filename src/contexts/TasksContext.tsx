@@ -1,5 +1,5 @@
 import { createContext, useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from 'react';
-import { clearPendingTaskChanges, flushPendingTaskChanges, registerPendingTaskChangesApplier, type PendingTaskChanges } from 'src/logic/PendingTaskChanges';
+import { clearPendingTaskChanges, flushPendingTaskChanges, registerPendingTaskChangesApplier } from 'src/logic/PendingTaskChanges';
 import { getTaskStorageQueueState, sendTaskStorageCommand, subscribeToTaskStorageQueue } from 'src/logic/TaskStorageQueue';
 import { findTaskById } from 'src/logic/TasksLogic';
 import { getInitialTaskState, addTaskToTaskState, refreshVisibleTasksInTaskState, deleteTaskFromTaskState, changeFiltersInTaskState, loadTasksIntoTaskState, resetFiltersTaskState, updateTaskInTaskState, sortTasksByImportanceInTaskState, moveActiveTaskInTaskState, type TaskStateContainer } from 'src/logic/TaskStateLogic';
@@ -77,7 +77,12 @@ const taskToPersistedTask = (task: Task): PersistedTask => {
 		priority: task.priority,
 		owner: task.owner,
 		dueDate: task.dueDate,
-		tags: [ ...task.tags ],
+
+		// An empty tag is a tag input the user has not filled in yet, or one they just emptied: it is never persisted, and stripping
+		// it on both sides of the comparison also keeps it from ever looking like a change
+		tags: task.tags.filter((tag) => {
+			return tag;
+		}),
 		sortPosition: task.sortPosition,
 		completionDate: cloneDate(task.completionDate)
 	};
@@ -137,18 +142,6 @@ const createPersistedTaskChange = (previousTask: Task, nextTask: Task): Persiste
 
 const hasPersistedTaskChange = (change: PersistedTaskChange): boolean => {
 	return Object.keys(change).length > 0;
-};
-
-// The tag still sitting in the trailing tag input becomes a real tag only when the buffered changes are saved
-const createChangedTaskValues = (oldTask: Task, pendingChanges: PendingTaskChanges): TaskChange => {
-	if(!pendingChanges.newTag) {
-		return pendingChanges.change;
-	}
-
-	return {
-		...pendingChanges.change,
-		tags: [ ...pendingChanges.change.tags ?? oldTask.tags, pendingChanges.newTag ]
-	};
 };
 
 const tryReadTaskStorageStatus = async(spotStorage: SpotStorageApi): Promise<StorageStatus | undefined> => {
@@ -394,20 +387,12 @@ export const TasksContextProvider = ({ children }: TasksContextProviderProps): R
 	}, [ applyOptimisticTaskCommand ]);
 
 	// Buffered task changes are applied against the task as it is now, not as it was when the user started editing it
-	const onApplyPendingTaskChanges = useCallback((taskId: string, pendingChanges: PendingTaskChanges): void => {
+	const onApplyPendingTaskChanges = useCallback((taskId: string, changedValues: TaskChange): void => {
 		applyOptimisticTaskCommand((currentTaskState) => {
 			const oldTask = findTaskById(currentTaskState.tasksContainer, taskId);
 
 			// The task was deleted while its changes were buffered, so there is nothing left to update
 			if(!oldTask) {
-				return {
-					taskState: currentTaskState
-				};
-			}
-
-			const changedValues = createChangedTaskValues(oldTask, pendingChanges);
-
-			if(Object.keys(changedValues).length === 0) {
 				return {
 					taskState: currentTaskState
 				};
@@ -438,8 +423,8 @@ export const TasksContextProvider = ({ children }: TasksContextProviderProps): R
 	});
 
 	useEffect(() => {
-		const unregisterApplier = registerPendingTaskChangesApplier((taskId, pendingChanges) => {
-			applyPendingTaskChangesRef.current(taskId, pendingChanges);
+		const unregisterApplier = registerPendingTaskChangesApplier((taskId, changedValues) => {
+			applyPendingTaskChangesRef.current(taskId, changedValues);
 		});
 
 		return () => {

@@ -8,6 +8,7 @@ import { OwnerIcon } from 'src/components/icons/OwnerIcon';
 import { FreeSelectInput } from 'src/components/inputs/FreeSelectInput';
 import { DatePicker } from 'src/components/inputs/DatePicker';
 import { WarningIcon } from 'src/components/icons/WarningIcon';
+import type { TaskChangeFlushMode } from 'src/logic/PendingTaskChanges';
 import type { FormDomains } from 'src/types/DomainTypes';
 import type { Task as TaskType } from 'src/types/TaskTypes';
 
@@ -37,16 +38,24 @@ const checkOptionCapitalization = (value: string, options: { label: string }[]):
 type TaskChipsProps = {
 	inputDomains: FormDomains;
 	task: TaskType;
-	setOwner: (owner: string, flush: boolean) => void;
-	setDueDate: (dueDate: string, flush: boolean) => void;
-	setTags: (changeTags: (prevTags: string[]) => string[], flush: boolean) => void;
+	setOwner: (owner: string, flushMode: TaskChangeFlushMode) => void;
+	setDueDate: (dueDate: string, flushMode: TaskChangeFlushMode) => void;
+	setTags: (changeTags: (prevTags: string[]) => string[], flushMode: TaskChangeFlushMode) => void;
 	flushTaskChanges: () => void;
-	newTag: string;
-	setNewTag: (value: string) => void;
 	disabled?: boolean;
 };
 
-const TaskChips = ({ inputDomains, task, setOwner, setDueDate, setTags, flushTaskChanges, newTag, setNewTag, disabled }: TaskChipsProps): ReactElement => {
+/**
+ * Returns the tags to show, which are the task tags plus the trailing empty tag the user types the next tag into.
+ * The trailing tag is only a rendered input: it becomes a task tag as soon as the user types into it, and it never reaches the database.
+ * @param tags Task tags.
+ * @returns The task tags, always followed by exactly one empty tag.
+ */
+const getTagsWithTrailingInput = (tags: string[]): string[] => {
+	return tags.length === 0 || tags[tags.length - 1] ? [ ...tags, '' ] : tags;
+};
+
+const TaskChips = ({ inputDomains, task, setOwner, setDueDate, setTags, flushTaskChanges, disabled }: TaskChipsProps): ReactElement => {
 	const {
 		state,
 		owner,
@@ -65,14 +74,14 @@ const TaskChips = ({ inputDomains, task, setOwner, setDueDate, setTags, flushTas
 				value={owner || ''}
 				placeholder={'Me'}
 				onChange={(value) => {
-					setOwner(value, false);
+					setOwner(value, 'delayed');
 				}}
 				onFinishEditing={(value) => {
 					let changedValue = value ? value.trim() : value;
 					changedValue = checkOptionCapitalization(changedValue, inputDomains.owners);
 					if(changedValue !== value) {
 						// Update value for trimming/capitalization and then flush
-						setOwner(changedValue, true);
+						setOwner(changedValue, 'immediate');
 					}
 					else {
 						// Otherwise just flush
@@ -96,7 +105,7 @@ const TaskChips = ({ inputDomains, task, setOwner, setDueDate, setTags, flushTas
 			<DatePicker
 				value={dueDate}
 				onChange={(value) => {
-					setDueDate(DateUtils.toStandardYearMonthDay(value), false);
+					setDueDate(DateUtils.toStandardYearMonthDay(value), 'delayed');
 				}}
 				placeholder={'No due date'}
 				onBlur={flushTaskChanges}
@@ -105,19 +114,21 @@ const TaskChips = ({ inputDomains, task, setOwner, setDueDate, setTags, flushTas
 		</Chip>
 	);
 
-	// Tag chips (if any)
-	for(let i = 0; i < tags.length; i++) {
+	// Tag chips, the last of which is always the empty input for the next tag
+	const tagsWithTrailingInput = getTagsWithTrailingInput(tags);
+	for(let i = 0; i < tagsWithTrailingInput.length; i++) {
 		chips.push(
 			<Chip
 				key={`tag-${i}`}
 				leftIcon={<TagsIcon/>}>
 				<FreeSelectInput
-					value={tags[i]}
+					value={tagsWithTrailingInput[i]}
 					placeholder={'Add tag...'}
 					onChange={(value) => {
+						// A tag the user is still typing is buffered but not saved on its own, so half-typed tags never reach the database
 						setTags((prevTags) => {
 							return [ ...prevTags.slice(0, i), value, ...prevTags.slice(i + 1) ];
-						}, false);
+						}, 'buffered');
 					}}
 					onFinishEditing={(value) => {
 						const changedValue = value ? value.trim() : value;
@@ -127,18 +138,19 @@ const TaskChips = ({ inputDomains, task, setOwner, setDueDate, setTags, flushTas
 								// Update value for trimming/capitalization and then flush
 								setTags((prevTags) => {
 									return [ ...prevTags.slice(0, i), normalizedValue, ...prevTags.slice(i + 1) ];
-								}, true);
+								}, 'immediate');
 							}
 							else {
 								// Otherwise just flush
 								flushTaskChanges();
 							}
 						}
-						else {
-							// Remove any empty tag from the array and then flush
+						else if(i < tags.length) {
+							// Remove any empty tag from the array and then flush. A trailing input the user never typed into is not in the
+							// array at all, so there is nothing to remove and the next render puts it back anyway.
 							setTags((prevTags) => {
 								return [ ...prevTags.slice(0, i), ...prevTags.slice(i + 1) ];
-							}, true);
+							}, 'immediate');
 						}
 					}}
 					options={inputDomains.tags}
@@ -147,38 +159,6 @@ const TaskChips = ({ inputDomains, task, setOwner, setDueDate, setTags, flushTas
 			</Chip>
 		);
 	}
-
-	// New tag chip
-	chips.push(
-		<Chip
-			key={`tag-new`}
-			leftIcon={<TagsIcon/>}>
-			<FreeSelectInput
-				value={newTag}
-				placeholder={'Add tag...'}
-				onChange={(value) => {
-					setNewTag(value);
-				}}
-				onFinishEditing={(value) => {
-					const changedValue = value ? value.trim() : value;
-					if(changedValue) {
-						// Reset new tag input, add as actual tag and then flush
-						const normalizedValue = checkOptionCapitalization(changedValue, inputDomains.tags);
-						setNewTag('');
-						setTags((prevTags) => {
-							return [ ...prevTags, normalizedValue ];
-						}, true);
-					}
-					else if(changedValue !== value) {
-						// Update for trimming
-						setNewTag('');
-					}
-				}}
-				options={inputDomains.tags}
-				disabled={disabled}
-			/>
-		</Chip>
-	);
 
 	return (
 		<div className='task-chips'>

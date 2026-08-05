@@ -355,11 +355,11 @@ Task edits are not sent to the task state on every keystroke. `src/logic/Pending
 
 - Task components read the buffer through `useSyncExternalStore` and render the task state merged with it. The rendered value is derived from both on every render, so the inputs and the task state can never drift apart.
 - Only the components of the edited task re-render while the user types, because subscribers are registered per task ID.
-- A buffered change is saved after `TASKS_CONFIG.flushDelayMs`, or after the shorter `TASKS_CONFIG.stateChangeDelayMs` when it is a pending state change. Every new change restarts the delay, and a value brought back to the one already in the task state is dropped from the buffer.
+- Every buffered value carries a flush mode. A `delayed` change is saved after `TASKS_CONFIG.flushDelayMs`, or after the shorter `TASKS_CONFIG.stateChangeDelayMs` when it is a pending state change, and restarts that delay on every new change. An `immediate` change is saved right away. A `buffered` change only waits in the buffer: it neither starts nor postpones a save, and it is saved by the next save of the same task, by leaving the input, or by the final flush. A value brought back to the one already in the task state is dropped from the buffer.
+- Tags use the `buffered` mode while the user types, so a half-typed tag never reaches the database on its own, and the `immediate` mode when the user leaves the tag input.
 - `TasksContextProvider` registers the single applier that saves buffered changes. It looks the task up by ID in the current task state, so changes are always applied to the task as it is at save time, and a task that no longer exists is skipped.
 - `TasksContextProvider` clears the buffer of a deleted task. It lives as long as the renderer, so leaving the task page no longer unregisters the applier and no longer has to flush anything first: buffered changes keep saving normally while the user is on another page.
 - A save takes out of the buffer only what it is actually saving. Anything the user typed in the meantime and that is not part of that save stays buffered.
-- The trailing tag input is buffered as `newTag` and is not a task change until it is committed. Delayed and explicit saves leave it alone, because the user may still be typing; only the final flush of the whole buffer turns it into a tag. Saving the other buffered changes of the same task must therefore not clear it either.
 - Buffered changes are never dropped when no applier is registered: they stay buffered until one is.
 - An applier that throws saved nothing, so what the save took out of the buffer goes back into it. The buffer is the only place those values still exist at that point, and values buffered while the applier ran are newer and win field by field.
 - The flush of the whole buffer saves each task on its own: one task that cannot be saved is reported to the console and leaves its values buffered, while the other tasks are still saved. It never throws, because its callers are the renderer going away, the page hide, and the provider teardown, none of which can do anything about a failure. A single-task save still reports it to its caller.
@@ -438,7 +438,7 @@ Field notes:
 - `priority` is `URGENT`, `HIGH`, `NORMAL`, or `LOW`.
 - `owner` is a free-form string. A missing or empty owner is displayed as `Me`.
 - `dueDate` is stored as a `YYYY-MM-DD` string. A missing or empty due date is displayed as no due date.
-- `tags` is an array of free-form strings.
+- `tags` is an array of free-form strings. In the React task state it may also hold empty strings, which are tag inputs the user is typing into or has just emptied rather than tags. `taskToPersistedTask()` in `src/contexts/TasksContext.tsx` strips them on the way to storage, on both sides of the change comparison, so an empty tag never reaches SQLite and never looks like a change of its own.
 - `sortPosition` stores manual ordering for active tasks. It is required and new tasks start at `0`.
 - `visible` is derived from filters at runtime. It is required in React task state and sample/new tasks start as `false`, but it is not stored in SQLite.
 - `completionDate` is set when a task is completed.
@@ -522,8 +522,10 @@ Active list actions:
 - receives dedicated owner, due date, and tags setters from `Task`
 - edits owner through `FreeSelectInput`
 - edits due date through `DatePicker`
-- edits existing tags through `FreeSelectInput`
-- provides a trailing empty tag input for adding a new tag
+- edits every tag through `FreeSelectInput`, all of them the same way
+- renders one tag input per task tag, plus a trailing empty one for the next tag whenever the last task tag is not empty already. The trailing input is derived at render time, so it is always there without the task tags having to carry it
+- turns what the user types into the trailing input into a task tag right away, which is why a new empty input appears next to it as soon as they start typing
+- removes a tag emptied by the user when they leave its input, wherever it is in the list. An empty tag is never persisted either, so a tag input the user has not filled in yet costs nothing
 - trims owner and tag values on finish
 - reuses existing capitalization when the typed value matches an existing domain case-insensitively
 
@@ -696,7 +698,7 @@ Current test coverage includes focused regression checks for:
 - storage IPC handler registration, channel delegation, shutdown drain, post-shutdown command failure behavior, exclusive access that finalizes in-flight commands and queues later ones, and two overlapping exclusive operations running one after the other with no command in between
 - the shutdown flush handshake: buffered renderer changes saved before the database is closed, commands refused only after the renderer reported, and a bounded wait when the renderer never reports
 - the window close flush handshake: buffered renderer changes saved while the database stays open, no wait when the window closes as part of a quit or its renderer is already gone, one single handshake shared by a window close and a quit, and a new handshake for a window closed later
-- the buffered task changes: save delays and their restart, immediate saves, forgetting a reverted value, the shorter state change delay, updater-form changes, dropping the buffer of a deleted task, committing the trailing tag input only on the final save, keeping the trailing tag input buffered while the other changes of the same task are saved, keeping changes when no applier is registered, keeping them buffered when the applier throws, saving the other tasks when one of them cannot be saved, per-task subscriber notification with stable snapshots, page hide saving, waiting for in-flight storage commands, retrying a failed write as soon as the flush is requested, and reporting to the main process only once storage caught up
+- the buffered task changes: save delays and their restart, immediate saves, forgetting a reverted value, the shorter state change delay, updater-form changes, dropping the buffer of a deleted task, a buffered value never starting a save of its own, a buffered value riding along with the save another change already scheduled, keeping changes when no applier is registered, keeping them buffered when the applier throws, saving the other tasks when one of them cannot be saved, per-task subscriber notification with stable snapshots, page hide saving, waiting for in-flight storage commands, retrying a failed write as soon as the flush is requested, and reporting to the main process only once storage caught up
 - runtime path resolution for packaged and development runs
 - backup folder resolution at startup, saved-folder reuse, the development folder override, the fallback to the default folder when the saved or chosen one cannot be used, configuration persistence, and running the change on the storage chain
 - backup location IPC registration, cancelled folder dialogs, and rejecting a chosen path that is not a usable folder
@@ -708,10 +710,10 @@ Tests that cover `src/framework` live in `tests/framework` and depend only on fr
 - smoke coverage for the Settings panel showing the fixed database location, reporting a failed backup without claiming the tasks are lost, and the confirmed backup folder change
 - Electron window load-target resolution for local built React loading
 - React task-page startup loading, Electron preload API requirement, persisted Electron loading, and startup-error rendering
-- React task-page storage commands for create, update, delete, complete, restore, manual reorder, and importance sort, plus the write-failure warning, storage-health feedback, and the task state being kept as it is after a rejected write
+- React task-page storage commands for create, update, delete, complete, restore, manual reorder, and importance sort, plus the empty tag of a tag input never reaching a storage command, the write-failure warning, storage-health feedback, and the task state being kept as it is after a rejected write
 - the task state surviving navigation: leaving the task page and coming back keeps the loaded tasks, the changes made to them, and the filters, without a loading step and without reading the database again
 - the task write queue: in-order writing, retrying a failed or thrown write while keeping the warning until it goes through, later commands not overtaking a failed one, keeping a command refused while storage was closing, retrying immediately when the retry delay cannot be waited out, dropping a refused command instead of retrying it forever, giving up on a write the database keeps failing so later commands are still written, not counting writes refused while storage was closing against that limit, keeping a dropped command's warning through later successful writes, and database status reporting
-- task edit durability corner cases: edits still saved after the task is filtered out of the list, never saved for a deleted task, task state values shown again when the parent replaces the task, what the user is typing kept while the parent replaces the task, the trailing tag input saved when the task disappears, a half-typed tag left in its input while another edit of the same task is saved, and everything saved before the renderer goes away
+- task edit durability corner cases: edits still saved after the task is filtered out of the list, never saved for a deleted task, task state values shown again when the parent replaces the task, what the user is typing kept while the parent replaces the task, a tag saved when the task disappears before its input is ever left, a tag not saved while it is still being typed and the empty input waiting after it, a tag saved when its input is left, and everything saved before the renderer goes away
 - generic logging success, public log levels, startup file-open failures, bounded retry failures, retry recovery, shutdown flush behavior, and size-based rolling with bounded retention
 - the manually sorted list utility: insertion at every position, moves, and sort position renumbering
 - date handling: day-granularity comparison, whole-day offsets, relative labels and the weekday horizon, labels that are not supplied falling through, relative labels following the clock past midnight, stored `YYYY-MM-DD` conversion in both directions, and the next working day

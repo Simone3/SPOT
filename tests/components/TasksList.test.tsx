@@ -1,9 +1,9 @@
 import type { ChangeEvent, ReactElement, ReactNode } from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { makeFormDomains, makeTask } from '../testUtils';
-import { registerPendingTaskChangesApplier, resetPendingTaskChangesForTests, type PendingTaskChanges } from 'src/logic/PendingTaskChanges';
+import { registerPendingTaskChangesApplier, resetPendingTaskChangesForTests } from 'src/logic/PendingTaskChanges';
 import { TasksList } from 'src/components/tasks/TasksList';
-import type { Task } from 'src/types/TaskTypes';
+import type { Task, TaskChange } from 'src/types/TaskTypes';
 
 jest.mock('src/components/inputs/TextArea', () => {
 	type MockTextAreaProps = {
@@ -77,7 +77,7 @@ const renderTasksList = (tasks: Task[]) => {
 		onDeleteTask: jest.fn(),
 		showActions: true
 	};
-	const applyPendingTaskChanges = jest.fn<void, [ string, PendingTaskChanges ]>();
+	const applyPendingTaskChanges = jest.fn<void, [ string, TaskChange ]>();
 
 	registerPendingTaskChangesApplier(applyPendingTaskChanges);
 
@@ -158,10 +158,7 @@ describe('TasksList', () => {
 		fireEvent.blur(taskText);
 
 		expect(applyPendingTaskChanges).toHaveBeenCalledWith(task.id, {
-			change: {
-				text: 'Updated task'
-			},
-			newTag: ''
+			text: 'Updated task'
 		});
 		applyPendingTaskChanges.mockClear();
 
@@ -220,10 +217,7 @@ describe('TasksList', () => {
 			jest.advanceTimersByTime(1);
 		});
 		expect(applyPendingTaskChanges).toHaveBeenCalledWith(task.id, {
-			change: {
-				state: 'COMPLETED'
-			},
-			newTag: ''
+			state: 'COMPLETED'
 		});
 		expect(consoleErrorSpy.mock.calls.some((call) => {
 			return call.some((value) => {

@@ -2,7 +2,7 @@ import 'src/components/tasks/Task.css';
 import { useCallback, useSyncExternalStore, type CSSProperties, type ReactElement } from 'react';
 import { useSortable } from '@dnd-kit/react/sortable';
 import { TASKS_CONFIG } from 'src/config/AppConfig';
-import { changePendingNewTag, changePendingTaskValue, flushPendingTaskChangesForTask, getPendingTaskChanges, subscribeToPendingTaskChanges } from 'src/logic/PendingTaskChanges';
+import { changePendingTaskValue, flushPendingTaskChangesForTask, getPendingTaskChanges, subscribeToPendingTaskChanges, type TaskChangeFlushMode } from 'src/logic/PendingTaskChanges';
 import { TextArea } from 'src/components/inputs/TextArea';
 import type { FormDomains } from 'src/types/DomainTypes';
 import type { Task as TaskType } from 'src/types/TaskTypes';
@@ -20,7 +20,7 @@ type TaskProps = {
 	showDragHandle: boolean;
 };
 
-type SetTaskValue = <TKey extends keyof TaskType>(key: TKey, valueOrUpdater: TaskType[TKey] | ((previousValue: TaskType[TKey]) => TaskType[TKey]), flush: boolean) => void;
+type SetTaskValue = <TKey extends keyof TaskType>(key: TKey, valueOrUpdater: TaskType[TKey] | ((previousValue: TaskType[TKey]) => TaskType[TKey]), flushMode: TaskChangeFlushMode) => void;
 type TaskContainerStyle = CSSProperties & {
 	'--task-state-change-delay': string;
 };
@@ -36,8 +36,7 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onDelete, showDrag
 	const pendingChanges = useSyncExternalStore(subscribeToChanges, readChanges);
 
 	// The displayed task is always the task state plus the buffered changes, so the two can never drift apart
-	const task = pendingChanges ? { ...taskFromProps, ...pendingChanges.change } : taskFromProps;
-	const newTag = pendingChanges ? pendingChanges.newTag : '';
+	const task = pendingChanges ? { ...taskFromProps, ...pendingChanges } : taskFromProps;
 	const {
 		text,
 		state,
@@ -57,24 +56,20 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onDelete, showDrag
 		flushPendingTaskChangesForTask(id);
 	};
 
-	const setTaskValue: SetTaskValue = (key, valueOrUpdater, flush) => {
-		changePendingTaskValue(taskFromProps, key, valueOrUpdater, flush);
+	const setTaskValue: SetTaskValue = (key, valueOrUpdater, flushMode) => {
+		changePendingTaskValue(taskFromProps, key, valueOrUpdater, flushMode);
 	};
 
-	const setOwner = (owner: string, flush: boolean): void => {
-		setTaskValue('owner', owner, flush);
+	const setOwner = (owner: string, flushMode: TaskChangeFlushMode): void => {
+		setTaskValue('owner', owner, flushMode);
 	};
 
-	const setDueDate = (dueDate: string, flush: boolean): void => {
-		setTaskValue('dueDate', dueDate, flush);
+	const setDueDate = (dueDate: string, flushMode: TaskChangeFlushMode): void => {
+		setTaskValue('dueDate', dueDate, flushMode);
 	};
 
-	const setTags = (changeTags: (prevTags: string[]) => string[], flush: boolean): void => {
-		setTaskValue('tags', changeTags, flush);
-	};
-
-	const setNewTag = (value: string): void => {
-		changePendingNewTag(id, value);
+	const setTags = (changeTags: (prevTags: string[]) => string[], flushMode: TaskChangeFlushMode): void => {
+		setTaskValue('tags', changeTags, flushMode);
 	};
 
 	// Dynamic container class
@@ -99,7 +94,7 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onDelete, showDrag
 				value={priority}
 				disabled={isStateChangePending}
 				onChange={(value) => {
-					setTaskValue('priority', value, false);
+					setTaskValue('priority', value, 'delayed');
 				}}
 				onBlur={flushTaskChanges}
 			/>
@@ -108,7 +103,7 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onDelete, showDrag
 					placeholder={'Add content...'}
 					value={text}
 					onChange={(value) => {
-						setTaskValue('text', value, false);
+						setTaskValue('text', value, 'delayed');
 					}}
 					onBlur={flushTaskChanges}
 					disabled={isStateChangePending}
@@ -120,8 +115,6 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onDelete, showDrag
 					setDueDate={setDueDate}
 					setTags={setTags}
 					flushTaskChanges={flushTaskChanges}
-					newTag={newTag}
-					setNewTag={setNewTag}
 					disabled={isStateChangePending}
 				/>
 			</div>
@@ -129,7 +122,7 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onDelete, showDrag
 				task={task}
 				onChangeState={() => {
 					// Change state and flush it after the exit animation unless it is reverted first
-					setTaskValue('state', state === 'ACTIVE' ? 'COMPLETED' : 'ACTIVE', false);
+					setTaskValue('state', state === 'ACTIVE' ? 'COMPLETED' : 'ACTIVE', 'delayed');
 				}}
 				onDelete={onDelete}
 				dragHandle={dragHandle}
