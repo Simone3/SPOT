@@ -1,6 +1,6 @@
 import 'src/components/tasks/TaskChips.css';
 import type { ReactElement } from 'react';
-import { DateUtils } from 'src/utils/DateUtils';
+import { DateUtils } from 'src/framework/utils/DateUtils';
 import { Chip } from 'src/components/common/Chip';
 import { TagsIcon } from 'src/components/icons/TagsIcon';
 import { CalendarIcon } from 'src/components/icons/CalendarIcon';

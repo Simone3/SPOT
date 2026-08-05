@@ -66,6 +66,7 @@ npm run make
 - `src/framework` contains the reusable application scaffolding described in the Framework Layer section below. It never imports SPOT code.
 - `src/framework/utils/ErrorUtils.ts` reads a message out of an unknown thrown value.
 - `src/framework/utils/ManuallySortedList.ts` inserts, moves, and renumbers items that carry a `sortPosition`, with the position step supplied by the caller.
+- `src/framework/utils/DateUtils.ts` compares and formats dates at day granularity, including the relative day labels described in the Dates section.
 - `src/framework/types/StorageTypes.ts` owns the storage result envelope: database and backup status, failure reasons, load and command results, and operational log entries.
 - `src/framework/types/BackupTypes.ts` owns the backup folder contract and the backup file naming shape.
 - `src/framework/main/logging/AppLogger.ts` configures `electron-log` behind a factory-created logger and exports the process-wide `appLogger` utility with `info`, `warn`, `error`, `debug`, and `flush` methods, newline-delimited JSON output, size-based rolling, and bounded write retries.
@@ -93,7 +94,7 @@ npm run make
 - `src/main/storage/TaskRowMapping.ts` maps between SQLite task rows and React `Task` objects and owns the shared task field to SQLite column mapping used by storage queries.
 - `src/main/storage/TaskRepository.ts` owns SQLite task queries and task repository helpers that can run against an existing database wrapper or a short scoped repository session.
 - `src/main/window/WindowLoadTarget.ts` resolves the built React `build/index.html` file from the Electron app root.
-- `src/types` contains shared TypeScript types and constants split into semantic files for tasks, task storage, task-storage IPC channels, backup location, backup-location IPC channels, domains, filters, and dates. The storage and backup types re-export the framework contracts and add only what is specific to SPOT. Types that have one clear owner stay in the owning `.ts` or `.tsx` file instead.
+- `src/types` contains shared TypeScript types and constants split into semantic files for tasks, task storage, task-storage IPC channels, backup location, backup-location IPC channels, domains, and filters. The storage and backup types re-export the framework contracts and add only what is specific to SPOT. Types that have one clear owner stay in the owning `.ts` or `.tsx` file instead.
 - `src/react-app-env.d.ts` contains the React Scripts TypeScript reference plus renderer-side declarations for `window.versions`, `window.spotStorage`, and `window.spotBackupLocation`.
 - `src/components/common` contains layout and shared UI primitives.
 - `src/components/inputs` contains reusable inputs.
@@ -101,10 +102,9 @@ npm run make
 - `src/components/notes` and `src/components/tags` contain placeholder route pages.
 - `src/components/settings` contains the Settings route page.
 - `src/components/storage` contains the Settings section that explains where the database lives and lets the user choose the backup folder.
-- `src/contexts` contains app-level React contexts.
+- `src/contexts` contains app-level React contexts: the backup location and the task state.
 - `src/logic` contains state and domain logic, including `PendingTaskChanges.ts`, which holds the task edits the user has not saved yet, and `TaskStorageQueue.ts`, which creates the single renderer write queue from the framework and exposes it to the task components.
-- `src/utils` contains general utilities.
-- `tests/framework` contains the tests for `src/framework`; `tests/main`, `tests/logic`, `tests/components`, and `tests/utils` contain the SPOT tests. `tests` also holds the test setup and test-only helpers.
+- `tests/framework` contains the tests for `src/framework`; `tests/main`, `tests/logic`, and `tests/components` contain the SPOT tests. `tests` also holds the test setup and test-only helpers.
 
 ## Source Imports
 
@@ -140,7 +140,9 @@ SPOT binds to the framework in a thin layer of adapters, and those adapters are 
 | `main/window/WindowLoadTarget.ts` | `src/main/window/WindowLoadTarget.ts` |
 | `renderer/StorageQueue.ts` | `src/logic/TaskStorageQueue.ts` |
 
-Not everything reusable was moved. `src/utils/DateUtils.ts` stays in SPOT because its `toSmartString()` depends on the renderer's `CurrentDates` label bundle, and pulling that type into the framework would defeat the boundary. UI primitives under `src/components` stay in SPOT as well: they are worth copying into a second application, not sharing from one place.
+Not everything reusable was moved. UI primitives under `src/components` stay in SPOT: they are worth copying into a second application, not sharing from one place.
+
+The framework holds one exception to the no-module-level-state rule besides `appLogger`: `DateUtils` memoizes the start of the current day and the `Intl` formatters it builds. Those caches are pure, so two applications sharing them could not observe each other through them, and the day cache invalidates itself when the day changes.
 
 Tests for the framework live in `tests/framework` and use only framework modules, so they travel with the folder.
 
@@ -164,7 +166,6 @@ Each group is declared `as const`, so consumers that pass a value to a widened p
 
 `src/index.tsx` renders:
 
-- `DatesContextProvider`
 - `BackupLocationContextProvider`
 - `TasksContextProvider`
 - `HashRouter`
@@ -614,23 +615,18 @@ Completed tasks are sorted by `completionDate` descending, then by ID. A complet
 
 ## Dates
 
-`DatesContextProvider` computes date labels once when the app mounts:
+`src/framework/utils/DateUtils.ts` provides:
 
-- Today
-- Yesterday
-- Tomorrow
-- five weekday labels after tomorrow
-- next working day
-
-`DateUtils` provides:
-
-- day-level date comparison
-- smart date labels for task chips and filters
+- day-level date comparison, the start of the current day, and the whole-day offset between a date and today
+- smart relative labels through `toSmartString()`
 - `YYYY-MM-DD` conversion for stored due dates, in both directions
+- the next working day after a given day
+
+`toSmartString(date, options)` picks the closest thing the reader recognizes: the label for today, yesterday, or tomorrow; a weekday name for the next `weekdayHorizonDays` days after tomorrow; and a full date for everything else. A label that is not supplied falls through to the next rule, so an application can name only the days it cares about. The framework owns the rules, the application owns the wording: SPOT declares its labels in `src/components/tasks/TaskFilters.tsx`, the only place that formats a date this way.
+
+There is no date context and no current-date React state. `DateUtils` computes the current day when it is asked, and caches it only until the day changes, which is cheaper than holding it in a provider and cannot go stale in the way stored state does. An application left open across midnight therefore shows correct labels again on the next render, without a timer and without a provider to refresh. What remains is that nothing forces that render: a view left untouched across midnight keeps the labels it last drew until something else re-renders it.
 
 Stored due dates are always parsed with `DateUtils.fromStandardYearMonthDay()`. The native `Date` constructor reads `YYYY-MM-DD` as UTC midnight, which shows and stores the previous day in negative UTC offsets, so it must not be used on stored due dates.
-
-Known limitation: the date context does not currently update at midnight.
 
 ## Components
 
@@ -704,7 +700,7 @@ Current test coverage includes focused regression checks for:
 - backup scheduling: waiting for the task changes to settle and restarting that wait, skipping a backup when nothing changed, retrying after a failure, reporting every outcome, running on the storage chain, backing up once more at shutdown while cancelling the pending schedule, and giving up on a shutdown backup that takes too long
 - a backup copy holding the stored tasks, and a failed backup that leaves the database healthy
 
-Tests that cover `src/framework` live in `tests/framework` and depend only on framework modules, so they move with the folder. Tests that cover how SPOT binds to it stay under `tests/main` and `tests/logic`.
+Tests that cover `src/framework` live in `tests/framework` and depend only on framework modules, so they move with the folder. Tests that cover how SPOT binds to it stay under `tests/main`, `tests/logic`, and `tests/components`.
 - smoke coverage for the Settings panel showing the fixed database location, reporting a failed backup without claiming the tasks are lost, and the confirmed backup folder change
 - Electron window load-target resolution for local built React loading
 - React task-page startup loading, Electron preload API requirement, persisted Electron loading, and startup-error rendering
@@ -714,6 +710,7 @@ Tests that cover `src/framework` live in `tests/framework` and depend only on fr
 - task edit durability corner cases: edits still saved after the task is filtered out of the list, never saved for a deleted task, task state values shown again when the parent replaces the task, what the user is typing kept while the parent replaces the task, the trailing tag input saved when the task disappears, a half-typed tag left in its input while another edit of the same task is saved, and everything saved before the renderer goes away
 - generic logging success, public log levels, startup file-open failures, bounded retry failures, retry recovery, shutdown flush behavior, and size-based rolling with bounded retention
 - the manually sorted list utility: insertion at every position, moves, and sort position renumbering
+- date handling: day-granularity comparison, whole-day offsets, relative labels and the weekday horizon, labels that are not supplied falling through, relative labels following the clock past midnight, stored `YYYY-MM-DD` conversion in both directions, and the next working day
 
 Validation commands:
 
@@ -744,6 +741,5 @@ The most important remaining work is:
 - Add persistence and Electron-shell integration tests for runtime startup, mutation, shutdown, and packaged loading flows.
 - Improve accessibility and focus behavior in reusable inputs and clickables.
 - Continue polishing drag-and-drop feedback as the task interaction model settles.
-- Make `DatesContextProvider` refresh date labels after midnight.
 - Continue polishing reload feedback.
 - Finish Notes and Tags pages, and the rest of the Settings page, when their scope is clear.

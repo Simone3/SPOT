@@ -1,29 +1,11 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { DatesContext } from 'src/contexts/DatesContext';
 import { TaskFilters } from 'src/components/tasks/TaskFilters';
+import { DateUtils } from 'src/framework/utils/DateUtils';
 import { getInitialFilters } from 'src/logic/FiltersLogic';
-import type { CurrentDates } from 'src/types/DateTypes';
 import type { FilterDomains } from 'src/types/DomainTypes';
 
-const currentDates: CurrentDates = {
-	today: {
-		date: new Date('2026-05-10T00:00:00'),
-		label: 'Today'
-	},
-	yesterday: {
-		date: new Date('2026-05-09T00:00:00'),
-		label: 'Yesterday'
-	},
-	tomorrow: {
-		date: new Date('2026-05-11T00:00:00'),
-		label: 'Tomorrow'
-	},
-	fiveDaysAfterTomorrow: [],
-	nextWorkingDay: {
-		date: new Date('2026-05-11T00:00:00'),
-		label: 'Next Workday'
-	}
-};
+// Due date labels are relative to the real current day, so the fixture has to be too
+const todayValue = DateUtils.toStandardYearMonthDay(new Date());
 
 const domains: FilterDomains = {
 	priorities: [
@@ -49,8 +31,8 @@ const domains: FilterDomains = {
 	dueDates: [
 		{
 			key: 'today',
-			value: '2026-05-10',
-			label: '2026-05-10',
+			value: todayValue,
+			label: todayValue,
 			color: undefined,
 			persistent: false,
 			count: 1
@@ -74,14 +56,12 @@ describe('TaskFilters', () => {
 		const onResetDefaultFilters = jest.fn();
 
 		render(
-			<DatesContext.Provider value={currentDates}>
-				<TaskFilters
-					domains={domains}
-					filters={getInitialFilters()}
-					onFilterChange={onFilterChange}
-					onResetDefaultFilters={onResetDefaultFilters}
-				/>
-			</DatesContext.Provider>
+			<TaskFilters
+				domains={domains}
+				filters={getInitialFilters()}
+				onFilterChange={onFilterChange}
+				onResetDefaultFilters={onResetDefaultFilters}
+			/>
 		);
 
 		fireEvent.change(screen.getByLabelText('Content'), {
@@ -99,7 +79,7 @@ describe('TaskFilters', () => {
 		expect(onFilterChange).toHaveBeenCalledWith({ text: 'report' });
 		expect(onFilterChange).toHaveBeenCalledWith({ priorities: [ 'HIGH' ] });
 		expect(onFilterChange).toHaveBeenCalledWith({ owners: [ 'Alice' ] });
-		expect(onFilterChange).toHaveBeenCalledWith({ dueDates: [ '2026-05-10' ] });
+		expect(onFilterChange).toHaveBeenCalledWith({ dueDates: [ todayValue ] });
 		expect(onFilterChange).toHaveBeenCalledWith({ tags: [ 'work' ] });
 		expect(onFilterChange).toHaveBeenCalledWith({ showCompleted: true });
 		expect(onResetDefaultFilters).toHaveBeenCalledTimes(1);

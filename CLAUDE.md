@@ -42,7 +42,7 @@ npm test -- tests/logic/SomeFile.spec.ts
 - Define TypeScript types in the owning `.ts`/`.tsx` file whenever practical. Shared cross-owner types live under `src/types` in semantic files such as `TaskTypes.ts`, `DomainTypes.ts`, `FilterTypes.ts`.
 - Prefer existing project patterns over new abstractions, but do centralize behavior into shared components/utilities when convenient.
 - Tunable constants (sizes, delays, retry policies, file and directory names) belong in `src/config/AppConfig.ts`, not inline in modules. Message strings stay in the module that owns them.
-- `src/framework` never reads `AppConfig`: it takes those values as parameters, and the SPOT adapters pass them in. It holds no module-level state either, so everything is created by a factory. The one exception is the process-wide `appLogger`, which the application initializes once at startup.
+- `src/framework` never reads `AppConfig`: it takes those values as parameters, and the SPOT adapters pass them in. It holds no module-level state either, so everything is created by a factory. Two exceptions: the process-wide `appLogger`, which the application initializes once at startup, and pure memoization caches such as the ones in `DateUtils`, which no caller can observe through.
 - Put new code in `src/framework` only when it would be just as useful to a different application, and in SPOT otherwise. When in doubt, put it in SPOT: moving it later is easy, untangling it is not.
 - Match the existing code style exactly, including spacing and newline conventions. Read a neighboring file before writing a new one.
 - Preserve the storage command names: `task.create`, `task.update`, `task.delete`, `tasks.updateMany`.
@@ -52,9 +52,9 @@ npm test -- tests/logic/SomeFile.spec.ts
 
 ## Testing
 
-Testing stays minimal but meaningful: focused unit tests for important logic plus 1-2 smoke tests for critical user flows. New logic in `src/logic`, `src/utils`, `src/main/storage`, and `src/framework` should come with unit tests.
+Testing stays minimal but meaningful: focused unit tests for important logic plus 1-2 smoke tests for critical user flows. New logic in `src/logic`, `src/main/storage`, and `src/framework` should come with unit tests.
 
-Tests for `src/framework` live in `tests/framework` and must depend only on framework modules, so they travel with the folder. SPOT tests live in `tests/main`, `tests/logic`, `tests/components`, and `tests/utils`.
+Tests for `src/framework` live in `tests/framework` and must depend only on framework modules, so they travel with the folder. SPOT tests live in `tests/main`, `tests/logic`, and `tests/components`.
 
 All three checks must pass before a feature or fix is considered done:
 

@@ -1,15 +1,25 @@
 import 'src/components/tasks/TaskFilters.css';
-import { useContext, type ReactElement } from 'react';
+import { type ReactElement } from 'react';
 import { ButtonsSelect } from 'src/components/inputs/ButtonsSelect';
 import { Checkbox } from 'src/components/inputs/Checkbox';
 import { TextInput } from 'src/components/inputs/TextInput';
 import { Header } from 'src/components/common/Header';
 import { ResetIcon } from 'src/components/icons/ResetIcon';
-import { DatesContext } from 'src/contexts/DatesContext';
-import { DateUtils } from 'src/utils/DateUtils';
+import { DateUtils, type SmartDateOptions } from 'src/framework/utils/DateUtils';
 import type { FilterDomains } from 'src/types/DomainTypes';
 import type { TaskFilterChange, TaskFilters as TaskFiltersType } from 'src/types/FilterTypes';
 import type { TaskPriorityValue } from 'src/types/TaskTypes';
+
+// The framework decides which day a due date falls on, so this only names the days SPOT wants to call out
+const DUE_DATE_LABEL_OPTIONS: SmartDateOptions = {
+	labels: {
+		today: 'Today',
+		yesterday: 'Yesterday',
+		tomorrow: 'Tomorrow'
+	},
+	weekdayHorizonDays: 5,
+	locale: 'en-US'
+};
 
 type TaskFiltersProps = {
 	domains: FilterDomains;
@@ -19,8 +29,6 @@ type TaskFiltersProps = {
 };
 
 const TaskFilters = ({ domains, filters, onFilterChange, onResetDefaultFilters }: TaskFiltersProps): ReactElement => {
-	const currentDates = useContext(DatesContext)!;
-
 	return (
 		<div className='task-filters-container'>
 			<Header
@@ -69,7 +77,7 @@ const TaskFilters = ({ domains, filters, onFilterChange, onResetDefaultFilters }
 							return onFilterChange({ dueDates: value as string[] });
 						}}
 						options={domains.dueDates.map((dueDateDomain) => {
-							return { ...dueDateDomain, label: !dueDateDomain.value ? dueDateDomain.label : DateUtils.toSmartString(DateUtils.fromStandardYearMonthDay(dueDateDomain.value), currentDates) };
+							return { ...dueDateDomain, label: !dueDateDomain.value ? dueDateDomain.label : DateUtils.toSmartString(DateUtils.fromStandardYearMonthDay(dueDateDomain.value), DUE_DATE_LABEL_OPTIONS) };
 						})
 						}/>
 				}

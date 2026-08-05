@@ -11,7 +11,6 @@ import { MainContent } from 'src/components/common/MainContent';
 import { TagsPage } from 'src/components/tags/TagsPage';
 import { SettingsPage } from 'src/components/settings/SettingsPage';
 import { BackupLocationContextProvider } from 'src/contexts/BackupLocationContext';
-import { DatesContextProvider } from 'src/contexts/DatesContext';
 import { TasksContextProvider } from 'src/contexts/TasksContext';
 import { installPendingTaskChangesFlushHandler } from 'src/logic/PendingTaskChanges';
 
@@ -21,22 +20,20 @@ installPendingTaskChangesFlushHandler();
 const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
 root.render(
 	<React.StrictMode>
-		<DatesContextProvider>
-			<BackupLocationContextProvider>
-				<TasksContextProvider>
-					<HashRouter>
-						<Sidebar/>
-						<MainContent>
-							<Routes>
-								<Route path='/' element={<TasksPage/>}/>
-								<Route path='/notes' element={<NotesPage/>}/>
-								<Route path='/tags' element={<TagsPage/>}/>
-								<Route path='/settings' element={<SettingsPage/>}/>
-							</Routes>
-						</MainContent>
-					</HashRouter>
-				</TasksContextProvider>
-			</BackupLocationContextProvider>
-		</DatesContextProvider>
+		<BackupLocationContextProvider>
+			<TasksContextProvider>
+				<HashRouter>
+					<Sidebar/>
+					<MainContent>
+						<Routes>
+							<Route path='/' element={<TasksPage/>}/>
+							<Route path='/notes' element={<NotesPage/>}/>
+							<Route path='/tags' element={<TagsPage/>}/>
+							<Route path='/settings' element={<SettingsPage/>}/>
+						</Routes>
+					</MainContent>
+				</HashRouter>
+			</TasksContextProvider>
+		</BackupLocationContextProvider>
 	</React.StrictMode>
 );

@@ -2,7 +2,7 @@ import { useId, type ReactElement } from 'react';
 import ReactDatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import 'src/components/inputs/DatePicker.css';
-import { DateUtils } from 'src/utils/DateUtils';
+import { DateUtils } from 'src/framework/utils/DateUtils';
 
 type DatePickerProps = {
 	placeholder?: string;
