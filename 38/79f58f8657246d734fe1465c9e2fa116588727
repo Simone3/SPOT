@@ -1,0 +1,32 @@
+DOCUMENTATION.md
+  s_5014ddbf404c94::t_3da6250f9d61b8 120,133-134,298,308-309,314,424-429,432,660
+src/components/tasks/TasksPage.tsx
+  s_5014ddbf404c94::t_02c63bfe776c01 2,5-6,65-66,68-80
+src/contexts/TasksContext.tsx
+  s_5014ddbf404c94::t_7231ac92ca1027 1-474
+src/index.tsx
+  s_5014ddbf404c94::t_e20294e73459c5 15,26-38
+tests/components/TasksPage.test.tsx
+  s_5014ddbf404c94::t_ca4d664ca1f895 1,6,193-214,245,270,308,331,401,442,491,541,589,606-643
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "3879f58f8657246d734fe1465c9e2fa116588727",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_5014ddbf404c94": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d6b4b9ae-0f83-45d6-9cc2-964b2618116c",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
