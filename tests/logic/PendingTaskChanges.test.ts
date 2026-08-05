@@ -396,6 +396,64 @@ describe('PendingTaskChanges', () => {
 		uninstall();
 	});
 
+	test('retries a write that failed as soon as the main process asks for the flush', async() => {
+		jest.useFakeTimers();
+		const { spotStorage, requestFlush } = createMockSpotStorage();
+		const task = makeTask({ text: 'Original task' });
+		const healthyResult: TaskStorageCommandResult = {
+			ok: true,
+			status: {
+				database: {
+					state: 'healthy'
+				}
+			}
+		};
+		const databaseFailure: TaskStorageCommandResult = {
+			ok: false,
+			reason: 'database-error',
+			message: 'Database is locked.',
+			status: {
+				database: {
+					state: 'unavailable',
+					message: 'Database is locked.'
+				}
+			}
+		};
+		const executeTaskCommand: jest.Mock<Promise<TaskStorageCommandResult>, []> = jest.fn(async() => {
+			return executeTaskCommand.mock.calls.length === 1 ? databaseFailure : healthyResult;
+		});
+		setWindowSpotStorage({
+			...spotStorage,
+			executeTaskCommand
+		});
+		registerPendingTaskChangesApplier((taskId, pendingChanges) => {
+			sendTaskStorageCommand({
+				command: 'task.update',
+				payload: {
+					taskId,
+					change: pendingChanges.change
+				}
+			});
+		});
+		const uninstall = installPendingTaskChangesFlushHandler(spotStorage);
+
+		changePendingTaskValue(task, 'text', 'Typed while the database was down', true);
+		await Promise.resolve();
+		await Promise.resolve();
+
+		expect(executeTaskCommand).toHaveBeenCalledTimes(1);
+
+		// The write is sitting on its retry delay, which is longer than the time the main process waits for the flush
+		requestFlush();
+		jest.useRealTimers();
+		await waitForQueuedWork();
+
+		expect(executeTaskCommand).toHaveBeenCalledTimes(2);
+		expect(spotStorage.notifyPendingTaskChangesFlushed).toHaveBeenCalledTimes(1);
+
+		uninstall();
+	});
+
 	test('installs the page hide flush without the Electron storage API', () => {
 		const uninstall = installPendingTaskChangesFlushHandler(undefined);
 

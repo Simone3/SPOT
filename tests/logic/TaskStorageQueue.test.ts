@@ -3,6 +3,7 @@ import {
 	clearTaskStorageFailures,
 	getTaskStorageQueueState,
 	resetTaskStorageQueueForTests,
+	retryTaskStorageQueueNow,
 	sendTaskStorageCommand,
 	subscribeToTaskStorageQueue,
 	waitForTaskStorageQueue
@@ -40,6 +41,20 @@ const createInvalidCommandFailure = (message: string): TaskStorageCommandResult 
 		status: {
 			database: {
 				state: 'healthy'
+			}
+		}
+	};
+};
+
+const createShutdownFailure = (message: string): TaskStorageCommandResult => {
+	return {
+		ok: false,
+		reason: 'shutdown',
+		message,
+		status: {
+			database: {
+				state: 'unavailable',
+				message
 			}
 		}
 	};
@@ -179,6 +194,48 @@ describe('TaskStorageQueue', () => {
 		expect(getTaskStorageQueueState().unsavedChangesMessage).toBe('Task storage update failed. The renderer lost the main process.');
 
 		jest.advanceTimersByTime(STORAGE_CONFIG.writeRetryDelayMs);
+		jest.useRealTimers();
+		await waitForTaskStorageQueue();
+
+		expect(executeTaskCommand).toHaveBeenCalledTimes(2);
+		expect(getTaskStorageQueueState().unsavedChangesMessage).toBeUndefined();
+	});
+
+	test('keeps a command storage refused while closing instead of dropping it', async() => {
+		jest.useFakeTimers();
+		const executeTaskCommand: jest.Mock<Promise<TaskStorageCommandResult>, []> = jest.fn(async() => {
+			return executeTaskCommand.mock.calls.length === 1 ? createShutdownFailure('Task storage is shutting down.') : healthyResult;
+		});
+		setExecuteTaskCommand(executeTaskCommand);
+
+		sendTaskStorageCommand(createUpdateCommand('first', 'First'));
+		await Promise.resolve();
+		await Promise.resolve();
+
+		expect(getTaskStorageQueueState().unsavedChangesMessage).toBe('Task storage update failed. Task storage is shutting down.');
+
+		jest.advanceTimersByTime(STORAGE_CONFIG.writeRetryDelayMs);
+		jest.useRealTimers();
+		await waitForTaskStorageQueue();
+
+		expect(executeTaskCommand).toHaveBeenCalledTimes(2);
+		expect(getTaskStorageQueueState().unsavedChangesMessage).toBeUndefined();
+	});
+
+	test('retries a failed write immediately when the retry delay cannot be waited out', async() => {
+		jest.useFakeTimers();
+		const executeTaskCommand: jest.Mock<Promise<TaskStorageCommandResult>, []> = jest.fn(async() => {
+			return executeTaskCommand.mock.calls.length === 1 ? createDatabaseFailure('Database is locked.') : healthyResult;
+		});
+		setExecuteTaskCommand(executeTaskCommand);
+
+		sendTaskStorageCommand(createUpdateCommand('first', 'First'));
+		await Promise.resolve();
+		await Promise.resolve();
+
+		expect(executeTaskCommand).toHaveBeenCalledTimes(1);
+
+		retryTaskStorageQueueNow();
 		jest.useRealTimers();
 		await waitForTaskStorageQueue();
 

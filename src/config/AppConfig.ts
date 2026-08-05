@@ -51,5 +51,7 @@ export const TASKS_CONFIG = {
 } as const;
 
 export const SHUTDOWN_CONFIG = {
-	rendererFlushTimeoutMs: 3000
+	// A write that failed can still be sitting on the retry delay when the flush handshake starts, so the wait has to outlast that delay: a
+	// shorter timeout would give up while the retry that saves the change has not even run yet
+	rendererFlushTimeoutMs: STORAGE_CONFIG.writeRetryDelayMs + 3000
 } as const;

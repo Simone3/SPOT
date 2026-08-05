@@ -72,10 +72,11 @@ const getErrorMessage = (error: unknown): string => {
 	return String(error);
 };
 
-// A database that failed once can work again, so those writes are kept and retried. A command the database refused as
-// invalid would fail again in exactly the same way, so it is dropped and only reported.
+// A database that failed once can work again, so those writes are kept and retried. Storage that refused a command because it is closing
+// never even attempted it, so that command is kept too. A command the database refused as invalid would fail again in exactly the same
+// way, so it is dropped and only reported.
 const isRetryableFailure = (result: TaskStorageCommandResult): boolean => {
-	return !result.ok && result.reason === 'database-error';
+	return !result.ok && (result.reason === 'database-error' || result.reason === 'shutdown');
 };
 
 const writeCommand = async(command: TaskStorageCommand): Promise<TaskStorageCommandResult> => {
@@ -205,6 +206,20 @@ export const subscribeToTaskStorageQueue = (subscriber: () => void): () => void 
  */
 export const getTaskStorageQueueState = (): TaskStorageQueueState => {
 	return queueState;
+};
+
+/**
+ * Writes the queued commands right away instead of waiting out the delay a failed write is retried after.
+ * Used when the renderer is asked to save everything under a bounded time, which the retry delay alone could use up.
+ */
+export const retryTaskStorageQueueNow = (): void => {
+	if(!retryTimeout) {
+		return;
+	}
+
+	clearTimeout(retryTimeout);
+	retryTimeout = undefined;
+	void writeQueuedCommands();
 };
 
 /**

@@ -1,5 +1,5 @@
 import { TASKS_CONFIG } from 'src/config/AppConfig';
-import { waitForTaskStorageQueue } from 'src/logic/TaskStorageQueue';
+import { retryTaskStorageQueueNow, waitForTaskStorageQueue } from 'src/logic/TaskStorageQueue';
 import type { SpotStorageApi } from 'src/types/TaskStorageTypes';
 import type { Task, TaskChange } from 'src/types/TaskTypes';
 
@@ -250,6 +250,9 @@ export const installPendingTaskChangesFlushHandler = (spotStorage: SpotStorageAp
 
 	const unsubscribeFromFlushRequests = spotStorage?.onFlushPendingTaskChanges?.(() => {
 		flushPendingTaskChanges();
+
+		// The main process waits for a bounded time, so a write that failed earlier is retried now instead of at the end of its retry delay
+		retryTaskStorageQueueNow();
 
 		void waitForTaskStorageQueue().then(() => {
 			return spotStorage.notifyPendingTaskChangesFlushed();

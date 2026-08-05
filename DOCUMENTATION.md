@@ -107,7 +107,7 @@ The exported groups are:
 - `APP_CONFIG_FILE`: the development root directory name and the application configuration file name.
 - `LOGGING_CONFIG`: the log directory name, the operational log file name, maximum file size, retained archive count, maximum write attempts, and retry delay.
 - `TASKS_CONFIG`: the task flush delay, the task state change delay, and the manual sort position step.
-- `SHUTDOWN_CONFIG`: the bounded time the main process waits for the renderer to flush its buffered task changes before quitting.
+- `SHUTDOWN_CONFIG`: the bounded time the main process waits for the renderer to flush its buffered task changes before quitting. It is derived from `STORAGE_CONFIG.writeRetryDelayMs` and must stay comfortably above it, because a write waiting out its retry delay when the quit starts would otherwise still be unwritten when the wait expires.
 
 Each group is declared `as const`, so consumers that pass a value to a widened parameter may need an explicit type annotation. User-facing and error message strings are not configuration and stay in the module that owns them.
 
@@ -288,7 +288,9 @@ React calls `loadTasks()` through `window.spotStorage` once on startup and calls
 `src/logic/TaskStorageQueue.ts` owns every task write. Commands are queued and written one at a time and in order, so a write that fails cannot be overtaken by later ones.
 
 - A write that fails with `database-error`, or whose call throws, stays at the front of the queue and is retried every `STORAGE_CONFIG.writeRetryDelayMs`. A database that failed once can work again, and the change is not lost in the meantime.
+- A write refused as `shutdown` was never attempted, so it stays queued and retried too, and is never counted as a change storage will not accept.
 - A write refused as `invalid-command` would be refused again in exactly the same way, so it is dropped instead of retried.
+- `retryTaskStorageQueueNow()` writes the queue again immediately instead of waiting out the retry delay. The renderer flush handshake calls it, because the main process waits for a bounded time and a pending retry could use all of it up.
 - A failed write does not touch the task state. The state holds what the user wanted, and reading the database back over it would throw that away, so React keeps it and only warns. There is no reconciliation and no reload after a write failure.
 - The warning lives as long as the change is unwritten: it is cleared when the queue drains, never by an unrelated command that happened to succeed. A dropped command keeps warning until tasks are loaded again, because that change will never be written.
 - Successful writes are silent. There is no saving or saved indicator.
@@ -340,10 +342,10 @@ React buffers task edits for a few seconds, so the quit drain would close the da
 
 1. The main process sends `spot-storage:flush-pending-task-changes` to the window and waits.
 2. Task write commands keep being accepted during that wait, because refusing them is exactly what would lose the buffered edits.
-3. React saves every buffered task change, waits for the resulting storage commands, and invokes `spot-storage:pending-task-changes-flushed`.
+3. React saves every buffered task change, retries a write that failed earlier instead of waiting out its retry delay, waits for the resulting storage commands, and invokes `spot-storage:pending-task-changes-flushed`.
 4. Only then does the main process refuse further commands, drain the in-flight ones, close the database, and flush the logger.
 
-The wait is bounded by `SHUTDOWN_CONFIG.rendererFlushTimeoutMs`, so an unresponsive or already destroyed renderer delays the quit by at most that timeout. When no renderer is wired at all, shutdown starts immediately and later commands are refused right away.
+The wait is bounded by `SHUTDOWN_CONFIG.rendererFlushTimeoutMs`, so an unresponsive or already destroyed renderer delays the quit by at most that timeout. That timeout outlasts `STORAGE_CONFIG.writeRetryDelayMs` on purpose: a write sitting on its retry delay when the quit starts must still fit in the wait, or a single transient database failure plus a quit would lose the change. When no renderer is wired at all, shutdown starts immediately and later commands are refused right away.
 
 Closing the window runs the same handshake, through `requestRendererFlushBeforeWindowClose()`, which `Main.ts` calls from the window `close` event. Closing is the usual way of leaving the application and it destroys the renderer, on Windows and Linux before `before-quit` ever runs and on macOS without quitting at all, so the handshake cannot be left to the quit path alone. The two differ in what follows: a window close only saves the buffered edits and then destroys the window, while a quit also refuses later commands, drains, backs up, and closes the database. The window close therefore keeps accepting task commands afterwards, because the application may still be running. When a window closes as part of a quit, `requestRendererFlushBeforeWindowClose()` returns nothing and the window closes right away, and a window closing while a quit starts, or the other way around, joins the handshake already running instead of asking the renderer twice.
 
@@ -633,7 +635,7 @@ Current test coverage includes focused regression checks for:
 - storage IPC handler registration, channel delegation, shutdown drain, post-shutdown command failure behavior, exclusive access that finalizes in-flight commands and queues later ones, and two overlapping exclusive operations running one after the other with no command in between
 - the shutdown flush handshake: buffered renderer changes saved before the database is closed, commands refused only after the renderer reported, and a bounded wait when the renderer never reports
 - the window close flush handshake: buffered renderer changes saved while the database stays open, no wait when the window closes as part of a quit or its renderer is already gone, one single handshake shared by a window close and a quit, and a new handshake for a window closed later
-- the buffered task changes: save delays and their restart, immediate saves, forgetting a reverted value, the shorter state change delay, updater-form changes, dropping the buffer of a deleted task, committing the trailing tag input only on the final save, keeping the trailing tag input buffered while the other changes of the same task are saved, keeping changes when no applier is registered, per-task subscriber notification with stable snapshots, page hide saving, waiting for in-flight storage commands, and reporting to the main process only once storage caught up
+- the buffered task changes: save delays and their restart, immediate saves, forgetting a reverted value, the shorter state change delay, updater-form changes, dropping the buffer of a deleted task, committing the trailing tag input only on the final save, keeping the trailing tag input buffered while the other changes of the same task are saved, keeping changes when no applier is registered, per-task subscriber notification with stable snapshots, page hide saving, waiting for in-flight storage commands, retrying a failed write as soon as the flush is requested, and reporting to the main process only once storage caught up
 - runtime path resolution for packaged and development runs
 - backup folder resolution at startup, saved-folder reuse, the development folder override, the fallback to the default folder when the saved or chosen one cannot be used, configuration persistence, and running the change on the storage chain
 - backup location IPC registration, cancelled folder dialogs, and rejecting a chosen path that is not a usable folder
@@ -644,7 +646,7 @@ Current test coverage includes focused regression checks for:
 - Electron window load-target resolution for local built React loading
 - React task-page startup loading, Electron preload API requirement, persisted Electron loading, and startup-error rendering
 - React task-page storage commands for create, update, delete, complete, restore, manual reorder, and importance sort, plus the write-failure warning, storage-health feedback, and the task state being kept as it is after a rejected write
-- the task write queue: in-order writing, retrying a failed or thrown write while keeping the warning until it goes through, later commands not overtaking a failed one, dropping a refused command instead of retrying it forever, keeping a dropped command's warning through later successful writes, and database status reporting
+- the task write queue: in-order writing, retrying a failed or thrown write while keeping the warning until it goes through, later commands not overtaking a failed one, keeping a command refused while storage was closing, retrying immediately when the retry delay cannot be waited out, dropping a refused command instead of retrying it forever, keeping a dropped command's warning through later successful writes, and database status reporting
 - task edit durability corner cases: edits still saved after the task is filtered out of the list, never saved for a deleted task, task state values shown again when the parent replaces the task, what the user is typing kept while the parent replaces the task, the trailing tag input saved when the task disappears, a half-typed tag left in its input while another edit of the same task is saved, and everything saved before the renderer goes away
 - generic SPOT logging success, public log levels, startup file-open failures, bounded retry failures, retry recovery, shutdown flush behavior, and size-based rolling with bounded retention
 
