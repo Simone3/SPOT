@@ -1,0 +1,38 @@
+DOCUMENTATION.md
+  s_3524255f27f9ea::t_aeba484d0c4eaa 82,161,202-203,408-412,705,707
+src/config/AppConfig.ts
+  s_3524255f27f9ea::t_f1bff8d88d35ec 56-60
+src/framework/main/ipc/StorageCommandIpc.ts
+  s_3524255f27f9ea::t_cfbe0dc396b757 59-63,109,244-255,265,270
+src/logic/PendingTaskChanges.ts
+  s_3524255f27f9ea::t_0fd211703feb98 258-260
+src/main/Main.ts
+  s_3524255f27f9ea::t_b860f3cb29ff18 99-106
+src/main/ipc/TaskStorageIpc.ts
+  s_3524255f27f9ea::t_b9bd262a406c1a 27-30,42,73
+tests/logic/PendingTaskChanges.test.ts
+  s_3524255f27f9ea::t_b7db2dde37c9db 524,538-540
+tests/main/TaskStorageIpc.test.ts
+  s_3524255f27f9ea::t_3de6f8ca39e512 350-414
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "51d4e57c1ea1bec0a56065cfdcc9d54d0337bf5b",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_3524255f27f9ea": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f84c1f04-ee25-420c-9e57-0bb2478850fb",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
