@@ -1,0 +1,26 @@
+DOCUMENTATION.md
+  s_2306b13fb0395a::t_d51a9f21de3421 158,201
+src/main/Main.ts
+  s_2306b13fb0395a::t_01bdd4b5037267 27,35-40
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "dcf02c3c403c3d7f72508c90f9d8cee834649f6e",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_2306b13fb0395a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d1df5532-c788-4818-89bc-283c6a30184a",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
