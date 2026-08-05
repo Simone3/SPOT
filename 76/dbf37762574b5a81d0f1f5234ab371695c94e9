@@ -1,0 +1,34 @@
+DOCUMENTATION.md
+  s_2d70b02b881615::t_7b94175d0e6084 110,291,293,345,348,638,649
+src/config/AppConfig.ts
+  s_2d70b02b881615::t_8764893eb0aad3 54-56
+src/logic/PendingTaskChanges.ts
+  s_2d70b02b881615::t_b4f91e0c462cc2 2,254-256
+src/logic/TaskStorageQueue.ts
+  s_2d70b02b881615::t_afba82c3f3d4f4 75-77,79,211-224
+tests/logic/PendingTaskChanges.test.ts
+  s_2d70b02b881615::t_d6548db10fceb3 399-456
+tests/logic/TaskStorageQueue.test.ts
+  s_2d70b02b881615::t_534120ed0bc2c9 6,49-62,204-245
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "76dbf37762574b5a81d0f1f5234ab371695c94e9",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_2d70b02b881615": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "990bc343-e5bc-4f1d-84af-867d811c867f",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
