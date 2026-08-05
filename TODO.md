@@ -1,34 +1,21 @@
 
-# electron
 
-logged elapsedMillis should be rounded
+delete node modues and package lock
 
-move createSpotLogger() from TaskStorage to a more generic class that starts both - "global" logger like Spring
-and remove "logger?" and "logger!" stuff, it will always be there
+start full screen
 
-is task page the right place for all that logic?
+REMOVE ALL APP DATA and test new stuff
 
-re-review all files created/modified after "Add hover feedback" commit
+re-review all files created/modified after "Add hover feedback" commit (jun 2)
 
-test persistence
-	careful with sort positions, especially when they change in more than one task at a time (manual sort recompute + re-sort by urgency)
-	errors
-	check logs
-	check database
-	does closing the program while typing save the latest value? considering both state update on blur and/or delayed disk save, if implemented
+organize all notes below
 
-extract ark modules for other apps like pfm
-
-moving to settings should not reset task state
-
-tests/complete review to avoid data loss (race conditions, etc.) both react and electron
 
 
 
 
 # others
 view what codex wrote in "Near-Term Work" in DOCUMENTATION.md
-DatesContextProvider should update every day at 00:00
 priority icons in the filters?
 ui feedback when clicking a button
 don't render dropboxes and hide them with css, just don't create them unless open = true!
