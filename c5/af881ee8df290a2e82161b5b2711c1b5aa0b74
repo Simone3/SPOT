@@ -1,0 +1,34 @@
+DOCUMENTATION.md
+  s_c404a9fb7dc94b::t_966872336d7fd3 159,373,385-389,395,399
+src/config/AppConfig.ts
+  s_c404a9fb7dc94b::t_19e7a5af4451e2 46
+src/framework/main/logging/AppLogger.ts
+  s_c404a9fb7dc94b::t_2b97f387d9723e 1,232,252-256,261-266,271,274,277,280-286
+src/main/Main.ts
+  s_c404a9fb7dc94b::t_cd6aa5f688ea7d 74
+tests/framework/AppLogger.test.ts
+  s_c404a9fb7dc94b::t_7b538f48401c80 4,227,248,270,275,284,287,293,296-298,301,305,312,316,320,326,329-331,337-340,342-345
+tests/main/TaskStorage.test.ts
+  s_c404a9fb7dc94b::t_256d09f4e8d00f 759
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "c5af881ee8df290a2e82161b5b2711c1b5aa0b74",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_c404a9fb7dc94b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f04655c6-1737-4a32-be85-9c4ace010b1a",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
