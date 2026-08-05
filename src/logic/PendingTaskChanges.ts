@@ -58,6 +58,20 @@ const setPendingTaskChanges = (taskId: string, pendingChanges: PendingTaskChange
 	notifyChangeSubscribers(taskId);
 };
 
+// Puts back what a failed save took out of the buffer. Anything buffered in the meantime is newer than the values that were being
+// saved, so it wins field by field, and a trailing tag input the user typed in again is not overwritten by the one that was committed.
+const restorePendingTaskChanges = (taskId: string, flushedChanges: PendingTaskChanges): void => {
+	const currentPendingChanges = pendingTaskChanges.get(taskId);
+
+	setPendingTaskChanges(taskId, {
+		change: {
+			...flushedChanges.change,
+			...currentPendingChanges?.change
+		},
+		newTag: currentPendingChanges?.newTag || flushedChanges.newTag
+	});
+};
+
 const flushTask = (taskId: string, commitNewTag: boolean): void => {
 	const pendingChanges = pendingTaskChanges.get(taskId);
 
@@ -79,10 +93,22 @@ const flushTask = (taskId: string, commitNewTag: boolean): void => {
 		change: {},
 		newTag: commitNewTag ? EMPTY_NEW_TAG : pendingChanges.newTag
 	});
-	applyPendingTaskChanges(taskId, {
-		change: pendingChanges.change,
-		newTag
-	});
+	try {
+		applyPendingTaskChanges(taskId, {
+			change: pendingChanges.change,
+			newTag
+		});
+	}
+	catch(error) {
+		// An applier that threw saved nothing, and the buffer is the only place those values still exist: leaving them out of it
+		// would lose them from the buffer and from the task state at once
+		restorePendingTaskChanges(taskId, {
+			change: pendingChanges.change,
+			newTag: commitNewTag ? pendingChanges.newTag : EMPTY_NEW_TAG
+		});
+
+		throw error;
+	}
 };
 
 /**
@@ -226,11 +252,18 @@ export const clearPendingTaskChanges = (taskId: string): void => {
 
 /**
  * Saves the buffered changes of every task, including the tags still sitting in the trailing tag inputs.
- * Used when the renderer is going away and nothing else will save them.
+ * Used when the renderer is going away and nothing else will save them, so one task that cannot be saved never keeps the
+ * other tasks from being saved and the caller is not left with a half-done flush to handle.
  */
 export const flushPendingTaskChanges = (): void => {
 	Array.from(pendingTaskChanges.keys()).forEach((taskId) => {
-		flushTask(taskId, true);
+		try {
+			flushTask(taskId, true);
+		}
+		catch(error) {
+			// There is nothing left to fall back on: the values stay buffered, and the failure is only reported
+			console.error('Could not save the buffered changes of a task', taskId, error);
+		}
 	});
 };
 

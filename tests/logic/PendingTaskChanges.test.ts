@@ -354,6 +354,70 @@ describe('PendingTaskChanges', () => {
 		uninstall();
 	});
 
+	test('keeps the buffered changes when the applier throws', () => {
+		jest.useFakeTimers();
+		const task = makeTask({ text: 'Original task' });
+
+		jest.spyOn(console, 'error').mockImplementation(() => {});
+		registerPendingTaskChangesApplier(() => {
+			throw new Error('The task state could not be updated.');
+		});
+		changePendingTaskValue(task, 'text', 'Edited task', false);
+		changePendingNewTag(task.id, 'urgent');
+
+		// A single-task save still reports the failure to the caller, while the flush of the whole buffer keeps going through the other tasks
+		expect(() => {
+			flushPendingTaskChangesForTask(task.id);
+		}).toThrow('The task state could not be updated.');
+		expect(() => {
+			flushPendingTaskChanges();
+		}).not.toThrow();
+
+		// A save that did not happen must leave the values where they still are, or they would be lost by the buffer and the task state at once
+		expect(getPendingTaskChanges(task.id)).toEqual({
+			change: {
+				text: 'Edited task'
+			},
+			newTag: 'urgent'
+		});
+	});
+
+	test('saves the other tasks when one of them cannot be saved', () => {
+		jest.useFakeTimers();
+		const failingTask = makeTask({ text: 'First task' });
+		const otherTask = makeTask({ text: 'Second task' });
+		const appliedChanges: AppliedChange[] = [];
+
+		jest.spyOn(console, 'error').mockImplementation(() => {});
+		registerPendingTaskChangesApplier((taskId, pendingChanges) => {
+			if(taskId === failingTask.id) {
+				throw new Error('The task state could not be updated.');
+			}
+
+			appliedChanges.push([ taskId, pendingChanges ]);
+		});
+		changePendingTaskValue(failingTask, 'text', 'Typed right before closing the window', false);
+		changePendingTaskValue(otherTask, 'text', 'Typed in the other task', false);
+		changePendingNewTag(otherTask.id, 'urgent');
+		flushPendingTaskChanges();
+
+		expect(appliedChanges).toEqual([
+			[ otherTask.id, {
+				change: {
+					text: 'Typed in the other task'
+				},
+				newTag: 'urgent'
+			} ]
+		]);
+		expect(getPendingTaskChanges(failingTask.id)).toEqual({
+			change: {
+				text: 'Typed right before closing the window'
+			},
+			newTag: ''
+		});
+		expect(getPendingTaskChanges(otherTask.id)).toBeUndefined();
+	});
+
 	test('reports to the main process only after the buffered changes reached storage', async() => {
 		const { spotStorage, requestFlush } = createMockSpotStorage();
 		const task = makeTask({ text: 'Original task' });
