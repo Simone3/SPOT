@@ -1,0 +1,38 @@
+src/config/AppConfig.ts
+  s_c404a9fb7dc94b::t_48e2f2d3d44b6c 60-64
+src/framework/main/ipc/StorageCommandIpc.ts
+  s_c404a9fb7dc94b::t_d11694dd1d5e8f 228-230,232
+src/framework/main/storage/DatabaseStorage.ts
+  s_c404a9fb7dc94b::t_f8f0aeaeb0faed 10-11,31,61,73-79,228
+src/logic/PendingTaskChanges.ts
+  s_c404a9fb7dc94b::t_e70eab3d0e06f9 1,176-183,292-297,299-300,302-311
+tests/logic/PendingTaskChanges.test.ts
+  s_c404a9fb7dc94b::t_0d95a5b249a77d 521-596
+tests/main/TaskStorage.test.ts
+  s_c404a9fb7dc94b::t_7d87980f435510 8,328-340,344-369,374
+tests/main/TaskStorageIpc.test.ts
+  s_c404a9fb7dc94b::t_cff395be270d2e 407-408,415,428-463
+DOCUMENTATION.md
+  s_c404a9fb7dc94b::t_7ac045483d9529 161,289,401,406
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "078cd34f46bd2a758140c7e652f5eddee1f40126",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_c404a9fb7dc94b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "f04655c6-1737-4a32-be85-9c4ace010b1a",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
