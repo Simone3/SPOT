@@ -1,0 +1,28 @@
+DOCUMENTATION.md
+  s_18ae7872930b23::t_3681a5058f2016 20-21
+package.json
+  s_18ae7872930b23::t_c1c536ca3ecd7e 96-98
+package-lock.json
+  s_18ae7872930b23::t_437e52b3742b1d 54-56
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "18cce1002d937cfa91b8e80c23205762c03db0f4",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_18ae7872930b23": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d9f40500-f01d-4c53-b857-88f428b65513",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
