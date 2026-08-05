@@ -1,0 +1,26 @@
+src/main/storage/SpotDatabase.ts
+  s_df11f1fe7d5a6d::t_cab3e354fe5f00 146-153
+tests/main/SpotDatabase.test.ts
+  s_df11f1fe7d5a6d::t_8aa4238bdf79b3 139-157
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "de648290b14de06d6322a4558edea86b46cfc645",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_df11f1fe7d5a6d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "833a34e2-74e8-4d7b-a3a6-5c108dcd4497",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
