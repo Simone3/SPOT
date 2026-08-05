@@ -117,6 +117,7 @@ Each group is declared `as const`, so consumers that pass a value to a widened p
 
 - `DatesContextProvider`
 - `BackupLocationContextProvider`
+- `TasksContextProvider`
 - `HashRouter`
 - `Sidebar`
 - `MainContent`
@@ -128,6 +129,8 @@ Routes:
 - `/notes` renders `NotesPage`
 - `/tags` renders `TagsPage`
 - `/settings` renders `SettingsPage`
+
+Every context provider is mounted above `HashRouter`, so route state is the only thing navigation changes. Page components hold what only they need: anything that must survive navigation belongs to a provider. There is no single application-wide store, because a shared one would re-render every page on any change; each provider owns one area.
 
 Nothing gates the app at startup: the database is always in the user-data folder, so the task page renders right away and the backup folder is only a Settings concern.
 
@@ -292,7 +295,7 @@ React calls `loadTasks()` through `window.spotStorage` once on startup and calls
 - A write refused as `invalid-command` would be refused again in exactly the same way, so it is dropped instead of retried.
 - `retryTaskStorageQueueNow()` writes the queue again immediately instead of waiting out the retry delay. The renderer flush handshake calls it, because the main process waits for a bounded time and a pending retry could use all of it up.
 - A failed write does not touch the task state. The state holds what the user wanted, and reading the database back over it would throw that away, so React keeps it and only warns. There is no reconciliation and no reload after a write failure.
-- The warning lives as long as the change is unwritten: it is cleared when the queue drains, never by an unrelated command that happened to succeed. A dropped command keeps warning until tasks are loaded again, because that change will never be written.
+- The warning lives as long as the change is unwritten: it is cleared when the queue drains, never by an unrelated command that happened to succeed. A dropped command warns for the rest of the session, because that change will never be written and tasks are only loaded at startup. `clearTaskStorageFailures()` forgets those warnings and is meant for a reload that has succeeded; nothing calls it today.
 - Successful writes are silent. There is no saving or saved indicator.
 
 ### Buffered Task Changes
@@ -302,13 +305,13 @@ Task edits are not sent to the task state on every keystroke. `src/logic/Pending
 - Task components read the buffer through `useSyncExternalStore` and render the task state merged with it. The rendered value is derived from both on every render, so the inputs and the task state can never drift apart.
 - Only the components of the edited task re-render while the user types, because subscribers are registered per task ID.
 - A buffered change is saved after `TASKS_CONFIG.flushDelayMs`, or after the shorter `TASKS_CONFIG.stateChangeDelayMs` when it is a pending state change. Every new change restarts the delay, and a value brought back to the one already in the task state is dropped from the buffer.
-- `TasksPage` registers the single applier that saves buffered changes. It looks the task up by ID in the current task state, so changes are always applied to the task as it is at save time, and a task that no longer exists is skipped.
-- `TasksPage` clears the buffer of a deleted task, and saves everything still buffered when it unmounts, before unregistering the applier.
+- `TasksContextProvider` registers the single applier that saves buffered changes. It looks the task up by ID in the current task state, so changes are always applied to the task as it is at save time, and a task that no longer exists is skipped.
+- `TasksContextProvider` clears the buffer of a deleted task. It lives as long as the renderer, so leaving the task page no longer unregisters the applier and no longer has to flush anything first: buffered changes keep saving normally while the user is on another page.
 - A save takes out of the buffer only what it is actually saving. Anything the user typed in the meantime and that is not part of that save stays buffered.
 - The trailing tag input is buffered as `newTag` and is not a task change until it is committed. Delayed and explicit saves leave it alone, because the user may still be typing; only the final flush of the whole buffer turns it into a tag. Saving the other buffered changes of the same task must therefore not clear it either.
 - Buffered changes are never dropped when no applier is registered: they stay buffered until one is.
 - An applier that throws saved nothing, so what the save took out of the buffer goes back into it. The buffer is the only place those values still exist at that point, and values buffered while the applier ran are newer and win field by field.
-- The flush of the whole buffer saves each task on its own: one task that cannot be saved is reported to the console and leaves its values buffered, while the other tasks are still saved. It never throws, because its callers are the renderer going away, the page hide, and the `TasksPage` unmount, none of which can do anything about a failure. A single-task save still reports it to its caller.
+- The flush of the whole buffer saves each task on its own: one task that cannot be saved is reported to the console and leaves its values buffered, while the other tasks are still saved. It never throws, because its callers are the renderer going away, the page hide, and the provider teardown, none of which can do anything about a failure. A single-task save still reports it to its caller.
 
 `StorageStatus` reports the database state as `healthy` or `unavailable`, plus `storageDirectory`, `databasePath`, and a `backup` status. Database health is hard: `unavailable` means the tasks may not be saved and React says so prominently. Backup health is soft and separate: `idle`, `ok`, or `failed`, with the backup `directory`, the `lastBackupAt` and `lastBackupPath` of the last successful one, and a failure `message`. A failed backup never makes the database unhealthy, because the tasks are already saved in the local database either way.
 
@@ -418,9 +421,15 @@ Field notes:
 
 The state helpers clone top-level containers and lists before updating them. Task objects remain shared until one of their fields changes; edit, visibility, and sort helpers clone each changed task object, including mutable task fields, before writing to it.
 
+`src/contexts/TasksContext.tsx` holds that state for the whole renderer and exposes it, the startup state, the storage status and warning, and every task action. It lives above the router on purpose:
+
+- Tasks are loaded exactly once, when the app starts. Moving between pages never reloads the database, and never resets filters, domains, or the manual sort order.
+- The startup load runs before any command can be queued, so it needs no ordering against the storage queue. A reload added later, while the user is working, would need it: it must await a bounded `waitForTaskStorageQueue()` first, so the database is not read before the queued writes are applied over it, and it must clear the storage warnings only once the reload has actually succeeded.
+- Task actions read the current state through a ref, so they stay stable across renders and the applier registration never has to be torn down.
+
 ## Task UI
 
-`TasksPage` owns the task state and renders:
+`TasksPage` reads `TasksContext` and renders:
 
 - a filter pane
 - an active tasks list
@@ -648,6 +657,7 @@ Current test coverage includes focused regression checks for:
 - Electron window load-target resolution for local built React loading
 - React task-page startup loading, Electron preload API requirement, persisted Electron loading, and startup-error rendering
 - React task-page storage commands for create, update, delete, complete, restore, manual reorder, and importance sort, plus the write-failure warning, storage-health feedback, and the task state being kept as it is after a rejected write
+- the task state surviving navigation: leaving the task page and coming back keeps the loaded tasks, the changes made to them, and the filters, without a loading step and without reading the database again
 - the task write queue: in-order writing, retrying a failed or thrown write while keeping the warning until it goes through, later commands not overtaking a failed one, keeping a command refused while storage was closing, retrying immediately when the retry delay cannot be waited out, dropping a refused command instead of retrying it forever, keeping a dropped command's warning through later successful writes, and database status reporting
 - task edit durability corner cases: edits still saved after the task is filtered out of the list, never saved for a deleted task, task state values shown again when the parent replaces the task, what the user is typing kept while the parent replaces the task, the trailing tag input saved when the task disappears, a half-typed tag left in its input while another edit of the same task is saved, and everything saved before the renderer goes away
 - generic SPOT logging success, public log levels, startup file-open failures, bounded retry failures, retry recovery, shutdown flush behavior, and size-based rolling with bounded retention

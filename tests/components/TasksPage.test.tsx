@@ -1,8 +1,9 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, type RenderResult } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { makeTask } from '../testUtils';
 import { flushPendingTaskChanges, resetPendingTaskChangesForTests } from 'src/logic/PendingTaskChanges';
 import { resetTaskStorageQueueForTests, waitForTaskStorageQueue } from 'src/logic/TaskStorageQueue';
+import { TasksContextProvider } from 'src/contexts/TasksContext';
 import { TasksPage } from 'src/components/tasks/TasksPage';
 import type { Task, TaskChange } from 'src/types/TaskTypes';
 import type { TaskFilterChange } from 'src/types/FilterTypes';
@@ -189,6 +190,28 @@ const createLoadTasks = (tasks: Task[]): jest.Mock<Promise<LoadTasksResult>, []>
 	});
 };
 
+// The task state lives in the provider, so the page is always rendered inside it, exactly as the application shell does
+const renderTasksPage = (): RenderResult => {
+	return render(
+		<TasksContextProvider>
+			<TasksPage/>
+		</TasksContextProvider>
+	);
+};
+
+// Moving to another page unmounts TasksPage while the provider above the router stays mounted
+type NavigableAppProps = {
+	isOnTasksPage: boolean;
+};
+
+const NavigableApp = ({ isOnTasksPage }: NavigableAppProps): ReactElement => {
+	return (
+		<TasksContextProvider>
+			{isOnTasksPage ? <TasksPage/> : <div>Settings page</div>}
+		</TasksContextProvider>
+	);
+};
+
 const clickAndSettle = async(element: HTMLElement): Promise<void> => {
 	await act(async() => {
 		fireEvent.click(element);
@@ -219,7 +242,7 @@ describe('TasksPage', () => {
 	test('requires the Electron storage API on startup', async() => {
 		setWindowSpotStorage(undefined);
 
-		render(<TasksPage/>);
+		renderTasksPage();
 
 		const alert = await screen.findByRole('alert');
 		expect(alert).toHaveTextContent('Task storage is unavailable');
@@ -244,7 +267,7 @@ describe('TasksPage', () => {
 		});
 		setWindowSpotStorage(createMockSpotStorage(loadTasks));
 
-		render(<TasksPage/>);
+		renderTasksPage();
 
 		expect(screen.getByRole('status')).toHaveTextContent('Loading tasks...');
 		expect(loadTasks).toHaveBeenCalledTimes(1);
@@ -282,7 +305,7 @@ describe('TasksPage', () => {
 		});
 		setWindowSpotStorage(createMockSpotStorage(loadTasks));
 
-		render(<TasksPage/>);
+		renderTasksPage();
 
 		const alert = await screen.findByRole('alert');
 		expect(alert).toHaveTextContent('Task storage is unavailable');
@@ -305,7 +328,7 @@ describe('TasksPage', () => {
 		const spotStorage = createMockSpotStorage(createLoadTasks([ persistedTask ]), executeTaskCommand);
 		setWindowSpotStorage(spotStorage);
 
-		render(<TasksPage/>);
+		renderTasksPage();
 		expect(await screen.findByText('Persisted startup task')).toBeInTheDocument();
 
 		await clickAndSettle(screen.getByRole('button', { name: 'Tasks update' }));
@@ -375,7 +398,7 @@ describe('TasksPage', () => {
 		});
 		setWindowSpotStorage(createMockSpotStorage(createLoadTasks([ completedTask ]), executeTaskCommand));
 
-		render(<TasksPage/>);
+		renderTasksPage();
 		expect(await screen.findByTestId('task-filters')).toHaveTextContent('Show completed: false');
 
 		await clickAndSettle(screen.getByRole('button', { name: 'Show completed' }));
@@ -416,7 +439,7 @@ describe('TasksPage', () => {
 		});
 		setWindowSpotStorage(createMockSpotStorage(createLoadTasks([ normalTask, urgentTask ]), executeTaskCommand));
 
-		render(<TasksPage/>);
+		renderTasksPage();
 		expect(await screen.findByText('Normal task')).toBeInTheDocument();
 
 		await clickAndSettle(screen.getByRole('button', { name: 'Tasks sort' }));
@@ -465,7 +488,7 @@ describe('TasksPage', () => {
 		});
 		setWindowSpotStorage(createMockSpotStorage(createLoadTasks([ persistedTask ]), executeTaskCommand));
 
-		render(<TasksPage/>);
+		renderTasksPage();
 		expect(await screen.findByText('Persisted startup task')).toBeInTheDocument();
 
 		fireEvent.click(screen.getByRole('button', { name: 'Tasks update' }));
@@ -515,7 +538,7 @@ describe('TasksPage', () => {
 		});
 		setWindowSpotStorage(createMockSpotStorage(loadTasks, executeTaskCommand));
 
-		render(<TasksPage/>);
+		renderTasksPage();
 		expect(await screen.findByText('Persisted startup task')).toBeInTheDocument();
 
 		fireEvent.click(screen.getByRole('button', { name: 'Tasks update' }));
@@ -563,7 +586,7 @@ describe('TasksPage', () => {
 		});
 		setWindowSpotStorage(createMockSpotStorage(loadTasks, executeTaskCommand));
 
-		render(<TasksPage/>);
+		renderTasksPage();
 		expect(await screen.findByText('Persisted startup task')).toBeInTheDocument();
 
 		fireEvent.click(screen.getByRole('button', { name: 'Tasks update' }));
@@ -579,5 +602,43 @@ describe('TasksPage', () => {
 		expect(alert).toHaveTextContent('Task storage update failed. Cannot write task changes.');
 		expect(alert).toHaveTextContent('Database status: unavailable. Could not reopen spot.sqlite.');
 		expect(screen.getByText('Updated by mock')).toBeInTheDocument();
+	});
+
+	test('keeps the loaded tasks and the filters when the user leaves the page and comes back', async() => {
+		const persistedTask = makeTask({
+			id: 'persisted-task',
+			text: 'Persisted startup task',
+			visible: false
+		});
+		const loadTasks = createLoadTasks([ persistedTask ]);
+		const executeTaskCommand = jest.fn(async(command: TaskStorageCommand): Promise<TaskStorageCommandResult> => {
+			void command;
+			return createSuccessfulCommandResult();
+		});
+		setWindowSpotStorage(createMockSpotStorage(loadTasks, executeTaskCommand));
+
+		const { rerender } = render(<NavigableApp isOnTasksPage={true}/>);
+		expect(await screen.findByText('Persisted startup task')).toBeInTheDocument();
+
+		await clickAndSettle(screen.getByRole('button', { name: 'Show completed' }));
+		await clickAndSettle(screen.getByRole('button', { name: 'Tasks update' }));
+		expect(screen.getByText('Updated by mock')).toBeInTheDocument();
+
+		await act(async() => {
+			rerender(<NavigableApp isOnTasksPage={false}/>);
+		});
+
+		expect(screen.getByText('Settings page')).toBeInTheDocument();
+
+		await act(async() => {
+			rerender(<NavigableApp isOnTasksPage={true}/>);
+		});
+
+		// The page comes back on the state it left, without a loading step and without reading the database over the changes it holds
+		expect(screen.queryByText('Loading tasks...')).not.toBeInTheDocument();
+		expect(screen.getByTestId('task-filters')).toHaveTextContent('Show completed: true');
+		expect(screen.getByText('Updated by mock')).toBeInTheDocument();
+		expect(screen.queryByText('Persisted startup task')).not.toBeInTheDocument();
+		expect(loadTasks).toHaveBeenCalledTimes(1);
 	});
 });
