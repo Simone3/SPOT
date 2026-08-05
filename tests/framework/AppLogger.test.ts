@@ -1,7 +1,7 @@
 import { appendFileSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { EOL, tmpdir } from 'node:os';
 import path from 'node:path';
-import { appLogger as processAppLogger, createAppLogger, initializeAppLogger, LOG_WRITE_FAILED_MESSAGE, LOGGER_NOT_INITIALIZED_MESSAGE, resetAppLoggerForTests, type AppLogEntry, type CreateAppLoggerBackend, type CreateAppLoggerOptions } from 'src/framework/main/logging/AppLogger';
+import { appLogger as processAppLogger, createAppLogger, initializeAppLogger, LOG_WRITE_FAILED_MESSAGE, LOGGER_NOT_INITIALIZED_MESSAGE, resetAppLoggerForTests, type AppLogEntry, type AppLogFields, type CreateAppLoggerBackend, type CreateAppLoggerOptions } from 'src/framework/main/logging/AppLogger';
 
 const TEST_LOG_FILE_NAME = 'app-logs.ndjson';
 
@@ -13,8 +13,6 @@ const createTestLoggerOptions = (options: Partial<CreateAppLoggerOptions> & Pick
 		fileName: TEST_LOG_FILE_NAME,
 		maximumFileSizeBytes: 1024 * 1024,
 		retainedArchiveCount: TEST_RETAINED_ARCHIVE_COUNT,
-		maximumWriteAttempts: 3,
-		retryDelayMs: 25,
 		...options
 	};
 };
@@ -25,33 +23,6 @@ const createTestLogger = (options: Partial<CreateAppLoggerOptions> & Pick<Create
 
 const makeTempLogDirectory = (): string => {
 	return mkdtempSync(path.join(tmpdir(), 'app-logger-'));
-};
-
-const sleep = (durationMs: number): Promise<void> => {
-	return new Promise((resolve) => {
-		setTimeout(resolve, durationMs);
-	});
-};
-
-const waitForExpectation = async(expectation: () => void): Promise<void> => {
-	let lastError: unknown;
-
-	for(let attempt = 1; attempt <= 20; attempt += 1) {
-		try {
-			expectation();
-			return;
-		}
-		catch(error) {
-			lastError = error;
-			await sleep(5);
-		}
-	}
-
-	if(lastError instanceof Error) {
-		throw lastError;
-	}
-
-	throw new Error(String(lastError));
 };
 
 const readAppLogEntries = (logDirectory: string): AppLogEntry[] => {
@@ -135,7 +106,6 @@ describe('AppLogger', () => {
 
 		initializeAppLogger(createTestLoggerOptions({
 			logDirectory,
-			retryDelayMs: 0,
 			now: () => {
 				return createdAt;
 			}
@@ -162,7 +132,6 @@ describe('AppLogger', () => {
 		const createdAt = new Date('2026-06-06T12:00:00.000Z');
 		const logger = createTestLogger({
 			logDirectory,
-			retryDelayMs: 0,
 			now: () => {
 				return createdAt;
 			}
@@ -223,7 +192,6 @@ describe('AppLogger', () => {
 		const createdAt = new Date('2026-06-06T12:00:00.000Z');
 		const logger = createTestLogger({
 			logDirectory,
-			retryDelayMs: 0,
 			now: () => {
 				return createdAt;
 			}
@@ -254,11 +222,9 @@ describe('AppLogger', () => {
 
 		const logger = createTestLogger({
 			logDirectory,
-			maximumWriteAttempts: 1,
 			backendFactory: createFakeBackendFactory(() => {
 				return undefined;
-			}),
-			retryDelayMs: 0
+			})
 		});
 
 		expect(logger.getStatus()).toEqual({
@@ -279,8 +245,7 @@ describe('AppLogger', () => {
 		tempStorageDirectories.push(logDirectory);
 		const logger = createTestLogger({
 			logDirectory,
-			maximumFileSizeBytes: 180,
-			retryDelayMs: 0
+			maximumFileSizeBytes: 180
 		});
 
 		for(let index = 0; index < 8; index += 1) {
@@ -302,134 +267,81 @@ describe('AppLogger', () => {
 		expect(logFiles.length).toBeLessThanOrEqual(TEST_RETAINED_ARCHIVE_COUNT + 1);
 	});
 
-	test('retries a failed write until a later attempt reaches the file', async() => {
+	test('writes every entry before the call that logged it returns', async() => {
 		const logDirectory = makeTempLogDirectory();
 		tempStorageDirectories.push(logDirectory);
 		const appLogPath = path.join(logDirectory, TEST_LOG_FILE_NAME);
-		let attempts = 0;
 		const backendFactory = createFakeBackendFactory((message) => {
-			attempts += 1;
-
-			if(attempts > 1) {
-				appendFileSync(appLogPath, `${message}${EOL}`, 'utf8');
-			}
+			appendFileSync(appLogPath, `${message}${EOL}`, 'utf8');
 		});
 		const logger = createTestLogger({
 			logDirectory,
-			maximumWriteAttempts: 3,
-			retryDelayMs: 0,
 			backendFactory
 		});
 
 		logger.info('Storage SQL query completed', {
 			type: 'sql.query',
-			query: 'SELECT retry_success'
+			query: 'SELECT written_synchronously'
 		});
 
-		await waitForExpectation(() => {
-			expect(attempts).toBe(2);
-			expect(readAppLogEntries(logDirectory)).toEqual([
-				expect.objectContaining({
-					level: 'info',
-					message: 'Storage SQL query completed',
-					type: 'sql.query',
-					query: 'SELECT retry_success'
-				})
-			]);
-		});
-	});
-
-	test('flushes pending retry writes before resolving', async() => {
-		const logDirectory = makeTempLogDirectory();
-		tempStorageDirectories.push(logDirectory);
-		const appLogPath = path.join(logDirectory, TEST_LOG_FILE_NAME);
-		let attempts = 0;
-		const backendFactory = createFakeBackendFactory((message) => {
-			attempts += 1;
-
-			if(attempts > 1) {
-				appendFileSync(appLogPath, `${message}${EOL}`, 'utf8');
-			}
-		});
-		const logger = createTestLogger({
-			logDirectory,
-			maximumWriteAttempts: 3,
-			retryDelayMs: 0,
-			backendFactory
-		});
-
-		logger.info('Storage SQL query completed', {
-			type: 'sql.query',
-			query: 'SELECT flush_retry_success'
-		});
-
-		await logger.flush();
-
-		expect(attempts).toBe(2);
+		// Nothing is awaited here on purpose: the entries describing a crash are worth having only if they reach the file before it
 		expect(readAppLogEntries(logDirectory)).toEqual([
 			expect.objectContaining({
 				level: 'info',
 				message: 'Storage SQL query completed',
 				type: 'sql.query',
-				query: 'SELECT flush_retry_success'
+				query: 'SELECT written_synchronously'
 			})
 		]);
+
+		// Which is also why there is never anything left for the shutdown flush to wait for
+		await expect(logger.flush()).resolves.toBeUndefined();
 	});
 
-	test('ignores failed writes without changing startup logging status', async() => {
+	test('ignores a write the log file could not receive', async() => {
 		const logDirectory = makeTempLogDirectory();
 		tempStorageDirectories.push(logDirectory);
-		let attempts = 0;
 		const backendFactory = createFakeBackendFactory(() => {
-			attempts += 1;
+			throw new Error('The log file is gone.');
 		});
 		const logger = createTestLogger({
 			logDirectory,
-			maximumWriteAttempts: 2,
-			retryDelayMs: 0,
 			backendFactory
 		});
 
+		// The log is a diagnostic trace, so losing an entry must never reach the caller and must never make logging look broken
 		expect(() => {
 			logger.info('Storage SQL query completed', {
 				type: 'sql.query',
-				query: 'SELECT retry_failure'
+				query: 'SELECT write_failure'
 			});
 		}).not.toThrow();
 
-		await waitForExpectation(() => {
-			expect(attempts).toBe(2);
-		});
-
+		await expect(logger.flush()).resolves.toBeUndefined();
 		expect(logger.getStatus()).toEqual({
 			state: 'healthy'
 		});
 	});
 
-	test('flush abandons failed writes after the bounded retry attempts', async() => {
+	test('ignores an entry holding a value JSON cannot represent', () => {
 		const logDirectory = makeTempLogDirectory();
 		tempStorageDirectories.push(logDirectory);
-		let attempts = 0;
-		const backendFactory = createFakeBackendFactory(() => {
-			attempts += 1;
+		const writtenLines: string[] = [];
+		const backendFactory = createFakeBackendFactory((message) => {
+			writtenLines.push(message);
 		});
 		const logger = createTestLogger({
 			logDirectory,
-			maximumWriteAttempts: 2,
-			retryDelayMs: 0,
 			backendFactory
 		});
+		const circularFields: AppLogFields = {
+			type: 'sql.query'
+		};
+		circularFields.circular = circularFields;
 
-		logger.info('Storage SQL query completed', {
-			type: 'sql.query',
-			query: 'SELECT flush_retry_failure'
-		});
-
-		await logger.flush();
-
-		expect(attempts).toBe(2);
-		expect(logger.getStatus()).toEqual({
-			state: 'healthy'
-		});
+		expect(() => {
+			logger.info('Storage SQL query completed', circularFields);
+		}).not.toThrow();
+		expect(writtenLines).toEqual([]);
 	});
 });

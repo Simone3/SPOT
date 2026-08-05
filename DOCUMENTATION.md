@@ -156,7 +156,7 @@ The exported groups are:
 - `STORAGE_CONFIG`: the database directory name, the SQLite database file name, the current schema version, the SQLite connection timeout, the delay before a failed task write is retried, and how many consecutive database errors on one write are retried before that change is given up on.
 - `BACKUP_CONFIG`: the default backup directory name, the backup file prefix and extension, the partial and temporary file names used while a backup is being written, the delay after the last task change before a backup runs, the number of retained backups, and the bounded time the shutdown backup is given.
 - `APP_CONFIG_FILE`: the development root directory name and the application configuration file name.
-- `LOGGING_CONFIG`: the log directory name, the operational log file name, maximum file size, retained archive count, maximum write attempts, and retry delay.
+- `LOGGING_CONFIG`: the log directory name, the operational log file name, maximum file size, and retained archive count.
 - `TASKS_CONFIG`: the task flush delay, the task state change delay, and the manual sort position step.
 - `SHUTDOWN_CONFIG`: the bounded time the main process waits for the renderer to flush its buffered task changes before quitting, plus how many times the renderer flushes its buffer within that wait. The timeout is derived from `STORAGE_CONFIG.writeRetryDelayMs` and must stay comfortably above it, because a write waiting out its retry delay when the quit starts would otherwise still be unwritten when the wait expires.
 
@@ -370,7 +370,7 @@ Task edits are not sent to the task state on every keystroke. `src/logic/Pending
 
 ### Operational Logging
 
-`src/framework/main/logging/AppLogger.ts` uses `electron-log` version `5.4.4` to write newline-delimited JSON entries to the log file of the current run, which for SPOT is `spot-logs.ndjson`. The dependency is wrapped by `createAppLogger()`, while `initializeAppLogger()` installs the concrete logger behind the process-wide `appLogger` utility. Main-process code can call `appLogger.info`, `appLogger.warn`, `appLogger.error`, `appLogger.debug`, and `appLogger.flush` without depending on `electron-log` directly or constructing a logger itself. The file name, size limit, retained archive count, and retry policy are passed in by the application: SPOT supplies them from `LOGGING_CONFIG`.
+`src/framework/main/logging/AppLogger.ts` uses `electron-log` version `5.4.4` to write newline-delimited JSON entries to the log file of the current run, which for SPOT is `spot-logs.ndjson`. The dependency is wrapped by `createAppLogger()`, while `initializeAppLogger()` installs the concrete logger behind the process-wide `appLogger` utility. Main-process code can call `appLogger.info`, `appLogger.warn`, `appLogger.error`, `appLogger.debug`, and `appLogger.flush` without depending on `electron-log` directly or constructing a logger itself. The file name, size limit, and retained archive count are passed in by the application: SPOT supplies them from `LOGGING_CONFIG`.
 
 The main process logs every incoming React storage command and every SQL query run by the storage layer, including `SELECT` queries. SQL log entries include the query text, `elapsedMillis`, and success or failure. Query parameters should be logged only when they are useful for debugging and safe to write to disk.
 
@@ -382,17 +382,21 @@ Example entries:
 {"createdAt":"2026-06-02T12:00:00.003Z","level":"info","message":"Storage SQL query completed","type":"sql.query","query":"UPDATE tasks SET text = ? WHERE id = ?","elapsedMillis":2.4,"result":"success"}
 ```
 
-Logger write methods return `void`; normal callers do not await operational logging or inspect write outcomes. The file transport writes only JSON lines, uses a 1 MiB maximum file size, and keeps one rolled archive so logs cannot grow without limit. Runtime log write failures are retried for a bounded time and then ignored when SQLite succeeds. `flush()` is reserved for shutdown preparation and waits for already pending write attempts to finish their bounded retries.
+Logger write methods return `void`; normal callers do not await operational logging or inspect write outcomes. The file transport writes only JSON lines, uses a 1 MiB maximum file size, and keeps one rolled archive so logs cannot grow without limit.
+
+It writes synchronously, so an entry is on disk before the call that logged it returns and the entries describing a crash survive it. The outcome of a write is deliberately not checked, and a failed write is simply lost: the log is a diagnostic trace and never a source of truth, so reading the file back to confirm every line would cost far more than writing it, on every statement of every transaction, to protect something the persistence contract already allows to fail. There is no retry either, because nothing reports a failure to retry. The one failure the logger does handle is an entry holding a value JSON cannot represent, which is swallowed rather than raised at the caller.
+
+`flush()` is reserved for shutdown preparation. Nothing is ever pending, so it resolves immediately; it stays part of the logger so shutdown keeps one place to wait on, and so a buffering transport could be introduced later without changing its callers.
 
 ### Failure And Shutdown
 
 Database write failures are user-facing. The SQLite transaction must not partially commit and the main process reports the failure to React, which keeps the task state, retries the write, and warns the user. Database read or startup failures are also user-facing; React receives a storage error state instead of silently falling back to stale persisted data.
 
-Operational-log failures are not renderer-facing. Startup log file open failures are tracked internally by `AppLogger`, and runtime log write failures are ignored after bounded retries when SQLite succeeds. Database folder failures must leave persistence visibly non-healthy rather than pretending data is saved.
+Operational-log failures are not renderer-facing. Startup log file open failures are tracked internally by `AppLogger`, and runtime log write failures are neither detected nor retried: the entry is lost while SQLite keeps succeeding. Database folder failures must leave persistence visibly non-healthy rather than pretending data is saved.
 
 Backup failures are renderer-facing but never alarming. They are logged, reported through the pushed backup status, and shown as a notice in the task page and in Settings, always stating that the tasks themselves are saved. A backup failure must never be routed through the database error path.
 
-`src/main/ipc/TaskStorageIpc.ts` registers a `before-quit` drain. The first quit request waits for in-flight task write commands, runs the last backup under its bounded timeout, calls `prepareForShutdown()` so the SQLite connection closes, flushes the process-wide logger so pending log retries can settle or be abandoned according to the bounded retry policy, and then resumes quitting. New write commands after shutdown begins return a `shutdown` failure instead of being enqueued behind the quit drain.
+`src/main/ipc/TaskStorageIpc.ts` registers a `before-quit` drain. The first quit request waits for in-flight task write commands, runs the last backup under its bounded timeout, calls `prepareForShutdown()` so the SQLite connection closes, flushes the process-wide logger, and then resumes quitting. New write commands after shutdown begins return a `shutdown` failure instead of being enqueued behind the quit drain.
 
 React buffers task edits for a few seconds, so the quit drain would close the database while the user's last keystrokes are still in the renderer. The first quit request therefore starts with a renderer flush handshake:
 

@@ -9,8 +9,6 @@ export const createSpotTestLoggerOptions = (options: LoggerTestOptions): CreateA
 		fileName: LOGGING_CONFIG.fileName,
 		maximumFileSizeBytes: LOGGING_CONFIG.maximumFileSizeBytes,
 		retainedArchiveCount: LOGGING_CONFIG.retainedArchiveCount,
-		maximumWriteAttempts: LOGGING_CONFIG.maximumWriteAttempts,
-		retryDelayMs: LOGGING_CONFIG.retryDelayMs,
 		...options
 	};
 };

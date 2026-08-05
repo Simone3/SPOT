@@ -162,7 +162,6 @@ describe('SpotDatabase', () => {
 		const appliedAt = new Date('2026-06-06T12:00:00.000Z');
 		initializeSpotTestLogger({
 			logDirectory: storageDirectory,
-			retryDelayMs: 0,
 			now: () => {
 				return appliedAt;
 			}

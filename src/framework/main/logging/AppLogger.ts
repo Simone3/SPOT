@@ -1,5 +1,4 @@
-import { closeSync, existsSync, mkdirSync, openSync, readFileSync } from 'node:fs';
-import os from 'node:os';
+import { closeSync, mkdirSync, openSync } from 'node:fs';
 import path from 'node:path';
 import electronLog from 'electron-log';
 import { getErrorMessage } from 'src/framework/utils/ErrorUtils';
@@ -55,8 +54,6 @@ export interface AppLoggerConfiguration {
 	fileName: string;
 	maximumFileSizeBytes: number;
 	retainedArchiveCount: number;
-	maximumWriteAttempts: number;
-	retryDelayMs: number;
 }
 
 export interface AppLoggerHealthyStatus {
@@ -75,8 +72,6 @@ export interface CreateAppLoggerOptions {
 	fileName: string;
 	maximumFileSizeBytes: number;
 	retainedArchiveCount: number;
-	maximumWriteAttempts: number;
-	retryDelayMs: number;
 	backendFactory?: CreateAppLoggerBackend;
 	now?: () => Date;
 }
@@ -155,16 +150,6 @@ const createLogId = (logDirectory: string): string => {
 	return `app-logger-${logDirectory.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
 };
 
-const sleep = (durationMs: number): Promise<void> => {
-	if(durationMs <= 0) {
-		return Promise.resolve();
-	}
-
-	return new Promise((resolve) => {
-		setTimeout(resolve, durationMs);
-	});
-};
-
 const configureLoggerBackend = (
 	backend: AppLoggerBackend,
 	configuration: AppLoggerConfiguration
@@ -209,17 +194,6 @@ const serializeLogEntry = (entry: AppLogEntry): string => {
 	return JSON.stringify(entry);
 };
 
-const assertCurrentLogEndsWithLine = (filePath: string, line: string): void => {
-	if(!existsSync(filePath)) {
-		throw new Error(`Log file "${filePath}" was not written.`);
-	}
-
-	const content = readFileSync(filePath, 'utf8');
-	if(!content.endsWith(`${line}${os.EOL}`)) {
-		throw new Error(`Log file "${filePath}" did not receive the expected line.`);
-	}
-};
-
 const assertLogFileWritable = (logDirectory: string, filePath: string): void => {
 	mkdirSync(logDirectory, { recursive: true });
 
@@ -246,8 +220,6 @@ export const createAppLogger = ({
 	fileName,
 	maximumFileSizeBytes,
 	retainedArchiveCount,
-	maximumWriteAttempts,
-	retryDelayMs,
 	backendFactory = createElectronLoggerBackend,
 	now = () => {
 		return new Date();
@@ -257,12 +229,9 @@ export const createAppLogger = ({
 		filePath: path.join(logDirectory, fileName),
 		fileName,
 		maximumFileSizeBytes,
-		retainedArchiveCount,
-		maximumWriteAttempts,
-		retryDelayMs
+		retainedArchiveCount
 	};
 	const backend = backendFactory(createLogId(logDirectory));
-	const pendingWrites = new Set<Promise<void>>();
 
 	configureLoggerBackend(backend, configuration);
 	const startupFailureMessage = getStartupFailureMessage(logDirectory, configuration.filePath);
@@ -280,57 +249,42 @@ export const createAppLogger = ({
 		};
 	};
 
-	const write = async(
-		level: AppLogLevel,
-		message: string,
-		fields?: AppLogFields
-	): Promise<void> => {
-		for(let attempt = 1; attempt <= maximumWriteAttempts; attempt += 1) {
-			try {
-				const serializedEntry = serializeLogEntry(createLogEntry(level, message, fields, now));
-
-				backend[level](serializedEntry);
-				assertCurrentLogEndsWithLine(configuration.filePath, serializedEntry);
-
-				return;
-			}
-			catch {
-				if(attempt < maximumWriteAttempts) {
-					await sleep(retryDelayMs);
-				}
-			}
-		}
-	};
-
-	const queueWrite = (
+	// The file transport writes synchronously, so a line is on disk once this returns and the entries describing a crash survive it.
+	// The outcome is not checked: the log is a diagnostic trace, never a source of truth, and reading the file back to confirm every
+	// line costs far more than writing it. A write that fails is therefore lost, which is what the operational log contract allows.
+	// Serializing the entry can still throw, on a field JSON cannot represent, and that must never reach the caller.
+	const write = (
 		level: AppLogLevel,
 		message: string,
 		fields?: AppLogFields
 	): void => {
-		const pendingWrite = write(level, message, fields).finally(() => {
-			pendingWrites.delete(pendingWrite);
-		});
-		pendingWrites.add(pendingWrite);
-	};
-
-	const flush = async(): Promise<void> => {
-		await Promise.allSettled(Array.from(pendingWrites));
+		try {
+			backend[level](serializeLogEntry(createLogEntry(level, message, fields, now)));
+		}
+		catch {
+			// Intentionally ignored
+		}
 	};
 
 	return {
 		debug: (message, fields) => {
-			queueWrite('debug', message, fields);
+			write('debug', message, fields);
 		},
 		error: (message, fields) => {
-			queueWrite('error', message, fields);
+			write('error', message, fields);
 		},
 		info: (message, fields) => {
-			queueWrite('info', message, fields);
+			write('info', message, fields);
 		},
 		warn: (message, fields) => {
-			queueWrite('warn', message, fields);
+			write('warn', message, fields);
 		},
-		flush,
+
+		// Nothing is ever pending, because every entry is written before its call returns. The method stays part of the logger so that
+		// shutdown keeps one place to wait on, and so that a buffering transport could be introduced without changing its callers.
+		flush: () => {
+			return Promise.resolve();
+		},
 		getStatus,
 		getConfiguration: () => {
 			return configuration;

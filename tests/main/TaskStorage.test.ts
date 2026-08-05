@@ -756,9 +756,7 @@ describe('TaskStorage', () => {
 				return createdAt;
 			},
 			logger: {
-				backendFactory: createNoopBackendFactory(),
-				maximumWriteAttempts: 1,
-				retryDelayMs: 0
+				backendFactory: createNoopBackendFactory()
 			}
 		});
 

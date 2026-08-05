@@ -71,9 +71,7 @@ void app.whenReady().then(async() => {
 		logDirectory: runtimePaths.logDirectory,
 		fileName: LOGGING_CONFIG.fileName,
 		maximumFileSizeBytes: LOGGING_CONFIG.maximumFileSizeBytes,
-		retainedArchiveCount: LOGGING_CONFIG.retainedArchiveCount,
-		maximumWriteAttempts: LOGGING_CONFIG.maximumWriteAttempts,
-		retryDelayMs: LOGGING_CONFIG.retryDelayMs
+		retainedArchiveCount: LOGGING_CONFIG.retainedArchiveCount
 	});
 
 	const taskStorage = createTaskStorage({
