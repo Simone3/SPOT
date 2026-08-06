@@ -53,6 +53,7 @@ npm test -- tests/logic/SomeFile.spec.ts
 - Database failures are user-facing: surface task-save feedback on write failure and reconcile state. Operational-log failures are best-effort and ignored by React when SQLite succeeds. Backup failures are user-facing too, but as a soft notice: they must never be routed through the database error path, because the tasks are already saved locally.
 - The live `spot.sqlite` database always lives in the Electron user-data folder and never moves. The user-selected folder only receives rotated write-only backup copies; SPOT never reads them back and does not sync across devices. Configuration and log files also stay in the user-data folder, and development runs keep their own root folder there.
 - Never place the live database in a folder a synchronization client controls, and never copy it with a plain file copy: build backups with `VACUUM INTO` locally, then publish them with an atomic rename.
+- Only one SPOT process may run at a time. The single instance lock is taken before anything else in `Main.ts`, and nothing may assume a second process could share the database: the optimistic write path, the audit, the backup rotation and the log rotation all assume a single writer.
 
 ## Testing
 
