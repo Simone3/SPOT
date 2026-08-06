@@ -43,7 +43,7 @@ export const LOGGING_CONFIG = {
 	directoryName: 'logs',
 	fileName: 'spot-logs.ndjson',
 	maximumFileSizeBytes: 100 * 1024 * 1024,
-	retainedArchiveCount: 1
+	retainedArchiveCount: 5
 } as const;
 
 export const TASKS_CONFIG = {
