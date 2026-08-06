@@ -73,6 +73,7 @@ export const EN_TRANSLATIONS = {
 	filters: {
 		title: 'Filters',
 		reset: 'Reset to default',
+		resizePane: 'Resize the filters pane',
 		content: 'Content',
 		contentPlaceholder: 'Search...',
 		priorities: 'Priorities',

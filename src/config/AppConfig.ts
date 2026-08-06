@@ -60,6 +60,20 @@ export const TASKS_CONFIG = {
 	dueDateWeekdayHorizonDays: 5
 } as const;
 
+export const PANE_LAYOUT_CONFIG = {
+	// Where the divider between the filters pane and the tasks pane sits when SPOT starts, as a share of the width the two panes share
+	defaultFiltersPaneFraction: 1 / 3,
+
+	// How much of that width one arrow key press moves the divider by
+	keyboardStepFraction: 0.02,
+
+	// A pane dragged below this width is collapsed instead of being left as an unusable sliver
+	collapseWidthPixels: 40,
+
+	// The pane on the other side of the divider always keeps at least this much width, so the divider itself stays on screen and grabbable
+	minimumPaneWidthPixels: 150
+} as const;
+
 export const AUDIT_CONFIG = {
 	// Task updates are optimistic, so the task state can only be known to have reached the database by reading it back. This is a
 	// first-period safety net meant to be switched off once the write path has been trusted for a while, not a part of that path.

@@ -122,7 +122,7 @@ npm run build-icons
 - `src/components/settings` contains the Settings route page.
 - `src/components/storage` contains the Settings section that explains where the database lives and lets the user choose the backup folder.
 - `src/contexts` contains app-level React contexts: the backup location and the task state.
-- `src/logic` contains state and domain logic, including `PendingTaskChanges.ts`, which holds the task edits the user has not saved yet, `TaskStorageQueue.ts`, which creates the single renderer write queue from the framework and exposes it to the task components, `TaskComparison.ts`, which owns what a stored task is and how two of them are compared, and `TaskStateAudit.ts`, which compares the tasks React holds against the tasks read back from the database.
+- `src/logic` contains state and domain logic, including `PendingTaskChanges.ts`, which holds the task edits the user has not saved yet, `TaskStorageQueue.ts`, which creates the single renderer write queue from the framework and exposes it to the task components, `TaskComparison.ts`, which owns what a stored task is and how two of them are compared, `TaskStateAudit.ts`, which compares the tasks React holds against the tasks read back from the database, and `PaneLayout.ts`, which holds the width the user gave each resizable pane and the rules that width has to obey.
 - `tests/framework` contains the tests for `src/framework`; `tests/main`, `tests/logic`, and `tests/components` contain the SPOT tests. `tests` also holds the test setup and test-only helpers.
 
 ## Source Imports
@@ -180,6 +180,7 @@ The exported groups are:
 - `APP_CONFIG_FILE`: the development root directory name and the application configuration file name.
 - `LOGGING_CONFIG`: the log directory name, the operational log file name, the maximum file size, and how many rolled archives are kept. The last two bound the log directory together: it holds at most `retainedArchiveCount + 1` files of `maximumFileSizeBytes` each.
 - `TASKS_CONFIG`: the task flush delay, the task state change delay, the manual sort position step, and how many days after tomorrow a due date is shown as a weekday name instead of a full date.
+- `PANE_LAYOUT_CONFIG`: where the divider of a resizable split page starts, how much one arrow key press moves it, the width below which a pane is collapsed instead of being left as a sliver, and the width the pane on the other side of the divider always keeps.
 - `AUDIT_CONFIG`: whether the task state audit runs at all, the delay before its first run, the delay between runs, and how many differing tasks one report lists.
 - `SHUTDOWN_CONFIG`: the bounded time the main process waits for the renderer to flush its buffered task changes before quitting, plus how many times the renderer flushes its buffer within that wait. The timeout is derived from the whole retry budget of one command, `STORAGE_CONFIG.writeRetryDelayMs` multiplied by `STORAGE_CONFIG.maximumWriteAttempts`, and not from a single retry delay: a retry that fails again schedules the next one, and the renderer cannot ask for that retry sooner while it is already waiting for the queue, so a wait covering only one delay would expire while the retry that saves the change has not run yet. The queue gives a change up after that many attempts, so the timeout is also the longest a quit can be held, and only while writes keep failing.
 
@@ -213,6 +214,7 @@ The page layout is a fixed-height flex app:
 - `Sidebar` stays on the side.
 - `MainContent` renders the selected route.
 - `Page` and `Pane` build the page-level split layout.
+- `ResizablePanes` and `PaneDivider` make a two-pane page resizable, as described in the Resizable Panes section.
 
 ## Electron Layer
 
@@ -599,6 +601,8 @@ The state helpers clone top-level containers and lists before updating them. Tas
 - an active tasks list
 - a completed tasks list when `showCompleted` is enabled
 
+The filter pane and the task lists are the two panes of a `ResizablePanes` split, so the user can give the filters as much or as little width as they want, down to collapsing them entirely. The Resizable Panes section describes how that works. The loading and startup-error states stay a plain single-pane `Page`: there are no filters to resize yet.
+
 `TasksList`:
 
 - filters the list down to tasks where `visible` is true
@@ -753,6 +757,7 @@ Common components:
 - `MainContent`
 - `Page`
 - `Pane`
+- `ResizablePanes`, `PaneDivider`
 - `Header`
 - `Clickable`
 - `Chip`
@@ -776,6 +781,23 @@ Input components:
 Tests replace `TextArea` with a plain `textarea` mock, so the behavior above is not covered by the automated tests. That mock was originally forced by `MDXEditor` version `4.2.0` being ESM-only, which the Jest version bundled with React Scripts could not load. Vitest loads ESM natively, so the obstacle is gone and the mock is now only a convenience: covering this behavior for real is possible whenever it is worth doing.
 
 Icons are local React components under `src/components/icons`.
+
+## Resizable Panes
+
+`ResizablePanes` renders a two-pane page whose divider the user can drag, all the way to collapsing the first pane. The task page uses it for the filters pane and the tasks pane; every other page still renders a plain `Page` with a single `Pane`.
+
+The split is held as the share of the width the two panes have between them, meaning the container width without the divider, and never as a pixel width:
+
+- Both panes are laid out with that share as their flex grow value, and the two shares always add up to one, so nothing has to be measured to render the page and resizing the window keeps the proportion the user chose.
+- The divider measures the container only while it is being dragged, to turn the pixels the pointer moved into a share.
+- `.pane` sets `min-width: 0`, because a flex item otherwise refuses to shrink below its content and a pane could never be collapsed.
+- `PaneDivider` draws the line that `.pane` would otherwise draw as its left border, and is wider than that line so it can be grabbed without aiming at two pixels.
+
+`clampPaneFraction()` in `src/logic/PaneLayout.ts` decides what a share is allowed to be: a pane dragged below `PANE_LAYOUT_CONFIG.collapseWidthPixels` collapses entirely instead of being left as an unusable sliver, and the pane on the other side of the divider keeps at least `PANE_LAYOUT_CONFIG.minimumPaneWidthPixels`, so the divider itself is always on screen and can be dragged back. A collapsed pane is still rendered, with the `inert` attribute, so nothing inside it stays in the tab order while it has no width.
+
+The divider is a focusable `separator`: the arrow keys move it by `PANE_LAYOUT_CONFIG.keyboardStepFraction`, `Home` collapses the first pane, `End` widens it as far as it goes, and a double click restores the default split. Dragging it puts a class on the body, because the pointer is over the panes for the whole drag and both the resize cursor and the block on text selection have to hold for the whole window.
+
+The same `src/logic/PaneLayout.ts` holds the share of each split layout, keyed by a layout ID, outside the component tree, the way `PendingTaskChanges.ts` holds buffered task edits: leaving the page unmounts it, and the user's layout must survive that just like the task state does. It is session state on purpose. Nothing is written to disk, so every SPOT start opens on the default split, which is the one third the filters pane has always taken.
 
 ## Styling
 
@@ -807,6 +829,8 @@ Current test coverage includes focused regression checks for:
 - translation lookup at any key depth, placeholder interpolation and unfilled placeholders left alone, locale number formatting, plural category selection including a language whose categories English does not have, the fallback bundle, a key no bundle holds being reported and shown as itself, a group never being mistaken for a translation, and locale list joining
 - language resolution: an available language taken as it is, case-insensitive matching, a regional tag falling back to its base language, the first language that can actually be served winning over the first one asked for, and the fallback when nothing matches
 - smoke coverage for task filters and task list interactions
+- the resizable pane split: the default split it starts on, dragging the divider and stopping when the button is released, collapsing a pane dragged to the edge and taking it out of the tab order, never dragging the other pane away entirely, the keyboard steps and the collapse and widen keys, the double click that restores the default split, and the split surviving the page being left and opened again
+- the pane layout rules: a share the layout allows left alone, the collapse below the collapse width, the minimum width kept for the pane across the divider, a container too narrow for both panes, a container that has not been laid out yet, and per-layout shares notifying only their own subscribers and only when they actually change
 - SQLite storage setup, task row mapping, command execution, transaction rollback, and optional operational logging behavior
 - storage IPC handler registration, channel delegation, shutdown drain, post-shutdown command failure behavior, exclusive access that finalizes in-flight commands and queues later ones, and two overlapping exclusive operations running one after the other with no command in between
 - the shutdown flush handshake: buffered renderer changes saved before the database is closed, commands refused only after the renderer reported, the application told to stop collecting changes before the first command is refused and before the drain starts, that same notice arriving right away when there is no renderer to ask, and a bounded wait when the renderer never reports

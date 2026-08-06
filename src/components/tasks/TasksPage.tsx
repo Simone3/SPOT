@@ -2,12 +2,17 @@ import 'src/components/tasks/TasksPage.css';
 import { useContext, type ReactElement } from 'react';
 import { Page } from 'src/components/common/Page';
 import { Pane } from 'src/components/common/Pane';
+import { ResizablePanes } from 'src/components/common/ResizablePanes';
+import { PANE_LAYOUT_CONFIG } from 'src/config/AppConfig';
 import { TasksContext } from 'src/contexts/TasksContext';
 import type { StorageStatus } from 'src/types/TaskStorageTypes';
 import { TasksList } from 'src/components/tasks/TasksList';
 import { TaskFilters } from 'src/components/tasks/TaskFilters';
 import { useTranslator } from 'src/i18n/TranslationContext';
 import type { SpotTranslator } from 'src/i18n/Translations';
+
+// Names the split between the filters and the tasks, so the width the user gave it is found again when the page is mounted anew
+const FILTERS_PANE_LAYOUT_ID = 'tasks-filters';
 
 interface TaskStorageFeedback {
 	role: 'alert' | 'status';
@@ -122,16 +127,19 @@ const TasksPage = (): ReactElement => {
 	}
 
 	return (
-		<Page>
-			<Pane relativeSize={1}>
+		<ResizablePanes
+			layoutId={FILTERS_PANE_LAYOUT_ID}
+			defaultFirstPaneFraction={PANE_LAYOUT_CONFIG.defaultFiltersPaneFraction}
+			dividerLabel={t('filters.resizePane')}
+			firstPane={
 				<TaskFilters
 					domains={taskState.domainsContainer.filters}
 					filters={taskState.filters}
 					onFilterChange={onFilterChange}
 					onResetDefaultFilters={onResetDefaultFilters}
 				/>
-			</Pane>
-			<Pane relativeSize={2}>
+			}
+			secondPane={<>
 				{taskStorageFeedback &&
 					<div className='tasks-page-storage-feedback' role={taskStorageFeedback.role}>
 						<h3 className='tasks-page-storage-feedback-title'>{taskStorageFeedback.title}</h3>
@@ -161,8 +169,8 @@ const TasksPage = (): ReactElement => {
 						showActions={false}
 					/>
 				}
-			</Pane>
-		</Page>
+			</>}
+		/>
 	);
 };
 

@@ -1,0 +1,35 @@
+/* The divider is wider than the line it draws, so that it can be grabbed without aiming at two pixels */
+.pane-divider {
+	flex: 0 0 8px;
+	position: relative;
+	background-color: var(--colors-background-primary);
+	cursor: col-resize;
+	outline: none;
+}
+
+/* The line itself, which replaces the border the pane after the divider would draw */
+.pane-divider::after {
+	content: '';
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: 3px;
+	width: 2px;
+	background-color: var(--colors-background-secondary);
+}
+
+.pane-divider:hover::after,
+.pane-divider:focus-visible::after,
+.pane-divider-dragging::after {
+	background-color: var(--colors-accent-primary);
+}
+
+.pane-divider + .pane {
+	border-left: none;
+}
+
+/* The pointer is over the panes for the whole drag, so the cursor and the selection block have to hold for the whole window */
+body.pane-resizing {
+	cursor: col-resize;
+	user-select: none;
+}
