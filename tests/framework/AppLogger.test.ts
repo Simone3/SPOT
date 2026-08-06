@@ -1,7 +1,7 @@
 import { appendFileSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { EOL, tmpdir } from 'node:os';
 import path from 'node:path';
-import { appLogger as processAppLogger, createAppLogger, initializeAppLogger, LOG_WRITE_FAILED_MESSAGE, LOGGER_NOT_INITIALIZED_MESSAGE, resetAppLoggerForTests, type AppLogEntry, type AppLogFields, type CreateAppLoggerBackend, type CreateAppLoggerOptions } from 'src/framework/main/logging/AppLogger';
+import { appLogger as processAppLogger, createAppLogger, initializeAppLogger, LOG_WRITE_FAILED_MESSAGE, LOGGER_NOT_INITIALIZED_MESSAGE, resetAppLoggerForTests, type AppLogEntry, type AppLogFields, type AppLogger, type CreateAppLoggerBackend, type CreateAppLoggerOptions } from 'src/framework/main/logging/AppLogger';
 
 const TEST_LOG_FILE_NAME = 'app-logs.ndjson';
 
@@ -37,6 +37,23 @@ const readAppLogEntries = (logDirectory: string): AppLogEntry[] => {
 	});
 };
 
+// Each entry is wider than the size limit the rolling tests use, so every write rolls the file at most once and the count is
+// what decides how many times it rolls
+const writeRollingLogEntries = (logger: AppLogger, entryCount: number): void => {
+	for(let index = 0; index < entryCount; index += 1) {
+		logger.info('Storage SQL query completed', {
+			type: 'sql.query',
+			query: `SELECT '${'x'.repeat(80)}-${index}'`
+		});
+	}
+};
+
+const readLogFileNames = (logDirectory: string): string[] => {
+	return readdirSync(logDirectory).filter((fileName) => {
+		return fileName.startsWith('app-logs');
+	}).sort();
+};
+
 const createFakeBackendFactory = (write: (message: string) => void): CreateAppLoggerBackend => {
 	return () => {
 		return {
@@ -55,6 +72,9 @@ const createFakeBackendFactory = (write: (message: string) => void): CreateAppLo
 						return data;
 					},
 					maxSize: 0,
+					archiveLogFn: () => {
+						return undefined;
+					},
 					resolvePathFn: () => {
 						return '';
 					},
@@ -240,7 +260,7 @@ describe('AppLogger', () => {
 		}).not.toThrow();
 	});
 
-	test('configures size-based rolling with bounded retention', () => {
+	test('rolls the log file into a numbered archive once it passes the size limit', () => {
 		const logDirectory = makeTempLogDirectory();
 		tempStorageDirectories.push(logDirectory);
 		const logger = createTestLogger({
@@ -248,23 +268,57 @@ describe('AppLogger', () => {
 			maximumFileSizeBytes: 180
 		});
 
-		for(let index = 0; index < 8; index += 1) {
-			logger.info('Storage SQL query completed', {
-				type: 'sql.query',
-				query: `SELECT '${'x'.repeat(80)}-${index}'`
-			});
-		}
+		writeRollingLogEntries(logger, 8);
 
 		const configuration = logger.getConfiguration();
-		const logFiles = readdirSync(logDirectory).filter((fileName) => {
-			return fileName.startsWith('app-logs');
-		});
 
 		expect(configuration.maximumFileSizeBytes).toBe(180);
 		expect(configuration.retainedArchiveCount).toBe(TEST_RETAINED_ARCHIVE_COUNT);
-		expect(logFiles).toContain(TEST_LOG_FILE_NAME);
-		expect(logFiles).toContain('app-logs.old.ndjson');
-		expect(logFiles.length).toBeLessThanOrEqual(TEST_RETAINED_ARCHIVE_COUNT + 1);
+		expect(readLogFileNames(logDirectory)).toEqual([ TEST_LOG_FILE_NAME, 'app-logs.old.1.ndjson' ]);
+	});
+
+	test('keeps as many archives as it was asked to and drops the oldest', () => {
+		const logDirectory = makeTempLogDirectory();
+		tempStorageDirectories.push(logDirectory);
+		const logger = createTestLogger({
+			logDirectory,
+			maximumFileSizeBytes: 180,
+			retainedArchiveCount: 3
+		});
+
+		writeRollingLogEntries(logger, 60);
+
+		// The archives are numbered from the newest, and the log directory never holds more than the current file and those three
+		const logFileNames = readLogFileNames(logDirectory);
+
+		expect(logFileNames).toEqual([
+			TEST_LOG_FILE_NAME,
+			'app-logs.old.1.ndjson',
+			'app-logs.old.2.ndjson',
+			'app-logs.old.3.ndjson'
+		]);
+
+		// Rolled far enough that the earliest entries fell off the end, which is what the retention count is there to bound
+		const everyRetainedEntry = logFileNames.map((fileName) => {
+			return readFileSync(path.join(logDirectory, fileName), 'utf8');
+		}).join('');
+
+		expect(everyRetainedEntry).not.toContain('-0\'');
+		expect(everyRetainedEntry).toContain('-59\'');
+	});
+
+	test('keeps no archive at all when it was asked for none', () => {
+		const logDirectory = makeTempLogDirectory();
+		tempStorageDirectories.push(logDirectory);
+		const logger = createTestLogger({
+			logDirectory,
+			maximumFileSizeBytes: 180,
+			retainedArchiveCount: 0
+		});
+
+		writeRollingLogEntries(logger, 20);
+
+		expect(readLogFileNames(logDirectory)).toEqual([ TEST_LOG_FILE_NAME ]);
 	});
 
 	test('writes every entry before the call that logged it returns', async() => {

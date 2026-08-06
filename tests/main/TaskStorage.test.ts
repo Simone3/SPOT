@@ -134,6 +134,9 @@ const createNoopBackendFactory = (): CreateAppLoggerBackend => {
 						return data;
 					},
 					maxSize: 0,
+					archiveLogFn: () => {
+						return undefined;
+					},
 					resolvePathFn: () => {
 						return '';
 					},

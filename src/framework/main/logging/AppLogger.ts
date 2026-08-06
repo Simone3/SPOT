@@ -1,4 +1,4 @@
-import { closeSync, mkdirSync, openSync } from 'node:fs';
+import { closeSync, existsSync, mkdirSync, openSync, renameSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import electronLog from 'electron-log';
 import { getErrorMessage } from 'src/framework/utils/ErrorUtils';
@@ -30,6 +30,10 @@ interface AppLogFileTransport extends AppLogTransport {
 	fileName: string;
 	format: (params: { data: unknown[] }) => unknown[];
 	maxSize: number;
+
+	// Called with the file that just passed the size limit. The parameter is deliberately unknown: the backend hands over its own
+	// file object rather than a path, and the only thing that may be assumed about it is that it describes itself as one.
+	archiveLogFn: (oldLogFile: unknown) => void;
 	resolvePathFn: () => string;
 	sync: boolean;
 }
@@ -150,6 +154,61 @@ const createLogId = (logDirectory: string): string => {
 	return `app-logger-${logDirectory.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
 };
 
+/**
+ * Builds the name of one archive, numbered from the newest.
+ * `app-logs.ndjson` archives as `app-logs.old.1.ndjson`, `app-logs.old.2.ndjson`, and so on.
+ * @param filePath Path of the log file being archived.
+ * @param archiveIndex Archive position, starting at 1 for the newest.
+ * @returns The path of that archive.
+ */
+const createArchiveFilePath = (filePath: string, archiveIndex: number): string => {
+	const { dir, name, ext } = path.parse(filePath);
+
+	return path.join(dir, `${name}.old.${archiveIndex}${ext}`);
+};
+
+/**
+ * Builds the archiver the backend calls when the log file passes the size limit.
+ * The backend only ever keeps one archive of its own, so the whole rotation is done here: each archive moves one place down,
+ * the oldest one falls off the end, and the file that just filled up becomes the newest archive. The log directory therefore
+ * holds the current file plus at most `retainedArchiveCount` archives, which bounds it at that many times the size limit.
+ * @param retainedArchiveCount How many archives to keep besides the current log file.
+ * @returns The archiver to install on the file transport.
+ */
+const createArchiveLogFn = (retainedArchiveCount: number): (oldLogFile: unknown) => void => {
+	return (oldLogFile) => {
+		// The backend hands over its own file object, and describes itself as the path when asked for a string
+		const filePath = String(oldLogFile);
+
+		// A rotation that failed is ignored exactly like a write that failed: the log is a diagnostic trace and never a source
+		// of truth, and there is nobody to report this to that could do anything about it
+		try {
+			// Keeping no archive at all still has to free the path, or the backend would reopen the file it just filled up
+			if(retainedArchiveCount < 1) {
+				rmSync(filePath, { force: true });
+
+				return;
+			}
+
+			rmSync(createArchiveFilePath(filePath, retainedArchiveCount), { force: true });
+
+			// Downwards, so that an archive is never renamed over one that has not been moved out of the way yet
+			for(let archiveIndex = retainedArchiveCount - 1; archiveIndex >= 1; archiveIndex -= 1) {
+				const archiveFilePath = createArchiveFilePath(filePath, archiveIndex);
+
+				if(existsSync(archiveFilePath)) {
+					renameSync(archiveFilePath, createArchiveFilePath(filePath, archiveIndex + 1));
+				}
+			}
+
+			renameSync(filePath, createArchiveFilePath(filePath, 1));
+		}
+		catch {
+			// Intentionally ignored
+		}
+	};
+};
+
 const configureLoggerBackend = (
 	backend: AppLoggerBackend,
 	configuration: AppLoggerConfiguration
@@ -170,6 +229,7 @@ const configureLoggerBackend = (
 		return [ String(data[0]) ];
 	};
 	backend.transports.file.maxSize = configuration.maximumFileSizeBytes;
+	backend.transports.file.archiveLogFn = createArchiveLogFn(configuration.retainedArchiveCount);
 	backend.transports.file.resolvePathFn = () => {
 		return configuration.filePath;
 	};

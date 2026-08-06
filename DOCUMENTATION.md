@@ -81,7 +81,7 @@ npm run build-icons
 - `src/framework/utils/DateUtils.ts` compares and formats dates at day granularity, including the relative day labels described in the Dates section.
 - `src/framework/types/StorageTypes.ts` owns the storage result envelope: database and backup status, failure reasons, load and command results, and operational log entries.
 - `src/framework/types/BackupTypes.ts` owns the backup folder contract and the backup file naming shape.
-- `src/framework/main/logging/AppLogger.ts` configures `electron-log` behind a factory-created logger and exports the process-wide `appLogger` utility with `info`, `warn`, `error`, `debug`, and `flush` methods, newline-delimited JSON output, size-based rolling into a single archive, and writes whose outcome is deliberately not checked.
+- `src/framework/main/logging/AppLogger.ts` configures `electron-log` behind a factory-created logger and exports the process-wide `appLogger` utility with `info`, `warn`, `error`, `debug`, and `flush` methods, newline-delimited JSON output, size-based rolling into a caller-chosen number of numbered archives, and writes whose outcome is deliberately not checked.
 - `src/framework/main/config/RuntimePaths.ts` lays out the application paths inside the Electron user-data folder from a caller-supplied set of folder and file names, and gives development runs their own root folder.
 - `src/framework/main/config/JsonConfigStore.ts` reads and writes a JSON configuration file whose shape is decided by a caller-supplied parser.
 - `src/framework/main/config/BackupLocationManager.ts` owns the backup folder: startup resolution, validation, the development override, the fallback to the default folder, and persistence through a caller-supplied directory store.
@@ -168,7 +168,7 @@ The exported groups are:
 - `STORAGE_CONFIG`: the database directory name, the SQLite database file name, the current schema version, the SQLite connection timeout, the delay before a failed task write is retried, and how many consecutive database errors on one write are retried before that change is given up on.
 - `BACKUP_CONFIG`: the default backup directory name, the backup file prefix and extension, the partial and temporary file names used while a backup is being written, the delay after the last task change before a backup runs, the number of retained backups, and the bounded time the shutdown backup is given.
 - `APP_CONFIG_FILE`: the development root directory name and the application configuration file name.
-- `LOGGING_CONFIG`: the log directory name, the operational log file name, the maximum file size, and a retained archive count that is currently carried but never applied, as the Operational Logging section explains.
+- `LOGGING_CONFIG`: the log directory name, the operational log file name, the maximum file size, and how many rolled archives are kept. The last two bound the log directory together: it holds at most `retainedArchiveCount + 1` files of `maximumFileSizeBytes` each.
 - `TASKS_CONFIG`: the task flush delay, the task state change delay, and the manual sort position step.
 - `AUDIT_CONFIG`: whether the task state audit runs at all, the delay before its first run, the delay between runs, and how many differing tasks one report lists.
 - `SHUTDOWN_CONFIG`: the bounded time the main process waits for the renderer to flush its buffered task changes before quitting, plus how many times the renderer flushes its buffer within that wait. The timeout is derived from the whole retry budget of one command, `STORAGE_CONFIG.writeRetryDelayMs` multiplied by `STORAGE_CONFIG.maximumWriteAttempts`, and not from a single retry delay: a retry that fails again schedules the next one, and the renderer cannot ask for that retry sooner while it is already waiting for the queue, so a wait covering only one delay would expire while the retry that saves the change has not run yet. The queue gives a change up after that many attempts, so the timeout is also the longest a quit can be held, and only while writes keep failing.
@@ -272,7 +272,7 @@ The database folder contains:
 The log directory contains:
 
 - `spot-logs.ndjson`: newline-delimited operational log entries.
-- `spot-logs.old.ndjson`: the single retained rolled log archive.
+- `spot-logs.old.1.ndjson` up to `spot-logs.old.<LOGGING_CONFIG.retainedArchiveCount>.ndjson`: the rolled log archives, numbered from the newest.
 
 The backup folder contains up to `BACKUP_CONFIG.retainedBackupCount` files named `spot-backup-<timestamp>.sqlite`. The timestamp is the ISO instant with colons and dots replaced, so the files sort chronologically by name. Anything else the user keeps in that folder is left alone.
 
@@ -432,9 +432,11 @@ Example entries:
 {"createdAt":"2026-06-02T12:00:00.003Z","level":"info","message":"Storage SQL query completed","type":"sql.query","query":"UPDATE tasks SET text = ? WHERE id = ?","elapsedMillis":2.4,"result":"success"}
 ```
 
-Logger write methods return `void`; normal callers do not await operational logging or inspect write outcomes. The file transport writes only JSON lines and rolls the file once it passes `LOGGING_CONFIG.maximumFileSizeBytes`, currently 100 MiB. Rolling renames the current file over `spot-logs.old.ndjson`, so the log directory holds at most the current file and one archive, and logs cannot grow without limit.
+Logger write methods return `void`; normal callers do not await operational logging or inspect write outcomes. The file transport writes only JSON lines and rolls the file once it passes `LOGGING_CONFIG.maximumFileSizeBytes`, currently 100 MiB.
 
-`LOGGING_CONFIG.retainedArchiveCount` is not wired to anything. It is carried into `AppLoggerConfiguration` and reported by `getConfiguration()`, but `configureLoggerBackend()` never passes it to `electron-log`, which keeps exactly one archive whatever it is set to. Raising it does not produce more archives.
+`AppLogger` owns the rolling itself, through the archiver it installs on the file transport. `electron-log` only ever keeps one archive of its own, so keeping `LOGGING_CONFIG.retainedArchiveCount` of them is done in `createArchiveLogFn()`: each archive moves one place down, the oldest falls off the end, and the file that just filled up becomes `spot-logs.old.1.ndjson`. The log directory therefore holds the current file plus at most that many archives, which bounds the whole directory at `retainedArchiveCount + 1` times the size limit. A count of `0` keeps no archive and simply discards the filled-up file, which still has to happen for the transport to reopen an empty one.
+
+A rotation that fails is ignored exactly like a write that fails: the log is a diagnostic trace and never a source of truth, and there is nobody to report the failure to who could act on it.
 
 It writes synchronously, so an entry is on disk before the call that logged it returns and the entries describing a crash survive it. The outcome of a write is deliberately not checked, and a failed write is simply lost: the log is a diagnostic trace and never a source of truth, so reading the file back to confirm every line would cost far more than writing it, on every statement of every transaction, to protect something the persistence contract already allows to fail. There is no retry either, because nothing reports a failure to retry. The one failure the logger does handle is an entry holding a value JSON cannot represent, which is swallowed rather than raised at the caller.
 
@@ -773,7 +775,7 @@ Tests that cover `src/framework` live in `tests/framework` and depend only on fr
 - the task state audit: reporting nothing when both sides hold the same tasks, ignoring the differences that are never stored, reporting a task the database does not hold, a task the task state does not hold, and which fields a task is stored with differently, breaking the message down by reason, and capping the listed differences while still counting all of them
 - smoke coverage for the audit in the running page: reading the database back after the audit delay and reporting what the two do not agree on, and not auditing at all while a task change has not reached storage yet
 - task edit durability corner cases: edits still saved after the task is filtered out of the list, never saved for a deleted task, task state values shown again when the parent replaces the task, what the user is typing kept while the parent replaces the task, a tag saved when the task disappears before its input is ever left, a tag not saved while it is still being typed and the empty input waiting after it, a tag saved when its input is left, and everything saved before the renderer goes away
-- generic logging success, public log levels, startup file-open failures, a write the log file could not receive being ignored, an entry holding a value JSON cannot represent being ignored, synchronous writing, shutdown flush behavior, and size-based rolling into a single archive
+- generic logging success, public log levels, startup file-open failures, a write the log file could not receive being ignored, an entry holding a value JSON cannot represent being ignored, synchronous writing, shutdown flush behavior, rolling the log file into a numbered archive once it passes the size limit, keeping as many archives as asked for while dropping the oldest, and keeping none when none were asked for
 - the manually sorted list utility: insertion at every position, moves, and sort position renumbering
 - date handling: day-granularity comparison, whole-day offsets, relative labels and the weekday horizon, labels that are not supplied falling through, relative labels following the clock past midnight, stored `YYYY-MM-DD` conversion in both directions, and the next working day
 
