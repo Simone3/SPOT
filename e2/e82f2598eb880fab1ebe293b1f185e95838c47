@@ -1,0 +1,25 @@
+TODO.md
+  h_08e8a5184a38af 3,6,8,11,13-14,16,23-25,34,36,38,40,43,46,49,51-52,60,62,64,66,68,71,73,75,77,79,81,83,85,87-88,90,92-93,95,98,110,113,115,118,120,122,124,126
+  s_00973c203f3979::t_044290e9bc915c 31,53-58,100,102,104,106,108
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "e2e82f2598eb880fab1ebe293b1f185e95838c47",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_00973c203f3979": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "1aea9360-2c3a-466e-8132-18e9ce3cb142",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
