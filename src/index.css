@@ -12,6 +12,7 @@ body {
 	--colors-border-strong: rgba(255, 255, 255, 0.16);
 	--colors-modal-overlay: rgba(0, 0, 0, 0.65);
 	--colors-modal-shadow: rgba(0, 0, 0, 0.45);
+	--colors-popup-shadow: rgba(0, 0, 0, 0.35);
 	--colors-interactive-hover-background: rgba(255, 255, 255, 0.08);
 	--colors-interactive-active-background: rgba(255, 255, 255, 0.12);
 

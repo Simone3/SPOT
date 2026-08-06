@@ -29,8 +29,9 @@
 
 .react-datepicker {
 	background-color: var(--colors-background-secondary);
-	border-color: var(--colors-text-primary);
-	border: none;
+	border: 1px solid var(--colors-border-strong);
+	border-radius: 5px;
+	box-shadow: 0 6px 16px var(--colors-popup-shadow);
 }
 
 .react-datepicker__current-month,
