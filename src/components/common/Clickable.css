@@ -1,5 +1,12 @@
 
+/* The button chrome is reset here, because a clickable only looks like what it is given: the callers style it */
 .clickable {
+	appearance: none;
+	font: inherit;
+	color: inherit;
+	background: none;
+	border: none;
+	padding: 0;
 	cursor: pointer;
 	transition:
 		background-color 120ms ease,
@@ -9,11 +16,11 @@
 		box-shadow 120ms ease;
 }
 
-.clickable:not(.clickable-disabled):hover {
+.clickable:not(:disabled):hover {
 	color: var(--colors-text-primary);
 }
 
-.clickable-disabled {
+.clickable:disabled {
 	cursor: default;
 	opacity: 0.45;
 }

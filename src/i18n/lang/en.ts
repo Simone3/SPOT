@@ -37,7 +37,8 @@ export const EN_TRANSLATIONS = {
 			refresh: 'Refresh',
 			sortByImportance: 'Sort by importance',
 			add: 'Add task',
-			drag: 'Drag task'
+			drag: 'Drag task',
+			delete: 'Delete task'
 		},
 
 		fields: {

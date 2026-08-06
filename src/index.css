@@ -34,6 +34,20 @@ body {
 
 	/* Fonts */
 	--font-family: Inter, system-ui, sans-serif;
+
+	/* Focus. The ring is separated from what it surrounds by a dark hairline, so that it is visible on every control,
+	   including the ones that are themselves filled with the accent color */
+	--focus-ring: 0 0 0 1px var(--colors-background-primary), 0 0 0 2px var(--colors-accent-primary), 0 0 5px var(--colors-accent-primary);
+}
+
+/* Every focusable control draws the same ring and none of them draws the one the browser would draw. The ring is a
+   shadow rather than an outline so that it follows the shape the control already has, whether or not it has a border.
+   `:focus-visible` is what draws it, so a control lights up when the keyboard reaches it and stays quiet when the
+   pointer clicks it; a field the user is about to type into matches `:focus-visible` on a click too, which is exactly
+   where a ring is expected. A control that draws its own focus UI overrides this rule and says why. */
+:focus-visible {
+	outline: none;
+	box-shadow: var(--focus-ring);
 }
 
 /* HTML body */

@@ -14,19 +14,19 @@
 	color: var(--colors-text-secondary);
 	cursor: grab;
 	opacity: 0.75;
+	transition:
+		background-color 120ms ease,
+		border-color 120ms ease,
+		color 120ms ease,
+		opacity 120ms ease,
+		box-shadow 120ms ease;
 }
 
-.task-drag-handle:hover, .task-drag-handle:focus {
-	outline: none;
+.task-drag-handle:hover, .task-drag-handle:focus-visible {
 	opacity: 1;
 	background: var(--colors-background-secondary);
 	color: var(--colors-text-primary);
 	border-color: var(--colors-background-secondary);
-}
-
-.task-drag-handle:focus {
-	border-color: var(--colors-accent-primary);
-	box-shadow: 0 0 4px var(--colors-accent-primary);
 }
 
 .task-drag-handle:active {

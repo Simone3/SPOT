@@ -35,13 +35,13 @@
 	color: var(--colors-text-secondary);
 }
 
-.header-actions .clickable:hover:not(.clickable-disabled) {
+.header-actions .clickable:hover:not(:disabled) {
 	background-color: var(--colors-interactive-hover-background);
 	border-color: var(--colors-border-subtle);
 	color: var(--colors-text-primary);
 }
 
-.header-actions .clickable:active:not(.clickable-disabled) {
+.header-actions .clickable:active:not(:disabled) {
 	background-color: var(--colors-interactive-active-background);
 }
 

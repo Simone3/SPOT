@@ -4,7 +4,6 @@
 }
 
 .checkbox-input {
-	outline: none;
 	appearance: none;
 	position: relative;
 	font-size: 1em;
@@ -25,11 +24,6 @@
 .checkbox-container:hover .checkbox-input {
 	background-color: var(--colors-interactive-hover-background);
 	border-color: var(--colors-text-primary);
-}
-
-.checkbox-input:focus {
-	border-color: var(--colors-text-secondary);
-	box-shadow: 0 0 4px var(--colors-accent-primary);
 }
 
 .checkbox-container-accent-selected .checkbox-input:checked {

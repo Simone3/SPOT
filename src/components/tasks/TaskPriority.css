@@ -25,14 +25,15 @@
 		var(--colors-background-secondary) calc(50% - var(--task-priority-border-offset)),
 		var(--colors-background-secondary)
 	);
-	padding: 2px 0;
+	/* The picker is centered on the task border, so horizontal padding grows it symmetrically and leaves the gradient
+	   where it is. The room it makes is what the focus ring of an option needs, which the picker would otherwise clip. */
+	padding: 2px 4px;
 }
 
 .task-priority-picker-option {
 	cursor: pointer;
 	user-select: none;
 	overflow: hidden;
-	outline: none;
 	width: 15px;
 	height: 15px;
 	padding: 2px;
@@ -50,9 +51,8 @@
 	background-color: var(--colors-interactive-active-background);
 }
 
-.task-priority-picker-option:focus:not([aria-disabled=true]) {
+.task-priority-picker-option:focus-visible:not([aria-disabled=true]) {
 	background-color: var(--colors-interactive-hover-background);
-	box-shadow: 0 0 4px var(--colors-accent-primary);
 }
 
 .task-priority-picker-option svg {

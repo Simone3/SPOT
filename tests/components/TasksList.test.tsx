@@ -188,9 +188,9 @@ describe('TasksList', () => {
 		expect(screen.getByPlaceholderText('Add tag...')).toBeDisabled();
 		expect(priorityPicker).toHaveAttribute('aria-disabled', 'true');
 		expect(dragHandle).toBeDisabled();
-		expect(deleteButton).toHaveAttribute('aria-disabled', 'true');
+		expect(deleteButton).toBeDisabled();
 		fireEvent.click(deleteButton);
-		expect(screen.queryByRole('button', { name: 'Delete Task' })).not.toBeInTheDocument();
+		expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
 		expect(applyPendingTaskChanges).not.toHaveBeenCalled();
 
 		fireEvent.click(completionCheckbox);
@@ -205,7 +205,7 @@ describe('TasksList', () => {
 		expect(screen.getByPlaceholderText('Add tag...')).not.toBeDisabled();
 		expect(priorityPicker).toHaveAttribute('aria-disabled', 'false');
 		expect(dragHandle).not.toBeDisabled();
-		expect(deleteButton).toHaveAttribute('aria-disabled', 'false');
+		expect(deleteButton).not.toBeDisabled();
 		act(() => {
 			vi.advanceTimersByTime(3000);
 		});

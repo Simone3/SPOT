@@ -806,6 +806,8 @@ Input components:
 
 `ButtonsSelect` and `FreeSelectInput` are string-valued input components. They accept simple option objects instead of app-specific domain types.
 
+`Clickable` makes anything the caller renders clickable, and carries no look of its own beyond the pointer, the disabled state and the shared focus ring. It renders a `button` and takes an optional label, which is what names a control that is only an icon, such as the task delete action. The header actions are named by the label they already show, so they pass none.
+
 `TextArea` wraps `MDXEditor`, which reads its `markdown` property only when it mounts and ignores every later change to it. `TextArea` therefore keeps an editor reference and pushes a new value in with `setMarkdown()` when the editor does not already hold it. Without that, an editor would keep showing content that is in no task state and in no database, for instance after tasks are reloaded following a failed write. The comparison against `getMarkdown()` is what keeps the editor untouched while the user types, because the value coming back from the task state is then the one the editor just produced.
 
 Tests replace `TextArea` with a plain `textarea` mock, so the behavior above is not covered by the automated tests. That mock was originally forced by `MDXEditor` version `4.2.0` being ESM-only, which the Jest version bundled with React Scripts could not load. Vitest loads ESM natively, so the obstacle is gone and the mock is now only a convenience: covering this behavior for real is possible whenever it is worth doing.
@@ -847,8 +849,24 @@ Theme variables include:
 - priority colors
 - danger variants, warning, and disabled colors
 - the Inter font family
+- the focus ring
 
 The current visual direction is dark, direct, and utilitarian.
+
+### Focus
+
+Every focusable control draws the same ring and none of them draws the one the browser would draw. `src/index.css` holds it as the `--focus-ring` variable and applies it to `:focus-visible` for the whole application, so a control needs no focus rule of its own:
+
+- The ring is a `box-shadow` and not an `outline`, so that it follows whatever shape the control already has, whether or not the control has a border. That is what lets a bordered button, a borderless chip input and a checkbox all light up the same way.
+- It is drawn on `:focus-visible` rather than `:focus`, so a control lights up when the keyboard reaches it and stays quiet when the pointer clicks it. A text entry field matches `:focus-visible` on a click too, which is why a field the user is about to type into does light up on a click.
+- A dark hairline separates the accent ring from what it surrounds, so the ring is visible even on a control filled with the accent color, such as a selected `ButtonsSelect` option or the selected day in the date picker.
+
+Two things follow from a single ring for everything:
+
+- A control that draws its own focus UI has to override the shared rule and say why. `PaneDivider` is the only one: it moves the ring onto the line it draws, because a ring around its whole grab area would be a glowing column running down the page.
+- A control the ring would be clipped on gets the room it needs from whatever clips it: the free-select dropdown insets its option list, and the priority picker carries horizontal padding. The picker is centered on the task border, so that padding grows it symmetrically and leaves its gradient where it is.
+
+Anything clickable is a real control and not a clickable `div`, so that the keyboard reaches it, activates it and shows the ring on it. `Clickable` is where that is enforced for the controls that are only an icon.
 
 ## Testing
 

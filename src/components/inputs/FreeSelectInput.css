@@ -18,17 +18,21 @@
 	width: 100%;
 }
 
+/* The horizontal padding is what the focus ring needs to not sit on the text, and the negative margin gives it back to
+   the layout, so the value keeps the position it would have without a ring */
 .free-select-input-value {
-	outline: none;
 	font: inherit;
 	color: var(--colors-text-secondary);
-	padding: 6px 0px;
+	padding: 6px 4px;
+	margin: 0 -4px;
 	width: 100%;
 	field-sizing: content;
 	max-inline-size: 300px;
 	text-overflow: ellipsis;
 	background: none;
 	border: none;
+	border-radius: 5px;
+	transition: box-shadow 120ms ease;
 }
 
 .free-select-input-dropdown-container {
@@ -54,12 +58,14 @@
 	max-height: 200px;
 }
 
+/* The list is inset by what the focus ring of an option needs, because the container it scrolls in would clip it */
 .free-select-input-options {
 	width: 100%;
 	list-style: none;
 	max-height: 200px;
 	margin: 0;
- 	padding: 0;
+	padding: 3px;
+	box-sizing: border-box;
 }
 
 .free-select-input-option {
@@ -68,10 +74,11 @@
 	padding: 6px;
 	overflow: hidden;
 	text-overflow: ellipsis;
-	outline: none;
+	border-radius: 5px;
 }
 
+/* The option under the pointer and the option the keyboard is on look the same, and the latter draws the ring too */
 .free-select-input-option:hover,
-.free-select-input-option:focus {
+.free-select-input-option:focus-visible {
 	background: var(--colors-accent-primary);
 }

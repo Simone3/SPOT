@@ -26,7 +26,7 @@ const Header = ({ title, actions }: HeaderProps): ReactElement => {
 					{actions.map((action) => {
 						return <Clickable onClick={action.onClick} key={action.id}>
 							{action.icon}
-							<div className='header-action-label'>{action.label}</div>
+							<span className='header-action-label'>{action.label}</span>
 						</Clickable>;
 					})
 					}

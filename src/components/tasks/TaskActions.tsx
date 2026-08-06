@@ -29,7 +29,7 @@ const TaskActions = ({ task, onChangeState, onDelete, dragHandle, disableSeconda
 			<Checkbox
 				value={state === 'COMPLETED'}
 				onChange={onChangeState}/>
-			<Clickable className='delete-button' disabled={disableSecondaryActions} onClick={() => {
+			<Clickable className='delete-button' label={t('tasks.actions.delete')} disabled={disableSecondaryActions} onClick={() => {
 				setConfirmOpen(true);
 			}}>
 				<DeleteIcon/>

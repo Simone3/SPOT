@@ -4,27 +4,30 @@ import type { MouseEventHandler, ReactElement, ReactNode } from 'react';
 type ClickableProps = {
 	children: ReactNode;
 	className?: string;
-	onClick: MouseEventHandler<HTMLDivElement>;
+	label?: string;
+	onClick: MouseEventHandler<HTMLButtonElement>;
 	disabled?: boolean;
 };
 
-const Clickable = ({ children, className, onClick, disabled }: ClickableProps): ReactElement => {
-	let fullClassName = `clickable ${className || ''}`;
-	if(disabled) {
-		fullClassName += ' clickable-disabled';
-	}
+/**
+ * Anything the caller renders, made clickable. It is a button and not a clickable div, because the keyboard has to
+ * reach it, activate it and show the focus ring on it the way it does for every other control in the application.
+ * @param props Clickable content, label and callbacks.
+ * @returns The clickable control.
+ */
+const Clickable = (props: ClickableProps): ReactElement => {
+	const { children, className, label, onClick, disabled } = props;
 
 	return (
-		<div
-			className={fullClassName}
-			aria-disabled={disabled}
-			onClick={(event) => {
-				if(!disabled) {
-					onClick(event);
-				}
-			}}>
+		<button
+			type='button'
+			className={`clickable ${className || ''}`}
+			aria-label={label}
+			title={label}
+			disabled={disabled}
+			onClick={onClick}>
 			{children}
-		</div>
+		</button>
 	);
 };
 

@@ -20,3 +20,15 @@
 .mdxeditor p {
 	margin: 0;
 }
+
+/* MDXEditor draws the editable area itself, so the focus ring is restated here to be sure it wins over the styles the
+   editor ships, and the radius is what makes it the same ring the other inputs draw */
+.textarea-input {
+	border-radius: 5px;
+	transition: box-shadow 120ms ease;
+}
+
+.textarea-input:focus-visible {
+	outline: none;
+	box-shadow: var(--focus-ring);
+}

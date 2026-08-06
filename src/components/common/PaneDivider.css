@@ -4,7 +4,6 @@
 	position: relative;
 	background-color: var(--colors-background-primary);
 	cursor: col-resize;
-	outline: none;
 }
 
 /* The line itself, which replaces the border the pane after the divider would draw */
@@ -22,6 +21,16 @@
 .pane-divider:focus-visible::after,
 .pane-divider-dragging::after {
 	background-color: var(--colors-accent-primary);
+}
+
+/* The divider is the line it draws and not the area it is grabbed by, so the focus ring goes on the line: a ring around
+   the whole grab area would be a glowing column running down the page */
+.pane-divider:focus-visible {
+	box-shadow: none;
+}
+
+.pane-divider:focus-visible::after {
+	box-shadow: var(--focus-ring);
 }
 
 .pane-divider + .pane {

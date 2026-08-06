@@ -30,24 +30,24 @@
 	box-sizing: border-box;
 }
 
-.task-actions .clickable:hover:not(.clickable-disabled) {
+.task-actions .clickable:hover:not(:disabled) {
 	background-color: var(--colors-interactive-hover-background);
 	border-color: var(--colors-border-subtle);
 }
 
-.task-actions .clickable:hover:not(.clickable-disabled) svg {
+.task-actions .clickable:hover:not(:disabled) svg {
 	color: var(--colors-text-primary);
 }
 
-.task-actions .clickable:active:not(.clickable-disabled) {
+.task-actions .clickable:active:not(:disabled) {
 	background-color: var(--colors-interactive-active-background);
 }
 
-.task-actions .delete-button:hover:not(.clickable-disabled) {
+.task-actions .delete-button:hover:not(:disabled) {
 	background-color: var(--colors-danger-background-muted);
 	border-color: var(--colors-danger-border);
 }
 
-.task-actions .delete-button:hover:not(.clickable-disabled) svg {
+.task-actions .delete-button:hover:not(:disabled) svg {
 	color: var(--colors-danger-text);
 }

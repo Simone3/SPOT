@@ -1,16 +1,20 @@
 
+/* The horizontal padding is what the focus ring needs to not sit on the text, and the negative margin gives it back to
+   the layout, so the value keeps the position it would have without a ring */
 .date-picker-input {
-	outline: none;
 	font: inherit;
 	color: var(--colors-text-secondary);
-	padding: 6px 0px;
+	padding: 6px 4px;
+	margin: 0 -4px;
 	width: 100%;
 	field-sizing: content;
 	max-inline-size: 300px;
 	text-overflow: ellipsis;
 	background: none;
 	border: none;
+	border-radius: 5px;
 	display: inline;
+	transition: box-shadow 120ms ease;
 }
 
 .react-datepicker-wrapper {
