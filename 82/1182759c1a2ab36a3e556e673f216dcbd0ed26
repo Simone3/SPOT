@@ -1,0 +1,48 @@
+CLAUDE.md
+  s_cd2e2d9504d714::t_1775184954ea3b 50
+DOCUMENTATION.md
+  s_cd2e2d9504d714::t_a05b87847fe983 10,98,118,173,367,373-374,403-420,769-772
+src/components/tasks/TasksPage.tsx
+  s_cd2e2d9504d714::t_3f58b946b701f2 31-32,63-71,83,92
+src/config/AppConfig.ts
+  s_cd2e2d9504d714::t_a05579da2bdbfc 55-67
+src/contexts/TasksContext.tsx
+  s_cd2e2d9504d714::t_69a6996e298a24 2-6,9,31,49-50,101,104-106,109,227-305,444,453
+src/framework/renderer/StorageQueue.ts
+  s_cd2e2d9504d714::t_4ce32e6d03cd85 39-42,89-92,256,264
+src/logic/TaskComparison.ts
+  s_cd2e2d9504d714::t_6f586b75ad9245 1-132
+src/logic/TaskStateAudit.ts
+  s_cd2e2d9504d714::t_15d17b8b4540cd 1-137
+src/logic/TaskStorageQueue.ts
+  s_cd2e2d9504d714::t_73bf5a9c594033 85-93
+tests/components/TasksPage.test.tsx
+  s_cd2e2d9504d714::t_f6a112f47bc585 5,678-744
+tests/logic/TaskComparison.test.ts
+  s_cd2e2d9504d714::t_7c3df01968a28e 1-95
+tests/logic/TaskStateAudit.test.ts
+  s_cd2e2d9504d714::t_b30b4552599fb0 1-116
+tests/logic/TaskStorageQueue.test.ts
+  s_cd2e2d9504d714::t_8e35b4e2406aac 6,93-104,381-412
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "821182759c1a2ab36a3e556e673f216dcbd0ed26",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_cd2e2d9504d714": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "41a438b0-b7f6-47a9-8ef1-640f9edd0def",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
