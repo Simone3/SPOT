@@ -1,0 +1,30 @@
+DOCUMENTATION.md
+  s_cd2e2d9504d714::t_a5a930c9fd7892 84,171,275,435,437-439,778
+src/framework/main/logging/AppLogger.ts
+  s_cd2e2d9504d714::t_45dc03a39f0d4c 1,33-36,157-211,232
+tests/framework/AppLogger.test.ts
+  s_cd2e2d9504d714::t_7ed103b1fc1d0c 4,40-56,75-77,263,271,277-321
+tests/main/TaskStorage.test.ts
+  s_cd2e2d9504d714::t_3f23e8899d1b4d 137-139
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "fa462b7b9665b4e2790a931b6bd3163178f22d47",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_cd2e2d9504d714": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "41a438b0-b7f6-47a9-8ef1-640f9edd0def",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
