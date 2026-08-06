@@ -1,0 +1,48 @@
+DOCUMENTATION.md
+  s_33b917c3b71d58::t_8fe3b42046ff00 125,183,217,604-605,760,785-801,832-833
+src/components/common/Page.tsx
+  s_33b917c3b71d58::t_7b310c00e9dc71 2,6-8,11,13
+src/components/common/Pane.css
+  s_33b917c3b71d58::t_9acaa5f36635ec 4-6
+src/components/common/Pane.tsx
+  s_33b917c3b71d58::t_10ee712ae34a88 6-8,12,14
+src/components/common/PaneDivider.css
+  s_33b917c3b71d58::t_ca8b34202ae6d5 1-35
+src/components/common/PaneDivider.tsx
+  s_33b917c3b71d58::t_66132efc72ff41 1-143
+src/components/common/ResizablePanes.tsx
+  s_33b917c3b71d58::t_fe7f031be5e0fb 1-65
+src/components/tasks/TasksPage.tsx
+  s_33b917c3b71d58::t_ea465782767009 5-6,14-16,130-134,141-142,172-173
+src/config/AppConfig.ts
+  s_33b917c3b71d58::t_f0909469af873c 63-76
+src/i18n/lang/en.ts
+  s_33b917c3b71d58::t_fcb7f8c8614b38 76
+src/logic/PaneLayout.ts
+  s_33b917c3b71d58::t_e3abc38679450c 1-98
+tests/components/ResizablePanes.test.tsx
+  s_33b917c3b71d58::t_b66aa46f342b28 1-139
+tests/logic/PaneLayout.test.ts
+  s_33b917c3b71d58::t_20a90dd44b1d45 1-63
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "489c22f8f3f81be41d6a8499cde1224b367e4e46",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_33b917c3b71d58": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "010be69c-ba5a-49bc-a6c9-bce915605a5b",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
