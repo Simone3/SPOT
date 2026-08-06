@@ -18,11 +18,12 @@ describe('PaneLayout', () => {
 		expect(clampPaneFraction(0.5, makeLimits())).toBe(0.5);
 	});
 
-	test('collapses the first pane as soon as it would be narrower than what it needs', () => {
-		expect(clampPaneFraction(199 / 900, makeLimits())).toBe(0);
-		expect(clampPaneFraction(-0.5, makeLimits())).toBe(0);
+	test('never shrinks the first pane below what it needs', () => {
+		expect(clampPaneFraction(199 / 900, makeLimits())).toBe(200 / 900);
+		expect(clampPaneFraction(0, makeLimits())).toBe(200 / 900);
+		expect(clampPaneFraction(-0.5, makeLimits())).toBe(200 / 900);
 
-		// One pixel more is a pane that still shows what it holds, so it is kept
+		// A pane dragged exactly onto the width it needs is left where the user put it
 		expect(clampPaneFraction(200 / 900, makeLimits())).toBe(200 / 900);
 	});
 
@@ -31,8 +32,9 @@ describe('PaneLayout', () => {
 		expect(clampPaneFraction(0.99, makeLimits())).toBe(500 / 900);
 	});
 
-	test('collapses the first pane when the page is too narrow for both panes', () => {
-		expect(clampPaneFraction(0.5, makeLimits({ resizableWidthPixels: 400 }))).toBe(0);
+	test('gives what width there is to the second pane when the page is too narrow for both', () => {
+		expect(clampPaneFraction(0.5, makeLimits({ resizableWidthPixels: 500 }))).toBe(100 / 500);
+		expect(clampPaneFraction(0.5, makeLimits({ resizableWidthPixels: 300 }))).toBe(0);
 	});
 
 	test('takes the wanted share as it is when the page has no width yet', () => {

@@ -6,7 +6,7 @@ export type PaneSplitLimits = {
 	// The width the two panes share, meaning the container width without the divider
 	resizableWidthPixels: number;
 
-	// The width the first pane needs to show what it holds: it is collapsed entirely rather than shown narrower than this
+	// The width the first pane needs to show what it holds: it is never dragged narrower than this
 	firstPaneMinimumWidthPixels: number;
 
 	// The width the second pane needs to show what it holds: the first pane never grows past what that leaves
@@ -27,8 +27,7 @@ const clampToUnitRange = (fraction: number): number => {
 };
 
 /**
- * Keeps a pane fraction inside what the layout allows: a first pane narrower than what it needs is collapsed entirely instead
- * of being left showing half of itself, and it never grows past what the second pane needs.
+ * Keeps a pane fraction inside what the layout allows: neither pane is ever dragged below the width it needs to show what it holds.
  * @param fraction Share of the resizable width the first pane would take.
  * @param limits What the measured widths of the page allow.
  * @returns The share the first pane may actually take.
@@ -43,13 +42,18 @@ export const clampPaneFraction = (fraction: number, limits: PaneSplitLimits): nu
 	}
 
 	// Rounded to whole pixels, which is what the pane is drawn on anyway: a share carried back and forth through a share of a
-	// width would otherwise land a fraction of a pixel under a limit and collapse a pane the user dragged exactly onto it
+	// width would otherwise land a fraction of a pixel outside a limit and move a pane the user dragged exactly onto it
 	const wantedWidthPixels = Math.round(wantedFraction * resizableWidthPixels);
 	const maximumWidthPixels = resizableWidthPixels - secondPaneMinimumWidthPixels;
 
-	// The second branch is a page too narrow to hold both panes, where the first one is the one that gives way
-	if(wantedWidthPixels < firstPaneMinimumWidthPixels || maximumWidthPixels <= 0) {
-		return 0;
+	// A page too narrow to hold both panes at once has no allowed width left to pick, so what there is goes to the second pane,
+	// which is where the user is working. The first pane gets its width back as soon as the window is wide enough again.
+	if(maximumWidthPixels <= firstPaneMinimumWidthPixels) {
+		return Math.max(maximumWidthPixels, 0) / resizableWidthPixels;
+	}
+
+	if(wantedWidthPixels < firstPaneMinimumWidthPixels) {
+		return firstPaneMinimumWidthPixels / resizableWidthPixels;
 	}
 
 	if(wantedWidthPixels > maximumWidthPixels) {

@@ -101,7 +101,7 @@ const PaneDivider = (props: PaneDividerProps): ReactElement => {
 
 			case 'Home':
 				event.preventDefault();
-				onFractionChange(0);
+				changeFraction(0);
 				break;
 
 			case 'End':

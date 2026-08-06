@@ -4,11 +4,14 @@
 	display: flex;
 	justify-content: space-between;
 	align-items: flex-start;
+
+	/* The title keeps the same distance from the first action as the actions keep from each other, so a narrow header stays readable */
+	--header-actions-gap: 10px;
 }
 
-/* A header never newlines: it is what a resizable pane is measured against, so it either fits on one line or the pane is too narrow to exist */
+/* A header never newlines: it is what a resizable pane is measured against, so it either fits on one line or the pane is not narrowed further */
 .header-title {
-	margin: 20px 0 0 20px;
+	margin: 20px var(--header-actions-gap) 0 20px;
 	white-space: nowrap;
 }
 
@@ -18,7 +21,7 @@
 	flex-direction: row;
 	color: var(--colors-text-secondary);
 	margin: 14px 14px 0 0;
-	gap: 10px;
+	gap: var(--header-actions-gap);
 }
 
 .header-actions .clickable {

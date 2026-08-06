@@ -2,7 +2,7 @@
 .pane {
 	flex: 1;
 
-	/* Flex items refuse to shrink below their content by default, which would keep a resized pane from ever collapsing */
+	/* Flex items refuse to shrink below their content by default, and the layout, not the content, decides how narrow a resized pane may get */
 	min-width: 0;
 	background-color: var(--colors-background-primary);
 	border-left: 2px solid var(--colors-background-secondary);

@@ -31,7 +31,7 @@ const measureRequiredWidthPixels = (headerLine: Element): number => {
 };
 
 // A pane is never squeezed below the headers it holds: a title and its actions having to newline is where a pane stops being readable,
-// and the user asking for less than that means they want the pane gone rather than half of it
+// so that is where the divider stops
 const measureMinimumWidthPixels = (pane: HTMLDivElement | null): number => {
 	const headerLines = Array.from(pane?.querySelectorAll(`.${HEADER_LINE_CLASS_NAME}`) ?? []);
 
@@ -43,7 +43,7 @@ const measureWidthPixels = (pane: HTMLDivElement | null): number => {
 };
 
 /**
- * A page split into two panes the user can resize by dragging the divider between them, down to collapsing the first one entirely.
+ * A page split into two panes the user can resize by dragging the divider between them, between the widths the two panes need.
  * The share each pane takes is kept in `src/logic/PaneLayout.ts` rather than in this component, so that navigating away from the
  * page and back does not undo the resizing.
  * @param props The layout identity, the share the first pane starts at, the divider label, and the two panes.
@@ -99,7 +99,7 @@ const ResizablePanes = (props: ResizablePanesProps): ReactElement => {
 	// The two shares always add up to one, so the panes fill the width the divider leaves them and nothing has to be measured to render
 	return (
 		<Page>
-			<Pane relativeSize={firstPaneFraction} inert={firstPaneFraction === 0} ref={firstPaneRef}>
+			<Pane relativeSize={firstPaneFraction} ref={firstPaneRef}>
 				{firstPane}
 			</Pane>
 			<PaneDivider

@@ -46,10 +46,6 @@ const getDivider = (): HTMLElement => {
 	return screen.getByRole('separator', { name: 'Resize the first pane' });
 };
 
-const getFirstPane = (): HTMLElement => {
-	return screen.getByText('First pane').closest('.pane')!;
-};
-
 const dragDividerBy = (deltaPixels: number): void => {
 	fireEvent.mouseDown(getDivider(), { button: 0, clientX: 300 });
 	fireEvent.mouseMove(window, { clientX: 300 + deltaPixels });
@@ -64,6 +60,10 @@ const toMaximumFraction = (secondPaneMinimumWidthPixels: number): number => {
 	return (resizableWidthPixels - secondPaneMinimumWidthPixels) / resizableWidthPixels;
 };
 
+const toMinimumFraction = (firstPaneMinimumWidthPixels: number): number => {
+	return firstPaneMinimumWidthPixels / resizableWidthPixels;
+};
+
 describe('ResizablePanes', () => {
 	afterEach(() => {
 		resetPaneLayoutForTests();
@@ -73,7 +73,6 @@ describe('ResizablePanes', () => {
 		renderResizablePanes();
 
 		expect(getDivider()).toHaveAttribute('aria-valuenow', toPercentage(defaultFraction));
-		expect(getFirstPane()).not.toHaveAttribute('inert');
 	});
 
 	test('resizes the panes when the divider is dragged', () => {
@@ -89,18 +88,15 @@ describe('ResizablePanes', () => {
 		expect(getDivider()).toHaveAttribute('aria-valuenow', toPercentage(defaultFraction + 150 / resizableWidthPixels));
 	});
 
-	test('collapses the first pane when the divider is dragged past what it needs', () => {
+	test('never drags the first pane below the width it needs', () => {
 		renderResizablePanes();
 
 		dragDividerBy(-resizableWidthPixels);
 
-		expect(getDivider()).toHaveAttribute('aria-valuenow', '0');
-
-		// Nothing of a collapsed pane is reachable, so what it holds is out of the tab order while it has no width
-		expect(getFirstPane()).toHaveAttribute('inert');
+		expect(getDivider()).toHaveAttribute('aria-valuenow', toPercentage(toMinimumFraction(PANE_LAYOUT_CONFIG.minimumPaneWidthPixels)));
 	});
 
-	test('never drags the second pane away entirely', () => {
+	test('never drags the second pane below the width it needs', () => {
 		renderResizablePanes();
 
 		dragDividerBy(resizableWidthPixels);
@@ -133,13 +129,13 @@ describe('ResizablePanes', () => {
 		setElementWidth(headerLines[1].children[0], 80);
 		setElementWidth(headerLines[1].children[1], 320);
 
-		// The filters header needs 220, so the pane is still shown at exactly that width
+		// The filters header needs 220, so the pane is left at exactly that width
 		dragDividerBy(220 - firstPaneWidthPixels);
-		expect(getDivider()).toHaveAttribute('aria-valuenow', toPercentage(220 / resizableWidthPixels));
+		expect(getDivider()).toHaveAttribute('aria-valuenow', toPercentage(toMinimumFraction(220)));
 
-		// One pixel narrower is a pane that cannot show its own heading anymore, so it collapses instead
+		// One pixel narrower is a pane that cannot show its own heading anymore, so the divider stops there
 		dragDividerBy(-1);
-		expect(getDivider()).toHaveAttribute('aria-valuenow', '0');
+		expect(getDivider()).toHaveAttribute('aria-valuenow', toPercentage(toMinimumFraction(220)));
 
 		// The tasks header is wider than the fallback minimum, so it is what stops the filters pane from growing
 		dragDividerBy(resizableWidthPixels);
@@ -156,7 +152,7 @@ describe('ResizablePanes', () => {
 		expect(getDivider()).toHaveAttribute('aria-valuenow', toPercentage(defaultFraction));
 
 		fireEvent.keyDown(getDivider(), { key: 'Home' });
-		expect(getDivider()).toHaveAttribute('aria-valuenow', '0');
+		expect(getDivider()).toHaveAttribute('aria-valuenow', toPercentage(toMinimumFraction(PANE_LAYOUT_CONFIG.minimumPaneWidthPixels)));
 
 		fireEvent.keyDown(getDivider(), { key: 'End' });
 		expect(getDivider()).toHaveAttribute('aria-valuenow', toPercentage(toMaximumFraction(PANE_LAYOUT_CONFIG.minimumPaneWidthPixels)));
