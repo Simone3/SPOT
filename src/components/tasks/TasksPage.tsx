@@ -28,7 +28,8 @@ const createStorageStatusMessage = (storageStatus: StorageStatus): string | unde
 
 const createTaskStorageFeedback = (
 	taskStorageWarning: string | undefined,
-	taskStorageStatus: StorageStatus | undefined
+	taskStorageStatus: StorageStatus | undefined,
+	taskStateAuditWarning: string | undefined
 ): TaskStorageFeedback | undefined => {
 	const statusMessage = taskStorageStatus ? createStorageStatusMessage(taskStorageStatus) : undefined;
 
@@ -59,6 +60,15 @@ const createTaskStorageFeedback = (
 		};
 	}
 
+	// The audit only compares, so what it found is reported below every failure that means something is not being saved right now
+	if(taskStateAuditWarning) {
+		return {
+			role: 'status',
+			title: 'Tasks on screen and stored tasks differ',
+			message: taskStateAuditWarning
+		};
+	}
+
 	return undefined;
 };
 
@@ -70,6 +80,7 @@ const TasksPage = (): ReactElement => {
 		taskStartupState,
 		taskStorageWarning,
 		taskStorageStatus,
+		taskStateAuditWarning,
 		onFilterChange,
 		onResetDefaultFilters,
 		onRefreshTasks,
@@ -78,7 +89,7 @@ const TasksPage = (): ReactElement => {
 		onAddNewTask,
 		onDeleteTask
 	} = useContext(TasksContext)!;
-	const taskStorageFeedback = createTaskStorageFeedback(taskStorageWarning, taskStorageStatus);
+	const taskStorageFeedback = createTaskStorageFeedback(taskStorageWarning, taskStorageStatus, taskStateAuditWarning);
 
 	if(taskStartupState.state === 'loading') {
 		return (

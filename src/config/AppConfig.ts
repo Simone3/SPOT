@@ -52,6 +52,19 @@ export const TASKS_CONFIG = {
 	sortPositionStep: 1000
 } as const;
 
+export const AUDIT_CONFIG = {
+	// Task updates are optimistic, so the task state can only be known to have reached the database by reading it back. This is a
+	// first-period safety net meant to be switched off once the write path has been trusted for a while, not a part of that path.
+	enabled: true,
+
+	// The first audit lets the application settle instead of running right after the startup load, which nothing has written over yet
+	initialDelayMs: 60000,
+	intervalMs: 120000,
+
+	// A report listing every task would be unreadable and would put the whole task list in the console, so the listed ones are capped
+	maximumReportedTasks: 20
+} as const;
+
 export const SHUTDOWN_CONFIG = {
 	// A write that failed can still be sitting on the retry delay when the flush handshake starts, and every retry that fails again schedules
 	// the next one, so the wait has to cover the whole retry budget of one command and not just a single delay: the renderer cannot ask for

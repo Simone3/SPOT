@@ -2,6 +2,7 @@ import type { Mock } from 'vitest';
 import { act, fireEvent, render, screen, type RenderResult } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { makeTask } from '../testUtils';
+import { AUDIT_CONFIG } from 'src/config/AppConfig';
 import { flushPendingTaskChanges, resetPendingTaskChangesForTests } from 'src/logic/PendingTaskChanges';
 import { resetTaskStorageQueueForTests, waitForTaskStorageQueue } from 'src/logic/TaskStorageQueue';
 import { TasksContextProvider } from 'src/contexts/TasksContext';
@@ -673,5 +674,72 @@ describe('TasksPage', () => {
 		expect(screen.getByText('Updated by mock')).toBeInTheDocument();
 		expect(screen.queryByText('Persisted startup task')).not.toBeInTheDocument();
 		expect(loadTasks).toHaveBeenCalledTimes(1);
+	});
+
+	test('audits the task state against the database and reports what the two do not agree on', async() => {
+		const shownTask = makeTask({
+			id: 'audited-task',
+			text: 'Audited task'
+		});
+		const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const loadTasks: Mock<() => Promise<LoadTasksResult>> = vi.fn(async(): Promise<LoadTasksResult> => {
+			return {
+				ok: true,
+
+				// The audit reads the database again, and this time it does not hold the task the renderer is showing
+				tasks: loadTasks.mock.calls.length === 1 ? [ shownTask ] : [],
+				status: healthyStatus
+			};
+		});
+		setWindowSpotStorage(createMockSpotStorage(loadTasks));
+		vi.useFakeTimers();
+
+		renderTasksPage();
+		await act(async() => {});
+
+		expect(screen.getByText('Audited task')).toBeInTheDocument();
+
+		await act(async() => {
+			vi.advanceTimersByTime(AUDIT_CONFIG.initialDelayMs);
+		});
+
+		expect(loadTasks).toHaveBeenCalledTimes(2);
+
+		const auditNotice = screen.getByRole('status');
+		expect(auditNotice).toHaveTextContent('Tasks on screen and stored tasks differ');
+		expect(auditNotice).toHaveTextContent('1 task not stored yet');
+
+		// The message only says how much drifted, so the tasks and the fields it found are reported to the console
+		expect(consoleWarn).toHaveBeenCalledTimes(1);
+	});
+
+	test('does not audit while a task change has not reached storage yet', async() => {
+		const loadTasks = createLoadTasks([ makeTask({
+			id: 'persisted-task',
+			text: 'Persisted startup task'
+		}) ]);
+		const pendingWrite = createDeferred<TaskStorageCommandResult>();
+		setWindowSpotStorage(createMockSpotStorage(loadTasks, vi.fn(() => {
+			return pendingWrite.promise;
+		})));
+		vi.useFakeTimers();
+
+		renderTasksPage();
+		await act(async() => {});
+		await clickAndSettle(screen.getByRole('button', { name: 'Tasks add' }));
+
+		await act(async() => {
+			vi.advanceTimersByTime(AUDIT_CONFIG.initialDelayMs);
+		});
+
+		// The task the user just added is still on its way to the database, so the task state being ahead of it is the write
+		// path working as designed and never a drift to report
+		expect(loadTasks).toHaveBeenCalledTimes(1);
+		expect(screen.queryByRole('status')).not.toBeInTheDocument();
+
+		pendingWrite.resolve(createSuccessfulCommandResult());
+		await act(async() => {
+			await waitForTaskStorageQueue();
+		});
 	});
 });

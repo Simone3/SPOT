@@ -1,9 +1,12 @@
 import { createContext, useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from 'react';
-import { clearPendingTaskChanges, flushPendingTaskChanges, registerPendingTaskChangesApplier } from 'src/logic/PendingTaskChanges';
-import { getTaskStorageQueueState, sendTaskStorageCommand, subscribeToTaskStorageQueue } from 'src/logic/TaskStorageQueue';
+import { AUDIT_CONFIG } from 'src/config/AppConfig';
+import { clearPendingTaskChanges, flushPendingTaskChanges, hasPendingTaskChanges, registerPendingTaskChangesApplier } from 'src/logic/PendingTaskChanges';
+import { createPersistedTaskChange, hasPersistedTaskChange, taskToPersistedTask } from 'src/logic/TaskComparison';
+import { auditTaskState, createTaskStateAuditMessage } from 'src/logic/TaskStateAudit';
+import { getTaskStorageQueueState, isTaskStorageQueueIdle, sendTaskStorageCommand, subscribeToTaskStorageQueue } from 'src/logic/TaskStorageQueue';
 import { findTaskById } from 'src/logic/TasksLogic';
 import { getInitialTaskState, addTaskToTaskState, refreshVisibleTasksInTaskState, deleteTaskFromTaskState, changeFiltersInTaskState, loadTasksIntoTaskState, resetFiltersTaskState, updateTaskInTaskState, sortTasksByImportanceInTaskState, moveActiveTaskInTaskState, type TaskStateContainer } from 'src/logic/TaskStateLogic';
-import type { PersistedTask, PersistedTaskChange, Task, TaskChange, TasksContainer } from 'src/types/TaskTypes';
+import type { PersistedTaskChange, Task, TaskChange, TasksContainer } from 'src/types/TaskTypes';
 import type { TaskFilterChange } from 'src/types/FilterTypes';
 import type { SpotStorageApi, StorageStatus, TaskStorageCommand } from 'src/types/TaskStorageTypes';
 
@@ -25,6 +28,7 @@ export interface TasksContextValue {
 	taskStartupState: TaskStartupState;
 	taskStorageWarning: string | undefined;
 	taskStorageStatus: StorageStatus | undefined;
+	taskStateAuditWarning: string | undefined;
 	onFilterChange: (changedFilters: TaskFilterChange) => void;
 	onResetDefaultFilters: () => void;
 	onRefreshTasks: () => void;
@@ -40,18 +44,9 @@ type TasksContextProviderProps = {
 	children: ReactNode;
 };
 
-const PERSISTED_TASK_FIELD_NAMES: readonly (keyof PersistedTaskChange)[] = [
-	'text',
-	'state',
-	'priority',
-	'owner',
-	'dueDate',
-	'tags',
-	'sortPosition',
-	'completionDate'
-];
-
 const ELECTRON_STORAGE_API_UNAVAILABLE_MESSAGE = 'SPOT must be opened from the Electron app.';
+
+const TASK_STATE_AUDIT_LOG_MESSAGE = 'The tasks on screen and the tasks in the database are not the same';
 
 const getErrorMessage = (error: unknown): string => {
 	if(error instanceof Error) {
@@ -63,85 +58,6 @@ const getErrorMessage = (error: unknown): string => {
 	}
 
 	return String(error);
-};
-
-const cloneDate = (date: Date | undefined): Date | undefined => {
-	return date ? new Date(date) : undefined;
-};
-
-const taskToPersistedTask = (task: Task): PersistedTask => {
-	return {
-		id: task.id,
-		text: task.text,
-		state: task.state,
-		priority: task.priority,
-		owner: task.owner,
-		dueDate: task.dueDate,
-
-		// An empty tag is a tag input the user has not filled in yet, or one they just emptied: it is never persisted, and stripping
-		// it on both sides of the comparison also keeps it from ever looking like a change
-		tags: task.tags.filter((tag) => {
-			return tag;
-		}),
-		sortPosition: task.sortPosition,
-		completionDate: cloneDate(task.completionDate)
-	};
-};
-
-const getPersistedTaskValue = (
-	task: Task,
-	fieldName: keyof PersistedTask
-): PersistedTask[keyof PersistedTask] => {
-	return taskToPersistedTask(task)[fieldName];
-};
-
-const arePersistedTaskValuesEqual = (
-	previousValue: PersistedTask[keyof PersistedTask],
-	nextValue: PersistedTask[keyof PersistedTask]
-): boolean => {
-	if(previousValue instanceof Date || nextValue instanceof Date) {
-		return previousValue instanceof Date &&
-			nextValue instanceof Date &&
-			previousValue.getTime() === nextValue.getTime();
-	}
-
-	if(Array.isArray(previousValue) || Array.isArray(nextValue)) {
-		return Array.isArray(previousValue) &&
-			Array.isArray(nextValue) &&
-			previousValue.length === nextValue.length &&
-			previousValue.every((value, index) => {
-				return value === nextValue[index];
-			});
-	}
-
-	return previousValue === nextValue;
-};
-
-const setPersistedTaskChangeValue = (
-	change: PersistedTaskChange,
-	fieldName: keyof PersistedTaskChange,
-	value: PersistedTask[keyof PersistedTask]
-): void => {
-	(change as Partial<Record<keyof PersistedTaskChange, PersistedTask[keyof PersistedTask]>>)[fieldName] = value;
-};
-
-const createPersistedTaskChange = (previousTask: Task, nextTask: Task): PersistedTaskChange => {
-	const change: PersistedTaskChange = {};
-
-	PERSISTED_TASK_FIELD_NAMES.forEach((fieldName) => {
-		const previousValue = getPersistedTaskValue(previousTask, fieldName);
-		const nextValue = getPersistedTaskValue(nextTask, fieldName);
-
-		if(!arePersistedTaskValuesEqual(previousValue, nextValue)) {
-			setPersistedTaskChangeValue(change, fieldName, nextValue);
-		}
-	});
-
-	return change;
-};
-
-const hasPersistedTaskChange = (change: PersistedTaskChange): boolean => {
-	return Object.keys(change).length > 0;
 };
 
 const tryReadTaskStorageStatus = async(spotStorage: SpotStorageApi): Promise<StorageStatus | undefined> => {
@@ -182,10 +98,15 @@ export const TasksContextProvider = ({ children }: TasksContextProviderProps): R
 	const [ taskStartupState, setTaskStartupState ] = useState<TaskStartupState>({ state: 'loading' });
 	const [ taskStorageWarning, setTaskStorageWarning ] = useState<string | undefined>();
 	const [ taskStorageStatus, setTaskStorageStatus ] = useState<StorageStatus | undefined>();
+	const [ taskStateAuditWarning, setTaskStateAuditWarning ] = useState<string | undefined>();
 	const taskStateRef = useRef(taskState);
+
+	// Counts task state changes so that the audit can tell whether the one it started against is still the current one
+	const taskStateGenerationRef = useRef(0);
 
 	const commitTaskState = useCallback((nextTaskState: TaskStateContainer): void => {
 		taskStateRef.current = nextTaskState;
+		taskStateGenerationRef.current += 1;
 		setTaskState(nextTaskState);
 	}, []);
 
@@ -302,6 +223,85 @@ export const TasksContextProvider = ({ children }: TasksContextProviderProps): R
 			setTaskStorageWarning(queueState.unsavedChangesMessage);
 		});
 	}, []);
+
+	// Task updates are optimistic and tasks are only read at startup, so nothing would notice a change that never reached the
+	// database until the next launch showed the task without it. The audit reads the database back while the application runs
+	// and reports what the two do not agree on. It only reads: the task state is never reconciled, because it holds what the
+	// user wanted and the audit has no way of knowing which of the two sides is the mistaken one.
+	useEffect(() => {
+		const spotStorage = window.spotStorage as SpotStorageApi | undefined;
+
+		if(!AUDIT_CONFIG.enabled || taskStartupState.state !== 'loaded' || !spotStorage) {
+			return undefined;
+		}
+
+		let didCancelAudit = false;
+		let auditTimeout: ReturnType<typeof setTimeout> | undefined;
+
+		// Everything the user changed is on its way to the database until the buffer is empty and the queue has drained, so the task
+		// state being ahead of it is the write path working as designed and not a drift. A change the queue gave up on is already
+		// reported as unsaved, and it is a difference the audit would keep finding for the rest of the session.
+		const isTaskStateQuiescent = (): boolean => {
+			return !document.hidden &&
+				!hasPendingTaskChanges() &&
+				isTaskStorageQueueIdle() &&
+				!getTaskStorageQueueState().unsavedChangesMessage;
+		};
+
+		const runAudit = async(): Promise<void> => {
+			if(!isTaskStateQuiescent()) {
+				return;
+			}
+
+			const auditedGeneration = taskStateGenerationRef.current;
+			const loadTasksResult = await spotStorage.loadTasks().catch(() => {
+				return undefined;
+			});
+
+			// A database that cannot be read is not a drift, and it is already reported through the storage status. The user can also
+			// change anything while it is being read, so an audit that raced a change reports that change instead of a drift: it is
+			// dropped, and the next one runs against a task state that has settled again.
+			if(didCancelAudit ||
+				!loadTasksResult?.ok ||
+				auditedGeneration !== taskStateGenerationRef.current ||
+				!isTaskStateQuiescent()) {
+				return;
+			}
+
+			const { tasksContainer } = taskStateRef.current;
+			const report = auditTaskState([ ...tasksContainer.active, ...tasksContainer.completed ], loadTasksResult.tasks);
+
+			if(report.isAligned) {
+				return;
+			}
+
+			// The message says how much drifted, while the console holds which tasks and which fields
+			console.warn(TASK_STATE_AUDIT_LOG_MESSAGE, report);
+			setTaskStateAuditWarning(createTaskStateAuditMessage(report));
+		};
+
+		// The audit reschedules itself instead of running on an interval, so a read waiting behind a write or a backup can never
+		// have another one queued up behind it
+		const scheduleAudit = (delayMs: number): void => {
+			auditTimeout = setTimeout(() => {
+				void runAudit().then(() => {
+					if(!didCancelAudit) {
+						scheduleAudit(AUDIT_CONFIG.intervalMs);
+					}
+				});
+			}, delayMs);
+		};
+
+		scheduleAudit(AUDIT_CONFIG.initialDelayMs);
+
+		return () => {
+			didCancelAudit = true;
+
+			if(auditTimeout) {
+				clearTimeout(auditTimeout);
+			}
+		};
+	}, [ taskStartupState.state ]);
 
 	const onFilterChange = useCallback((changedFilters: TaskFilterChange): void => {
 		commitTaskState(changeFiltersInTaskState(taskStateRef.current, changedFilters));
@@ -441,6 +441,7 @@ export const TasksContextProvider = ({ children }: TasksContextProviderProps): R
 			taskStartupState,
 			taskStorageWarning,
 			taskStorageStatus,
+			taskStateAuditWarning,
 			onFilterChange,
 			onResetDefaultFilters,
 			onRefreshTasks,
@@ -449,7 +450,7 @@ export const TasksContextProvider = ({ children }: TasksContextProviderProps): R
 			onAddNewTask,
 			onDeleteTask
 		};
-	}, [ taskState, taskStartupState, taskStorageWarning, taskStorageStatus, onFilterChange, onResetDefaultFilters, onRefreshTasks, onMoveActiveTask, onSortTasksByImportance, onAddNewTask, onDeleteTask ]);
+	}, [ taskState, taskStartupState, taskStorageWarning, taskStorageStatus, taskStateAuditWarning, onFilterChange, onResetDefaultFilters, onRefreshTasks, onMoveActiveTask, onSortTasksByImportance, onAddNewTask, onDeleteTask ]);
 
 	return (
 		<TasksContext.Provider value={contextValue}>

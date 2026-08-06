@@ -3,6 +3,7 @@ import { STORAGE_CONFIG } from 'src/config/AppConfig';
 import {
 	clearTaskStorageFailures,
 	getTaskStorageQueueState,
+	isTaskStorageQueueIdle,
 	resetTaskStorageQueueForTests,
 	retryTaskStorageQueueNow,
 	sendTaskStorageCommand,
@@ -87,6 +88,18 @@ const setExecuteTaskCommand = (executeTaskCommand: SpotStorageApi['executeTaskCo
 			notifyPendingTaskChangesFlushed: vi.fn()
 		}
 	});
+};
+
+const createDeferred = <T>(): { promise: Promise<T>; resolve: (value: T) => void } => {
+	let resolve: (value: T) => void = () => {};
+	const promise = new Promise<T>((promiseResolve) => {
+		resolve = promiseResolve;
+	});
+
+	return {
+		promise,
+		resolve
+	};
 };
 
 const waitForQueuedWork = (): Promise<void> => {
@@ -364,5 +377,37 @@ describe('TaskStorageQueue', () => {
 
 	test('resolves the idle wait right away when there is nothing to write', async() => {
 		await expect(waitForTaskStorageQueue()).resolves.toBeUndefined();
+	});
+
+	test('reports the queue as busy from the moment a command is queued until it is written', async() => {
+		const pendingWrite = createDeferred<TaskStorageCommandResult>();
+		setExecuteTaskCommand(vi.fn(() => {
+			return pendingWrite.promise;
+		}));
+
+		expect(isTaskStorageQueueIdle()).toBe(true);
+
+		sendTaskStorageCommand(createUpdateCommand('first', 'First'));
+
+		expect(isTaskStorageQueueIdle()).toBe(false);
+
+		pendingWrite.resolve(healthyResult);
+		await waitForTaskStorageQueue();
+
+		expect(isTaskStorageQueueIdle()).toBe(true);
+	});
+
+	test('reports the queue as busy while a failed write waits out its retry delay', async() => {
+		vi.useFakeTimers();
+		setExecuteTaskCommand(vi.fn(async() => {
+			return createDatabaseFailure('Database is locked.');
+		}));
+
+		sendTaskStorageCommand(createUpdateCommand('first', 'First'));
+		await Promise.resolve();
+		await Promise.resolve();
+
+		// The command is still queued, so nothing may treat the renderer as having caught up with the database
+		expect(isTaskStorageQueueIdle()).toBe(false);
 	});
 });

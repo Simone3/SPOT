@@ -36,6 +36,10 @@ export interface StorageQueue<TCommand> {
 	// cannot wait forever must bound the wait themselves.
 	waitForIdle: () => Promise<void>;
 
+	// Whether everything the renderer changed has reached storage. Used by callers that must not act while the renderer is
+	// legitimately ahead of storage, and that have nothing to do while it is, so waiting for the queue would only defer them.
+	isIdle: () => boolean;
+
 	// Forgets the warnings about changes that were not stored. Used when records are loaded again from the database,
 	// because the renderer state does not hold those changes anymore.
 	clearFailures: () => void;
@@ -81,6 +85,10 @@ export const createStorageQueue = <TCommand>({
 	let isWriting = false;
 
 	let retryTimeout: ReturnType<typeof setTimeout> | undefined;
+
+	const isQueueIdle = (): boolean => {
+		return queuedCommands.length === 0 && !isWriting;
+	};
 
 	const notifyStateSubscribers = (): void => {
 		stateSubscribers.forEach((subscriber) => {
@@ -245,7 +253,7 @@ export const createStorageQueue = <TCommand>({
 			void writeQueuedCommands();
 		},
 		waitForIdle: () => {
-			if(queuedCommands.length === 0 && !isWriting) {
+			if(isQueueIdle()) {
 				return Promise.resolve();
 			}
 
@@ -253,6 +261,7 @@ export const createStorageQueue = <TCommand>({
 				idleWaiters.add(resolve);
 			});
 		},
+		isIdle: isQueueIdle,
 		clearFailures: () => {
 			droppedCommandMessage = undefined;
 			setQueueState({

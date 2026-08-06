@@ -83,6 +83,15 @@ export const waitForTaskStorageQueue = (): Promise<void> => {
 };
 
 /**
+ * Tells whether every task change has reached storage.
+ * Used by callers that must not read the database back while the task state is legitimately still ahead of it.
+ * @returns Whether nothing is left to write.
+ */
+export const isTaskStorageQueueIdle = (): boolean => {
+	return taskStorageQueue.isIdle();
+};
+
+/**
  * Forgets the warnings about changes that were not stored.
  * Used when tasks are loaded again from the database, because the task state does not hold those changes anymore.
  */
