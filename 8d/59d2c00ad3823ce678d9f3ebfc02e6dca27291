@@ -1,0 +1,26 @@
+DOCUMENTATION.md
+  s_cd2e2d9504d714::t_64f84514044df6 84,171,435-437,776
+src/config/AppConfig.ts
+  s_cd2e2d9504d714::t_ffa3d0653e1bb6 45,62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "8d59d2c00ad3823ce678d9f3ebfc02e6dca27291",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_cd2e2d9504d714": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "41a438b0-b7f6-47a9-8ef1-640f9edd0def",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
