@@ -1,0 +1,60 @@
+CLAUDE.md
+  s_0632cfa30c489f::t_657fdb9207f7d8 48
+DOCUMENTATION.md
+  s_0632cfa30c489f::t_7a78d14059aafd 809-810,852,856-870
+src/components/common/Clickable.css
+  s_0632cfa30c489f::t_e417bbfb566ec6 2,4-9,19,23
+src/components/common/Clickable.tsx
+  s_0632cfa30c489f::t_0bbda2ac4a1e20 7-8,12-19,22-28,30
+src/components/common/Header.css
+  s_0632cfa30c489f::t_4050f0a1354944 38,44
+src/components/common/Header.tsx
+  s_0632cfa30c489f::t_36d12eecff76a1 29
+src/components/common/PaneDivider.css
+  s_0632cfa30c489f::t_e88e22382e8b07 26-35
+src/components/common/SidebarElement.css
+  s_0632cfa30c489f::t_0c942ed929bf83 34-35
+src/components/inputs/DatePicker.css
+  s_0632cfa30c489f::t_d05b08f665329a 2-3,7-8,15,17
+src/components/inputs/FreeSelectInput.css
+  s_0632cfa30c489f::t_e461d8c96f2a2a 21-22,26-27,34-35,61,67-68,77,80,82
+src/components/inputs/TextArea.css
+  s_0632cfa30c489f::t_574c9ce7ca5946 23-34
+src/components/inputs/TextInput.css
+  s_0632cfa30c489f::t_3a78e592a88a3b 19
+src/components/tasks/TaskActions.css
+  s_0632cfa30c489f::t_d1c1ffeadc963b 33,38,42,46,51
+src/components/tasks/TaskActions.tsx
+  s_0632cfa30c489f::t_3b51b5d5ce9f26 32
+src/components/tasks/TaskDragHandle.css
+  s_0632cfa30c489f::t_5413980a4e62c1 17-22,25
+src/components/tasks/TaskPriority.css
+  s_0632cfa30c489f::t_4aaea16c2122eb 28-30,54
+src/i18n/lang/en.ts
+  s_0632cfa30c489f::t_aea0d646c292fd 40-41
+src/index.css
+  s_0632cfa30c489f::t_bc9235a7b1deba 37-50
+tests/components/TasksList.test.tsx
+  s_0632cfa30c489f::t_5c7a29bbbc2af9 191,193,208
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "075ffd56c17bd94a49853ac6990dbeb0c07a706f",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_0632cfa30c489f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e92cf7be-43f6-4bb5-bdfe-eeb53ffa7c66",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
