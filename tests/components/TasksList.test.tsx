@@ -137,6 +137,27 @@ describe('TasksList', () => {
 		expect(props.onAddNewTask).toHaveBeenCalledTimes(1);
 	});
 
+	test('labels every chip input with its icon, so clicking the icon focuses the input', () => {
+		const task = makeTask({
+			text: 'Task with chips',
+			visible: true
+		});
+		const { container } = renderTasksList([ task ]);
+
+		const chipInputs = [
+			screen.getByPlaceholderText('Me'),
+			screen.getByPlaceholderText('No due date'),
+			screen.getByPlaceholderText('Add tag...')
+		];
+		const chipIcons = Array.from(container.querySelectorAll('.chip-icon-left'));
+
+		expect(chipIcons).toHaveLength(chipInputs.length);
+		for(let i = 0; i < chipInputs.length; i++) {
+			expect(chipInputs[i].id).toBeTruthy();
+			expect(chipIcons[i]).toHaveAttribute('for', chipInputs[i].id);
+		}
+	});
+
 	test('saves task edits and delays completion while disabling secondary controls', () => {
 		vi.useFakeTimers();
 		const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});

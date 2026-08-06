@@ -2,19 +2,20 @@ import 'src/components/common/Chip.css';
 import type { ReactElement, ReactNode } from 'react';
 
 type ChipProps = {
+	inputId: string;
 	leftIcon?: ReactNode;
 	rightIcon?: ReactNode;
 	children: ReactNode;
 };
 
-const Chip = ({ leftIcon, rightIcon, children }: ChipProps): ReactElement => {
+const Chip = ({ inputId, leftIcon, rightIcon, children }: ChipProps): ReactElement => {
 	return (
 		<div className='chip'>
-			{leftIcon}
+			{leftIcon && <label className='chip-icon chip-icon-left' htmlFor={inputId}>{leftIcon}</label>}
 			<div className='chip-content'>
 				{children}
 			</div>
-			{rightIcon}
+			{rightIcon && <span className='chip-icon chip-icon-right'>{rightIcon}</span>}
 		</div>
 	);
 };

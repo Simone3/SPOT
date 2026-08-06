@@ -5,6 +5,7 @@ import 'src/components/inputs/DatePicker.css';
 import { DateUtils } from 'src/framework/utils/DateUtils';
 
 type DatePickerProps = {
+	id?: string;
 	placeholder?: string;
 	value?: string;
 	onChange: (value: Date | null) => void;
@@ -12,8 +13,10 @@ type DatePickerProps = {
 	disabled?: boolean;
 };
 
-const DatePicker = ({ placeholder, value, onChange, onBlur, disabled }: DatePickerProps): ReactElement => {
-	const id = useId();
+const DatePicker = ({ id: idFromProps, placeholder, value, onChange, onBlur, disabled }: DatePickerProps): ReactElement => {
+	// The caller can own the input id, so that something outside this component (a chip icon, for one) can label the input
+	const generatedId = useId();
+	const id = idFromProps || generatedId;
 
 	return (
 		<div className='date-picker-container'>

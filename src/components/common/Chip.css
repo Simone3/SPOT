@@ -10,11 +10,17 @@
 	width: 1em;
 }
 
-.chip svg:first-child {
-	padding-right: 6px;
+/* The icon wrappers only carry the label association, so the icons stay direct flex items of the chip */
+.chip-icon {
+	display: contents;
 }
 
-.chip svg:last-child {
+.chip-icon-left svg {
+	padding-right: 6px;
+	cursor: text;
+}
+
+.chip-icon-right svg {
 	padding-left: 6px;
 }
 

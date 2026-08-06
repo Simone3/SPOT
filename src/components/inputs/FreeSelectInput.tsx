@@ -8,6 +8,7 @@ type FreeSelectOption = {
 };
 
 type FreeSelectInputProps = {
+	id?: string;
 	label?: string;
 	placeholder?: string;
 	options: FreeSelectOption[];
@@ -23,9 +24,11 @@ type FreeSelectInputProps = {
  * @returns The editable select input.
  */
 const FreeSelectInput = (props: FreeSelectInputProps): ReactElement => {
-	const { label, placeholder, options, disabled, value, onChange, onFinishEditing } = props;
+	const { id: idFromProps, label, placeholder, options, disabled, value, onChange, onFinishEditing } = props;
 
-	const id = useId();
+	// The caller can own the input id, so that something outside this component (a chip icon, for one) can label the input
+	const generatedId = useId();
+	const id = idFromProps || generatedId;
 
 	const [ open, setOpen ] = useState(false);
 	const [ changedAfterOpen, setChangedAfterOpen ] = useState(false);

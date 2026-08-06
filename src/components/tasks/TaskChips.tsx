@@ -1,5 +1,5 @@
 import 'src/components/tasks/TaskChips.css';
-import type { ReactElement } from 'react';
+import { useId, type ReactElement } from 'react';
 import { DateUtils } from 'src/framework/utils/DateUtils';
 import { Chip } from 'src/components/common/Chip';
 import { TagsIcon } from 'src/components/icons/TagsIcon';
@@ -65,14 +65,20 @@ const TaskChips = ({ inputDomains, task, setOwner, setDueDate, setTags, flushTas
 		tags
 	} = task;
 
+	// Each chip gives its input an id of its own, so that the chip icon can label the input and clicking the icon focuses it
+	const inputIdPrefix = useId();
+
 	const chips = [];
 
 	// Owner chip
+	const ownerInputId = `${inputIdPrefix}owner`;
 	chips.push(
 		<Chip
 			key='owner'
+			inputId={ownerInputId}
 			leftIcon={<OwnerIcon/>}>
 			<FreeSelectInput
+				id={ownerInputId}
 				value={owner || ''}
 				placeholder={t('tasks.fields.ownerPlaceholder')}
 				onChange={(value) => {
@@ -99,12 +105,15 @@ const TaskChips = ({ inputDomains, task, setOwner, setDueDate, setTags, flushTas
 	// Due date chip
 	const dueDateValue = DateUtils.fromStandardYearMonthDay(dueDate);
 	const isOverdue = state !== 'COMPLETED' && dueDateValue && DateUtils.compareDay(dueDateValue, new Date()) <= 0;
+	const dueDateInputId = `${inputIdPrefix}due-date`;
 	chips.push(
 		<Chip
 			key='due-date'
+			inputId={dueDateInputId}
 			leftIcon={<CalendarIcon/>}
 			rightIcon={isOverdue && <WarningIcon className='due-date-overdue-icon'/>}>
 			<DatePicker
+				id={dueDateInputId}
 				value={dueDate}
 				onChange={(value) => {
 					setDueDate(DateUtils.toStandardYearMonthDay(value), 'delayed');
@@ -119,11 +128,14 @@ const TaskChips = ({ inputDomains, task, setOwner, setDueDate, setTags, flushTas
 	// Tag chips, the last of which is always the empty input for the next tag
 	const tagsWithTrailingInput = getTagsWithTrailingInput(tags);
 	for(let i = 0; i < tagsWithTrailingInput.length; i++) {
+		const tagInputId = `${inputIdPrefix}tag-${i}`;
 		chips.push(
 			<Chip
 				key={`tag-${i}`}
+				inputId={tagInputId}
 				leftIcon={<TagsIcon/>}>
 				<FreeSelectInput
+					id={tagInputId}
 					value={tagsWithTrailingInput[i]}
 					placeholder={t('tasks.fields.tagPlaceholder')}
 					onChange={(value) => {

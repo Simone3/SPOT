@@ -663,6 +663,7 @@ Active list actions:
 `TaskChips`:
 
 - receives dedicated owner, due date, and tags setters from `Task`
+- owns the id of every chip input and hands it to both the input and its `Chip`, so that the chip icon is a real `<label>` for the input and clicking the icon focuses it. `FreeSelectInput` and `DatePicker` fall back to an id of their own when the caller does not give them one
 - edits owner through `FreeSelectInput`
 - edits due date through `DatePicker`
 - edits every tag through `FreeSelectInput`, all of them the same way
