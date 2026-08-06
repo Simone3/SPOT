@@ -42,7 +42,7 @@ export const APP_CONFIG_FILE = {
 export const LOGGING_CONFIG = {
 	directoryName: 'logs',
 	fileName: 'spot-logs.ndjson',
-	maximumFileSizeBytes: 1024 * 1024,
+	maximumFileSizeBytes: 100 * 1024 * 1024,
 	retainedArchiveCount: 1
 } as const;
 
@@ -59,7 +59,7 @@ export const AUDIT_CONFIG = {
 
 	// The first audit lets the application settle instead of running right after the startup load, which nothing has written over yet
 	initialDelayMs: 60000,
-	intervalMs: 120000,
+	intervalMs: 600000,
 
 	// A report listing every task would be unreadable and would put the whole task list in the console, so the listed ones are capped
 	maximumReportedTasks: 20
