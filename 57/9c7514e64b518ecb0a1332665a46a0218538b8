@@ -1,0 +1,34 @@
+CLAUDE.md
+  s_0228ee6167cd95::t_cfa8a2e3371faa 14-20
+DOCUMENTATION.md
+  s_0228ee6167cd95::t_967ed83a7f6de2 14-15,30,36,39,60,70-72,77
+package.json
+  s_0228ee6167cd95::t_860997a6049245 11-12
+scripts/dev.js
+  s_0228ee6167cd95::t_cb8d6a2634e734 8-9
+src/config/AppConfig.ts
+  s_0228ee6167cd95::t_942cd641c066c2 13
+src/main/window/WindowLoadTarget.ts
+  s_0228ee6167cd95::t_50cdaf421ab9db 25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "579c7514e64b518ecb0a1332665a46a0218538b8",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_0228ee6167cd95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4351ac28-827d-4c53-b604-d930628c71e5",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
