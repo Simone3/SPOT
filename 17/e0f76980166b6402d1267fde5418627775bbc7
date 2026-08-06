@@ -1,0 +1,124 @@
+src/components/common/Sidebar.tsx
+  s_96b198f62609a0::t_c18a607475a993 8,11-12,16-18,21
+src/components/notes/NotesPage.tsx
+  s_96b198f62609a0::t_850aa19ddde228 4,7-8,12
+src/components/storage/BackupSettings.tsx
+  s_96b198f62609a0::t_9d66983f62d29b 7-8,16,24-26,33,39-41,80-81,91,105,115,135,163,167,177-179,181,183,185-186,188,195,200,206,217,220-223,226,228
+src/components/tags/TagsPage.tsx
+  s_96b198f62609a0::t_bfc1ce9d30199e 4,7-8,12
+src/components/tasks/Task.tsx
+  s_96b198f62609a0::t_224cd9584659ae 13,30-31,106
+src/components/tasks/TaskActions.tsx
+  s_96b198f62609a0::t_8e749d0a9b5af0 8,19,39,42-43,46,48
+src/components/tasks/TaskChips.tsx
+  s_96b198f62609a0::t_b7edfc207c3a32 14,60,77,112,128
+src/components/tasks/TaskDragHandle.tsx
+  s_96b198f62609a0::t_493f81c6acd350 4,11-13,19-20
+src/components/tasks/TaskFilters.tsx
+  s_96b198f62609a0::t_d39b94eba2d699 7,10-11,16-27,38-41,45,49,55-56,63,73,83,90,96,105
+src/components/tasks/TasksList.tsx
+  s_96b198f62609a0::t_1deddf0fb439b8 12,27,56,61,66,93
+src/components/tasks/TasksPage.tsx
+  s_96b198f62609a0::t_2a9ee99aef6a43 9-10,19,24,27-28,34-35,37,42,51,60-61,70,95-97,104,116,145,157
+src/config/AppConfig.ts
+  s_96b198f62609a0::t_8151cff6b61237 14-18,57-60
+src/contexts/BackupLocationContext.tsx
+  s_96b198f62609a0::t_2fb474cfa91200 2,39,49,77,86,91,101,122
+src/contexts/TasksContext.tsx
+  s_96b198f62609a0::t_959491f4729b9f 6,8-10,50-60,108-111,118-129,167,171,178,192,306-307
+src/framework/main/config/BackupLocationManager.ts
+  s_96b198f62609a0::t_0010c45cc66d3e 3,21,31-33,46,52-55,89,158-159
+src/framework/main/ipc/BackupLocationIpc.ts
+  s_96b198f62609a0::t_c33252638e303d 64
+src/framework/main/storage/BackupDirectory.ts
+  s_96b198f62609a0::t_8cc90ead0cc5d5 10-17,19-25,29,36,44,54
+src/framework/main/storage/DatabaseStorage.ts
+  s_96b198f62609a0::t_494aea2d639746 10-11,39-41,62,82
+src/framework/types/TranslationTypes.ts
+  s_96b198f62609a0::t_55e9c0de38d26b 1-44
+src/i18n/TranslationContext.tsx
+  s_96b198f62609a0::t_9c0eef5ce92dc8 1-14
+src/i18n/lang/en.ts
+  s_96b198f62609a0::t_c7e7e3612f6fba 1-188
+src/index.tsx
+  s_96b198f62609a0::t_95ac6d105aea11 15,24-40
+src/logic/DomainsLogic.ts
+  s_96b198f62609a0::t_f05185f6451942 17-27,30-65,68-87,92-93,96,99-101,105-106
+src/logic/TaskStateAudit.ts
+  s_96b198f62609a0::t_ddcaa2460894e5 3,97-102,115,118,123-124,127-130,133,136-137,139-142
+src/logic/TaskStateLogic.ts
+  s_96b198f62609a0::t_8676c405109529 7,32,35,40,42,60,62
+src/logic/TaskStorageQueue.ts
+  s_96b198f62609a0::t_d6e1dcd9c15e21 1,3,8-20,22,26-29,39
+src/main/Main.ts
+  s_96b198f62609a0::t_ef0c60f280f8cd 7,9,20-35,95-98,108-109,123,159,170
+src/main/ipc/BackupLocationIpc.ts
+  s_96b198f62609a0::t_de8c175cda28fa 4,17-19,28,36-38
+src/main/ipc/TaskStorageIpc.ts
+  s_96b198f62609a0::t_34811cb22aa1bc 4,21-23,42,73
+src/main/storage/TaskStorage.ts
+  s_96b198f62609a0::t_a7b0c47d031325 4,47-49,54,78
+tests/logic/DomainsLogic.test.ts
+  s_96b198f62609a0::t_1f499d61966cef 1,40,78,103
+tests/logic/TaskStateAudit.test.ts
+  s_96b198f62609a0::t_b7770019104348 1,5-6,20,53,67,89,104,116
+tests/testUtils/TranslationTestFactory.tsx
+  s_96b198f62609a0::t_b4479e4bd8b911 1-42
+tests/testUtils/index.ts
+  s_96b198f62609a0::t_c1f1a9a263c9d8 3
+CLAUDE.md
+  s_96b198f62609a0::t_18dded441d1f93 45-48
+DOCUMENTATION.md
+  s_96b198f62609a0::t_6fca4f298d5e8c 76-78,85-88,161-162,166,177,182,186,482-516,680,682,686-687,707,736,801-802,824,833-834
+src/framework/i18n/LanguageResolution.ts
+  s_96b198f62609a0::t_8aa2b135ac6c85 1-44
+src/framework/i18n/Translator.ts
+  s_96b198f62609a0::t_f18ed989df6a05 1-148
+src/framework/renderer/TranslationContext.tsx
+  s_96b198f62609a0::t_7a1064cd2b91af 1-81
+src/i18n/Translations.ts
+  s_96b198f62609a0::t_c740423d05250d 1-59
+tests/components/BackupSettings.test.tsx
+  s_96b198f62609a0::t_c8468a99f1cad7 1-2,102,121,135
+tests/components/TaskEditDurability.test.tsx
+  s_96b198f62609a0::t_c5476e157f8842 3,5,98
+tests/components/TaskFilters.test.tsx
+  s_96b198f62609a0::t_0980e1604f425a 1-2,59
+tests/components/TasksList.test.tsx
+  s_96b198f62609a0::t_14feae889baada 3,5,89
+tests/components/TasksPage.test.tsx
+  s_96b198f62609a0::t_813f17535e0e8c 2,4,207,654
+tests/framework/BackupLocationManager.test.ts
+  s_96b198f62609a0::t_8d5aae3f4719ab 7,20-33,103,123,140,154,170,193,215
+tests/framework/LanguageResolution.test.ts
+  s_96b198f62609a0::t_f82d16a5fd5c60 1-42
+tests/framework/Translator.test.ts
+  s_96b198f62609a0::t_a4514563dd1243 1-142
+tests/main/BackupLocationIpc.test.ts
+  s_96b198f62609a0::t_51c8386b0bc765 6,8,68-84,96-97,114-115,138-139,163-164
+tests/main/TaskStorage.test.ts
+  s_96b198f62609a0::t_44369cced1c983 4,13-16,185,364,369,374
+tests/main/TaskStorageIpc.test.ts
+  s_96b198f62609a0::t_877389651a91cf 3,6,10-13,144,191,237,248,291,338,354,380,414,453,496,530,562,599,626,657,695,769
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "17e0f76980166b6402d1267fde5418627775bbc7",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_96b198f62609a0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "75909c9f-1a29-4e05-955c-0b4eca760a3a",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
