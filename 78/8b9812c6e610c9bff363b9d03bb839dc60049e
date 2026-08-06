@@ -1,0 +1,40 @@
+DOCUMENTATION.md
+  s_33b917c3b71d58::t_dc53f6bb3b40dd 604,787,793,796,798,802,836-837
+src/components/common/Header.css
+  s_33b917c3b71d58::t_44930fcf1379c7 7-9,12,14,24
+src/components/common/Pane.css
+  s_33b917c3b71d58::t_01164d82c02b9e 5
+src/components/common/Pane.tsx
+  s_33b917c3b71d58::t_afb1655b211d02 12,14
+src/components/common/PaneDivider.tsx
+  s_33b917c3b71d58::t_35e7a0ae327949 104
+src/components/common/ResizablePanes.tsx
+  s_33b917c3b71d58::t_6a3084e2461e35 34,46,102
+src/logic/PaneLayout.ts
+  s_33b917c3b71d58::t_73cc137ab6db38 9,30,45,49-56
+tests/components/ResizablePanes.test.tsx
+  s_33b917c3b71d58::t_c68a893baee5e7 63-66,91,96,99,132,134,136,138,155
+tests/logic/PaneLayout.test.ts
+  s_33b917c3b71d58::t_a23f6f01ca7ea7 21-24,26,35-37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "788b9812c6e610c9bff363b9d03bb839dc60049e",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_33b917c3b71d58": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "010be69c-ba5a-49bc-a6c9-bce915605a5b",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
