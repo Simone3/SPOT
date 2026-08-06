@@ -1,0 +1,48 @@
+CLAUDE.md
+  s_0228ee6167cd95::t_8b90892b133586 17,39
+DOCUMENTATION.md
+  s_0228ee6167cd95::t_18c4fffe051c2c 14-15,30,36-41,68-86,95-96,99,204,257,880
+package.json
+  s_0228ee6167cd95::t_67d3da25305c94 11
+scripts/build-electron.js
+  s_0228ee6167cd95::t_71d03f203be088 3,10
+scripts/dev.js
+  s_0228ee6167cd95::t_c2bbad2b0cecb7 1-154
+scripts/electron-bundle.js
+  s_0228ee6167cd95::t_3610ee91f57ed5 1-34
+src/config/AppConfig.ts
+  s_0228ee6167cd95::t_d9de0dd365ad0e 11-15
+src/framework/main/window/WindowLoadTarget.ts
+  s_0228ee6167cd95::t_70b336a682d5ff 3-4,8-10,18-20,25-26,28-34
+src/main/Main.ts
+  s_0228ee6167cd95::t_5209496067c61c 63-64,93-98
+src/main/window/WindowLoadTarget.ts
+  s_0228ee6167cd95::t_8fd50b1bc6445c 11-14,18-19,23-27
+tests/framework/WindowLoadTarget.test.ts
+  s_0228ee6167cd95::t_991e1c72d35845 1-36
+tests/main/WindowLoadTarget.test.ts
+  s_0228ee6167cd95::t_3b95a15f0cc5d8 2,5-9,11-14,17-27,29-30,33-41
+vite.config.mts
+  s_0228ee6167cd95::t_4d197ed6ef0515 3,24-48,50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "315ec32c85081b9a8051fb0a87c6453ec4fa1d71",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_0228ee6167cd95": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4351ac28-827d-4c53-b604-d930628c71e5",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
