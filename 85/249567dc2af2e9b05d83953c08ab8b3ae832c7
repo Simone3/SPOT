@@ -1,0 +1,28 @@
+src/components/inputs/DatePicker.css
+  s_49af9f7646860e::t_cb9b97e5159e29 32-34
+src/components/inputs/FreeSelectInput.css
+  s_49af9f7646860e::t_3c196dffaf302d 40,42
+src/index.css
+  s_49af9f7646860e::t_7a7177e737ce75 15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "85249567dc2af2e9b05d83953c08ab8b3ae832c7",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_49af9f7646860e": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "befce497-9a0f-438d-af50-33e2b8acb014",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
