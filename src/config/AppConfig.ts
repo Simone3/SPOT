@@ -67,10 +67,7 @@ export const PANE_LAYOUT_CONFIG = {
 	// How much of that width one arrow key press moves the divider by
 	keyboardStepFraction: 0.02,
 
-	// A pane dragged below this width is collapsed instead of being left as an unusable sliver
-	collapseWidthPixels: 40,
-
-	// The pane on the other side of the divider always keeps at least this much width, so the divider itself stays on screen and grabbable
+	// How narrow a pane may get is measured from the headers it holds, so this is only the floor for a pane that holds none
 	minimumPaneWidthPixels: 150
 } as const;
 

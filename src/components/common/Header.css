@@ -6,8 +6,10 @@
 	align-items: flex-start;
 }
 
+/* A header never newlines: it is what a resizable pane is measured against, so it either fits on one line or the pane is too narrow to exist */
 .header-title {
 	margin: 20px 0 0 20px;
+	white-space: nowrap;
 }
 
 .header-actions {
@@ -48,4 +50,5 @@
 
 .header-action-label {
 	line-height: 1;
+	white-space: nowrap;
 }

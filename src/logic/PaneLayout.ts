@@ -1,4 +1,17 @@
-import { PANE_LAYOUT_CONFIG } from 'src/config/AppConfig';
+/**
+ * What the widths of a split page allow, measured from the page itself.
+ */
+export type PaneSplitLimits = {
+
+	// The width the two panes share, meaning the container width without the divider
+	resizableWidthPixels: number;
+
+	// The width the first pane needs to show what it holds: it is collapsed entirely rather than shown narrower than this
+	firstPaneMinimumWidthPixels: number;
+
+	// The width the second pane needs to show what it holds: the first pane never grows past what that leaves
+	secondPaneMinimumWidthPixels: number;
+};
 
 /**
  * The share of the resizable width the user gave the first pane of each split layout.
@@ -14,28 +27,32 @@ const clampToUnitRange = (fraction: number): number => {
 };
 
 /**
- * Keeps a pane fraction inside what the layout allows: a pane narrower than the collapse width is collapsed entirely, and the
- * pane on the other side of the divider always keeps its minimum width.
+ * Keeps a pane fraction inside what the layout allows: a first pane narrower than what it needs is collapsed entirely instead
+ * of being left showing half of itself, and it never grows past what the second pane needs.
  * @param fraction Share of the resizable width the first pane would take.
- * @param resizableWidthPixels Width the two panes share, meaning the container width without the divider.
+ * @param limits What the measured widths of the page allow.
  * @returns The share the first pane may actually take.
  */
-export const clampPaneFraction = (fraction: number, resizableWidthPixels: number): number => {
+export const clampPaneFraction = (fraction: number, limits: PaneSplitLimits): number => {
+	const { resizableWidthPixels, firstPaneMinimumWidthPixels, secondPaneMinimumWidthPixels } = limits;
 	const wantedFraction = clampToUnitRange(fraction);
 
-	// Nothing can be said about the widths of a container that has not been laid out yet, so the wanted share is taken as it is
+	// Nothing can be said about the widths of a page that has not been laid out yet, so the wanted share is taken as it is
 	if(resizableWidthPixels <= 0) {
 		return wantedFraction;
 	}
 
-	const wantedWidthPixels = wantedFraction * resizableWidthPixels;
-	const maximumWidthPixels = resizableWidthPixels - PANE_LAYOUT_CONFIG.minimumPaneWidthPixels;
+	// Rounded to whole pixels, which is what the pane is drawn on anyway: a share carried back and forth through a share of a
+	// width would otherwise land a fraction of a pixel under a limit and collapse a pane the user dragged exactly onto it
+	const wantedWidthPixels = Math.round(wantedFraction * resizableWidthPixels);
+	const maximumWidthPixels = resizableWidthPixels - secondPaneMinimumWidthPixels;
 
-	if(wantedWidthPixels <= PANE_LAYOUT_CONFIG.collapseWidthPixels || maximumWidthPixels <= 0) {
+	// The second branch is a page too narrow to hold both panes, where the first one is the one that gives way
+	if(wantedWidthPixels < firstPaneMinimumWidthPixels || maximumWidthPixels <= 0) {
 		return 0;
 	}
 
-	if(wantedWidthPixels >= maximumWidthPixels) {
+	if(wantedWidthPixels > maximumWidthPixels) {
 		return maximumWidthPixels / resizableWidthPixels;
 	}
 

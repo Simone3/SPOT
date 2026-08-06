@@ -1,36 +1,43 @@
 import { fireEvent, render, screen, type RenderResult } from '@testing-library/react';
+import type { ReactNode } from 'react';
+import { Header } from 'src/components/common/Header';
 import { ResizablePanes } from 'src/components/common/ResizablePanes';
 import { PANE_LAYOUT_CONFIG } from 'src/config/AppConfig';
 import { resetPaneLayoutForTests } from 'src/logic/PaneLayout';
 
-const containerWidthPixels = 908;
-const dividerWidthPixels = 8;
-
-// The two panes share everything the divider leaves them, which is what a pane share is a share of
-const resizableWidthPixels = containerWidthPixels - dividerWidthPixels;
+// The two panes are the whole page as far as the divider is concerned, so their widths are the width the split shares out
+const firstPaneWidthPixels = 300;
+const secondPaneWidthPixels = 600;
+const resizableWidthPixels = firstPaneWidthPixels + secondPaneWidthPixels;
 
 const defaultFraction = 1 / 3;
 
-// jsdom lays nothing out, so the widths the divider measures are the ones the test gives it
+// jsdom lays nothing out, so every width the panes are measured on is the one the test gives them
 const setElementWidth = (element: Element, width: number): void => {
 	element.getBoundingClientRect = () => {
 		return new DOMRect(0, 0, width, 0);
 	};
 };
 
-const renderResizablePanes = (): RenderResult => {
+const setPaneWidths = (result: RenderResult, firstWidth: number, secondWidth: number): void => {
+	const panes = result.container.querySelectorAll('.pane');
+
+	setElementWidth(panes[0], firstWidth);
+	setElementWidth(panes[1], secondWidth);
+};
+
+const renderResizablePanes = (firstPane: ReactNode = <div>First pane</div>, secondPane: ReactNode = <div>Second pane</div>): RenderResult => {
 	const result = render(
 		<ResizablePanes
 			layoutId='test-layout'
 			defaultFirstPaneFraction={defaultFraction}
 			dividerLabel='Resize the first pane'
-			firstPane={<div>First pane</div>}
-			secondPane={<div>Second pane</div>}
+			firstPane={firstPane}
+			secondPane={secondPane}
 		/>
 	);
 
-	setElementWidth(result.container.querySelector('.page')!, containerWidthPixels);
-	setElementWidth(screen.getByRole('separator'), dividerWidthPixels);
+	setPaneWidths(result, firstPaneWidthPixels, secondPaneWidthPixels);
 
 	return result;
 };
@@ -40,7 +47,7 @@ const getDivider = (): HTMLElement => {
 };
 
 const getFirstPane = (): HTMLElement => {
-	return screen.getByText('First pane').parentElement!;
+	return screen.getByText('First pane').closest('.pane')!;
 };
 
 const dragDividerBy = (deltaPixels: number): void => {
@@ -51,6 +58,10 @@ const dragDividerBy = (deltaPixels: number): void => {
 
 const toPercentage = (fraction: number): string => {
 	return String(Math.round(fraction * 100));
+};
+
+const toMaximumFraction = (secondPaneMinimumWidthPixels: number): number => {
+	return (resizableWidthPixels - secondPaneMinimumWidthPixels) / resizableWidthPixels;
 };
 
 describe('ResizablePanes', () => {
@@ -78,7 +89,7 @@ describe('ResizablePanes', () => {
 		expect(getDivider()).toHaveAttribute('aria-valuenow', toPercentage(defaultFraction + 150 / resizableWidthPixels));
 	});
 
-	test('collapses the first pane when the divider is dragged to the edge', () => {
+	test('collapses the first pane when the divider is dragged past what it needs', () => {
 		renderResizablePanes();
 
 		dragDividerBy(-resizableWidthPixels);
@@ -94,8 +105,45 @@ describe('ResizablePanes', () => {
 
 		dragDividerBy(resizableWidthPixels);
 
-		const maximumFraction = (resizableWidthPixels - PANE_LAYOUT_CONFIG.minimumPaneWidthPixels) / resizableWidthPixels;
-		expect(getDivider()).toHaveAttribute('aria-valuenow', toPercentage(maximumFraction));
+		expect(getDivider()).toHaveAttribute('aria-valuenow', toPercentage(toMaximumFraction(PANE_LAYOUT_CONFIG.minimumPaneWidthPixels)));
+	});
+
+	test('keeps each pane wide enough for the header it holds', () => {
+		const headerActions = [{
+			id: 'reset',
+			icon: null,
+			label: 'Reset to default',
+			onClick: () => {}
+		}];
+		const result = renderResizablePanes(
+			<div>
+				First pane
+				<Header title='Filters' actions={headerActions}/>
+			</div>,
+			<div>
+				Second pane
+				<Header title='Tasks' actions={headerActions}/>
+			</div>
+		);
+
+		// A header needs what its title and its actions need side by side, which is what the panes are then measured against
+		const headerLines = result.container.querySelectorAll('.header-line');
+		setElementWidth(headerLines[0].children[0], 80);
+		setElementWidth(headerLines[0].children[1], 140);
+		setElementWidth(headerLines[1].children[0], 80);
+		setElementWidth(headerLines[1].children[1], 320);
+
+		// The filters header needs 220, so the pane is still shown at exactly that width
+		dragDividerBy(220 - firstPaneWidthPixels);
+		expect(getDivider()).toHaveAttribute('aria-valuenow', toPercentage(220 / resizableWidthPixels));
+
+		// One pixel narrower is a pane that cannot show its own heading anymore, so it collapses instead
+		dragDividerBy(-1);
+		expect(getDivider()).toHaveAttribute('aria-valuenow', '0');
+
+		// The tasks header is wider than the fallback minimum, so it is what stops the filters pane from growing
+		dragDividerBy(resizableWidthPixels);
+		expect(getDivider()).toHaveAttribute('aria-valuenow', toPercentage(toMaximumFraction(400)));
 	});
 
 	test('resizes the panes with the keyboard', () => {
@@ -111,8 +159,7 @@ describe('ResizablePanes', () => {
 		expect(getDivider()).toHaveAttribute('aria-valuenow', '0');
 
 		fireEvent.keyDown(getDivider(), { key: 'End' });
-		const maximumFraction = (resizableWidthPixels - PANE_LAYOUT_CONFIG.minimumPaneWidthPixels) / resizableWidthPixels;
-		expect(getDivider()).toHaveAttribute('aria-valuenow', toPercentage(maximumFraction));
+		expect(getDivider()).toHaveAttribute('aria-valuenow', toPercentage(toMaximumFraction(PANE_LAYOUT_CONFIG.minimumPaneWidthPixels)));
 	});
 
 	test('goes back to the default split when the divider is double clicked', () => {
@@ -124,6 +171,19 @@ describe('ResizablePanes', () => {
 		fireEvent.doubleClick(getDivider());
 
 		expect(getDivider()).toHaveAttribute('aria-valuenow', toPercentage(defaultFraction));
+	});
+
+	test('gives the panes back the width they need when the window becomes narrower', () => {
+		const result = renderResizablePanes();
+
+		dragDividerBy(resizableWidthPixels);
+		expect(getDivider()).toHaveAttribute('aria-valuenow', toPercentage(toMaximumFraction(PANE_LAYOUT_CONFIG.minimumPaneWidthPixels)));
+
+		// The split is a proportion, so a narrower window leaves the second pane on a width it cannot work with
+		setPaneWidths(result, 250, 50);
+		fireEvent(window, new Event('resize'));
+
+		expect(getDivider()).toHaveAttribute('aria-valuenow', toPercentage((300 - PANE_LAYOUT_CONFIG.minimumPaneWidthPixels) / 300));
 	});
 
 	test('keeps the split the user chose when the page is left and opened again', () => {

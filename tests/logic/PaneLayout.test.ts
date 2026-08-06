@@ -1,7 +1,13 @@
-import { PANE_LAYOUT_CONFIG } from 'src/config/AppConfig';
-import { clampPaneFraction, getPaneFraction, resetPaneLayoutForTests, setPaneFraction, subscribeToPaneFraction } from 'src/logic/PaneLayout';
+import { clampPaneFraction, getPaneFraction, resetPaneLayoutForTests, setPaneFraction, subscribeToPaneFraction, type PaneSplitLimits } from 'src/logic/PaneLayout';
 
-const resizableWidthPixels = 900;
+const makeLimits = (limits: Partial<PaneSplitLimits> = {}): PaneSplitLimits => {
+	return {
+		resizableWidthPixels: 900,
+		firstPaneMinimumWidthPixels: 200,
+		secondPaneMinimumWidthPixels: 400,
+		...limits
+	};
+};
 
 describe('PaneLayout', () => {
 	afterEach(() => {
@@ -9,29 +15,28 @@ describe('PaneLayout', () => {
 	});
 
 	test('leaves a pane share the layout allows as it is', () => {
-		expect(clampPaneFraction(0.5, resizableWidthPixels)).toBe(0.5);
+		expect(clampPaneFraction(0.5, makeLimits())).toBe(0.5);
 	});
 
-	test('collapses a pane dragged below the collapse width', () => {
-		const slimFraction = (PANE_LAYOUT_CONFIG.collapseWidthPixels - 1) / resizableWidthPixels;
+	test('collapses the first pane as soon as it would be narrower than what it needs', () => {
+		expect(clampPaneFraction(199 / 900, makeLimits())).toBe(0);
+		expect(clampPaneFraction(-0.5, makeLimits())).toBe(0);
 
-		expect(clampPaneFraction(slimFraction, resizableWidthPixels)).toBe(0);
-		expect(clampPaneFraction(-0.5, resizableWidthPixels)).toBe(0);
+		// One pixel more is a pane that still shows what it holds, so it is kept
+		expect(clampPaneFraction(200 / 900, makeLimits())).toBe(200 / 900);
 	});
 
-	test('keeps the minimum width of the pane on the other side of the divider', () => {
-		const maximumFraction = (resizableWidthPixels - PANE_LAYOUT_CONFIG.minimumPaneWidthPixels) / resizableWidthPixels;
-
-		expect(clampPaneFraction(1, resizableWidthPixels)).toBe(maximumFraction);
-		expect(clampPaneFraction(0.99, resizableWidthPixels)).toBe(maximumFraction);
+	test('never grows the first pane past what the second pane needs', () => {
+		expect(clampPaneFraction(1, makeLimits())).toBe(500 / 900);
+		expect(clampPaneFraction(0.99, makeLimits())).toBe(500 / 900);
 	});
 
-	test('collapses the pane when the container is too narrow for both panes', () => {
-		expect(clampPaneFraction(0.5, PANE_LAYOUT_CONFIG.minimumPaneWidthPixels)).toBe(0);
+	test('collapses the first pane when the page is too narrow for both panes', () => {
+		expect(clampPaneFraction(0.5, makeLimits({ resizableWidthPixels: 400 }))).toBe(0);
 	});
 
-	test('takes the wanted share as it is when the container has no width yet', () => {
-		expect(clampPaneFraction(0.25, 0)).toBe(0.25);
+	test('takes the wanted share as it is when the page has no width yet', () => {
+		expect(clampPaneFraction(0.25, makeLimits({ resizableWidthPixels: 0 }))).toBe(0.25);
 	});
 
 	test('keeps the share of each layout separately and notifies only its subscribers', () => {

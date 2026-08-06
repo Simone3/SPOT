@@ -1,7 +1,7 @@
 import 'src/components/common/PaneDivider.css';
-import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactElement, type RefObject } from 'react';
+import { useEffect, useState, type KeyboardEvent, type MouseEvent, type ReactElement } from 'react';
 import { PANE_LAYOUT_CONFIG } from 'src/config/AppConfig';
-import { clampPaneFraction } from 'src/logic/PaneLayout';
+import { clampPaneFraction, type PaneSplitLimits } from 'src/logic/PaneLayout';
 
 // While the divider is dragged the pointer is over whatever the panes hold, so the resize cursor and the selection block go on the body
 const RESIZING_BODY_CLASS_NAME = 'pane-resizing';
@@ -9,13 +9,13 @@ const RESIZING_BODY_CLASS_NAME = 'pane-resizing';
 type DragState = {
 	startClientX: number;
 	startFraction: number;
-	resizableWidthPixels: number;
+	limits: PaneSplitLimits;
 };
 
 type PaneDividerProps = {
 	label: string;
 	fraction: number;
-	containerRef: RefObject<HTMLDivElement | null>;
+	measureLimits: () => PaneSplitLimits;
 	onFractionChange: (fraction: number) => void;
 	onReset: () => void;
 };
@@ -24,31 +24,22 @@ type PaneDividerProps = {
  * The draggable separator between two panes of a split page.
  * It reports the share of the width the pane before it should take, and never holds that share itself, so the page decides what
  * survives a re-render.
- * @param props Divider label, current pane share, split container, and callbacks.
+ * @param props Divider label, current pane share, page measurements, and callbacks.
  * @returns The separator.
  */
 const PaneDivider = (props: PaneDividerProps): ReactElement => {
-	const { label, fraction, containerRef, onFractionChange, onReset } = props;
+	const { label, fraction, measureLimits, onFractionChange, onReset } = props;
 
-	const dividerRef = useRef<HTMLDivElement>(null);
 	const [ dragState, setDragState ] = useState<DragState | undefined>();
 
-	// The two panes share the container width without the divider, which keeps its own width whatever the user does
-	const getResizableWidthPixels = (): number => {
-		const containerWidthPixels = containerRef.current?.getBoundingClientRect().width ?? 0;
-		const dividerWidthPixels = dividerRef.current?.getBoundingClientRect().width ?? 0;
-
-		return containerWidthPixels - dividerWidthPixels;
-	};
-
 	const changeFraction = (wantedFraction: number): void => {
-		const resizableWidthPixels = getResizableWidthPixels();
+		const limits = measureLimits();
 
-		if(resizableWidthPixels <= 0) {
+		if(limits.resizableWidthPixels <= 0) {
 			return;
 		}
 
-		onFractionChange(clampPaneFraction(wantedFraction, resizableWidthPixels));
+		onFractionChange(clampPaneFraction(wantedFraction, limits));
 	};
 
 	// The pointer leaves the divider as soon as the drag starts, so the whole window follows it until the button is released
@@ -58,9 +49,9 @@ const PaneDivider = (props: PaneDividerProps): ReactElement => {
 		}
 
 		const onWindowMouseMove = (event: globalThis.MouseEvent): void => {
-			const movedFraction = dragState.startFraction + (event.clientX - dragState.startClientX) / dragState.resizableWidthPixels;
+			const movedFraction = dragState.startFraction + (event.clientX - dragState.startClientX) / dragState.limits.resizableWidthPixels;
 
-			onFractionChange(clampPaneFraction(movedFraction, dragState.resizableWidthPixels));
+			onFractionChange(clampPaneFraction(movedFraction, dragState.limits));
 		};
 
 		const onWindowMouseUp = (): void => {
@@ -79,19 +70,20 @@ const PaneDivider = (props: PaneDividerProps): ReactElement => {
 	}, [ dragState, onFractionChange ]);
 
 	const onMouseDown = (event: MouseEvent<HTMLDivElement>): void => {
-		const resizableWidthPixels = getResizableWidthPixels();
+		const limits = measureLimits();
 
-		if(event.button !== 0 || resizableWidthPixels <= 0) {
+		if(event.button !== 0 || limits.resizableWidthPixels <= 0) {
 			return;
 		}
 
 		// Without this the browser starts selecting the text of both panes as soon as the divider is dragged
 		event.preventDefault();
 
+		// The panes are measured once here: what they need does not change while they are being dragged, and neither does the width they share
 		setDragState({
 			startClientX: event.clientX,
 			startFraction: fraction,
-			resizableWidthPixels
+			limits
 		});
 	};
 
@@ -124,7 +116,6 @@ const PaneDivider = (props: PaneDividerProps): ReactElement => {
 
 	return (
 		<div
-			ref={dividerRef}
 			className={`pane-divider ${dragState ? 'pane-divider-dragging' : ''}`}
 			role='separator'
 			aria-orientation='vertical'
