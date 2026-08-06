@@ -21,14 +21,28 @@
 	margin: 0;
 }
 
-/* MDXEditor draws the editable area itself, so the focus ring is restated here to be sure it wins over the styles the
-   editor ships, and the radius is what makes it the same ring the other inputs draw */
-.textarea-input {
+/* MDXEditor fills the editable area with the text and leaves nothing around it, so a ring drawn on that area would sit
+   on the text. The container draws it instead, on a pseudo-element inset outwards from itself: the ring then stands off
+   from the text the way it does on the other inputs, and because a pseudo-element takes no space, standing it off moves
+   nothing else on the card. The rule the whole application shares is turned off on the editable area itself. */
+.textarea-container {
+	position: relative;
+}
+
+.textarea-container::after {
+	content: '';
+	position: absolute;
+	inset: -6px;
 	border-radius: 5px;
+	pointer-events: none;
 	transition: box-shadow 120ms ease;
+}
+
+.textarea-container:has(.textarea-input:focus-visible)::after {
+	box-shadow: var(--focus-ring);
 }
 
 .textarea-input:focus-visible {
 	outline: none;
-	box-shadow: var(--focus-ring);
+	box-shadow: none;
 }

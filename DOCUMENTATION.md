@@ -865,6 +865,7 @@ Two things follow from a single ring for everything:
 
 - A control that draws its own focus UI has to override the shared rule and say why. `PaneDivider` is the only one: it moves the ring onto the line it draws, because a ring around its whole grab area would be a glowing column running down the page.
 - A control the ring would be clipped on gets the room it needs from whatever clips it: the free-select dropdown insets its option list, and the priority picker carries horizontal padding. The picker is centered on the task border, so that padding grows it symmetrically and leaves its gradient where it is.
+- A control with no room around its own content stands the ring off from it. `TextArea` is the one that needs it, because MDXEditor fills the editable area with the text: the ring is drawn by the container on a pseudo-element inset outwards from it, which stands off from the text without moving anything else on the task card.
 
 Anything clickable is a real control and not a clickable `div`, so that the keyboard reaches it, activates it and shows the ring on it. `Clickable` is where that is enforced for the controls that are only an icon.
 
