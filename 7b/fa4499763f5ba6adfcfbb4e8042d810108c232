@@ -1,0 +1,34 @@
+assets/icon.svg
+  s_fd9f6a3f1f6cf6::t_338de89b1ab67a 1-13
+package.json
+  s_fd9f6a3f1f6cf6::t_77a47f5d03c65f 10
+CLAUDE.md
+  s_fd9f6a3f1f6cf6::t_19703179d955c9 19
+DOCUMENTATION.md
+  s_fd9f6a3f1f6cf6::t_5946f11c881562 54-59,68-69,223-237
+forge.config.js
+  s_fd9f6a3f1f6cf6::t_737604620dc21e 1,5-8,12,14-15,27-29,37-41,45-49
+scripts/build-icons.js
+  s_fd9f6a3f1f6cf6::t_c7cd7d2e2af72c 1-200
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "7bfa4499763f5ba6adfcfbb4e8042d810108c232",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_fd9f6a3f1f6cf6": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "65dfb582-be34-4cd4-92d3-b3020ff8d692",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
