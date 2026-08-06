@@ -1,0 +1,14 @@
+src/logic/FiltersLogic.ts
+  h_08e8a5184a38af 12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "f36b10d2953d88af93ae09d0ac66e2959523db14",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
