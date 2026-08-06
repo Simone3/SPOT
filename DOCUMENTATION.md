@@ -51,6 +51,12 @@ npm run make
 
 `npm start`, `npm run package`, and `npm run make` build the React renderer and Electron main/preload bundles first so Electron always loads local generated files.
 
+Regenerating the application icons is a separate step, because their generated files are committed:
+
+```sh
+npm run build-icons
+```
+
 ## Repository Map
 
 - `CLAUDE.md` contains contributor and coding-agent instructions. Keep it aligned with this document.
@@ -59,6 +65,8 @@ npm run make
 - `DOCUMENTATION.md` is this detailed project reference.
 - `eslint.config.js` contains the flat ESLint configuration used by `npm run lint`.
 - `scripts/build-electron.js` bundles Electron main and preload TypeScript sources into ignored `dist/electron` runtime files.
+- `scripts/build-icons.js` regenerates the packaged application icons from `assets/icon.svg`, as described in the Application Icon section.
+- `assets/icon.svg` is the application icon master artwork, and `assets/icon.icns`, `assets/icon.ico`, and `assets/icon.png` are the generated files Electron Forge packages. They are committed, so packaging never depends on regenerating them. The folder is tracked because `build` and `dist` are both ignored.
 - `vite.config.mts` configures the Vite renderer build and the Vitest test run. It is an ES module because `package.json` has no `"type": "module"`, so the `.mts` extension is what keeps the native config loader from treating it as CommonJS.
 - `index.html` is the React renderer HTML template and the Vite entry point, so it lives in the repository root and loads `src/index.tsx` directly.
 - `src/index.tsx` mounts the React app and defines routes.
@@ -211,6 +219,21 @@ The scheduler and the storage IPC handlers need each other: the handlers return 
 Known Electron work still pending:
 
 - Add robust save, reload, and error handling polish.
+
+## Application Icon
+
+`assets/icon.svg` is the only hand-edited icon file: a dark rounded tile carrying concentric accent rings, a solid centre dot, and a white checkmark inside that dot. It uses the same `#0099FF` accent and dark background as the renderer theme. Everything else is generated from it by `npm run build-icons`, which runs `scripts/build-icons.js` under Electron and rasterizes the master with Electron's own Chromium, so no image library or external converter is a dependency.
+
+The script produces two tiles from the same master, because the platforms disagree on framing:
+
+- The macOS tile follows Apple's icon grid, an 824x824 body centered on a 1024x1024 transparent canvas. macOS draws `.icns` artwork exactly as given and masks nothing, so a full-bleed tile would sit noticeably larger than every neighbouring dock icon.
+- The full-bleed tile fills its canvas, which is what Windows and Linux expect since they scale and mask the artwork themselves.
+
+From those it writes three committed files: `assets/icon.icns` for macOS, built by piping a full `.iconset` through the macOS `iconutil` command, `assets/icon.ico` for Windows, packed directly as an ICO container of PNG entries from 16 to 256 pixels, and `assets/icon.png` at 512 pixels for Linux. Because `iconutil` only exists on macOS, a run on another platform skips the `.icns` file and keeps the other two.
+
+Two details of the render are deliberate and easy to break. The window uses a fully transparent `backgroundColor` rather than a `transparent` window, because a transparent window needs a real display and fails when the build runs headless. Both tiles are laid out side by side in one page and taken in a single capture, then cropped apart, because a window reliably serves only one load and one capture: a second load, or a second window, fails once the first capture is done. The capture comes back at the display's device scale factor, so the script accepts anything at or above the canvas size and derives every icon size from it by resizing down.
+
+`forge.config.js` points `packagerConfig.icon` at the extension-less `assets/icon` path and lets the packager choose `.icns` or `.ico` per platform, while `maker-squirrel` takes `icon.ico` as its `setupIcon` and `maker-deb` and `maker-rpm` take `icon.png`. The packager reads those files straight from the repository at package time, so `assets` is in the `packagerConfig.ignore` list and never ends up inside the application bundle. That ignore pattern is anchored to the repository root and so does not touch the `build/assets` renderer output, which must stay in the bundle.
 
 ## Persistence
 

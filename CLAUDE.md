@@ -16,6 +16,7 @@ npm run typecheck   # tsc --noEmit
 npm test            # Vitest, tests/ only
 npm start           # build React + Electron bundles, then electron-forge start
 npm run build       # build-react + build-electron
+npm run build-icons # regenerate assets/icon.{icns,ico,png} from assets/icon.svg
 ```
 
 Prefer running a single test file while iterating:
