@@ -1,7 +1,6 @@
 import { createContext, useCallback, useEffect, useMemo, useState, type ReactElement, type ReactNode } from 'react';
+import { useTranslator } from 'src/i18n/TranslationContext';
 import type { BackupLocation, ChooseBackupDirectoryResult, SetBackupDirectoryResult, SpotBackupLocationApi } from 'src/types/BackupLocationTypes';
-
-export const ELECTRON_BACKUP_LOCATION_API_UNAVAILABLE_MESSAGE = 'SPOT must be opened from the Electron app.';
 
 export interface ApplyBackupDirectoryOutcome {
 	ok: boolean;
@@ -37,6 +36,7 @@ const getBackupLocationApi = (): SpotBackupLocationApi | undefined => {
 
 // Changing the backup folder never touches the database, so nothing has to be flushed or reloaded when it changes
 export const BackupLocationContextProvider = ({ children }: BackupLocationContextProviderProps): ReactElement => {
+	const { t } = useTranslator();
 	const [ location, setLocation ] = useState<BackupLocation | undefined>();
 	const [ isLoading, setIsLoading ] = useState(true);
 	const [ loadErrorMessage, setLoadErrorMessage ] = useState<string | undefined>();
@@ -46,7 +46,7 @@ export const BackupLocationContextProvider = ({ children }: BackupLocationContex
 		const backupLocationApi = getBackupLocationApi();
 
 		if(!backupLocationApi) {
-			setLoadErrorMessage(ELECTRON_BACKUP_LOCATION_API_UNAVAILABLE_MESSAGE);
+			setLoadErrorMessage(t('storage.electronOnly'));
 			setIsLoading(false);
 
 			return undefined;
@@ -74,7 +74,7 @@ export const BackupLocationContextProvider = ({ children }: BackupLocationContex
 		return () => {
 			didCancelLoad = true;
 		};
-	}, []);
+	}, [ t ]);
 
 	const chooseBackupDirectory = useCallback((): Promise<ChooseBackupDirectoryResult> => {
 		const backupLocationApi = getBackupLocationApi();
@@ -83,12 +83,12 @@ export const BackupLocationContextProvider = ({ children }: BackupLocationContex
 			return Promise.resolve({
 				ok: false,
 				reason: 'invalid-directory',
-				message: ELECTRON_BACKUP_LOCATION_API_UNAVAILABLE_MESSAGE
+				message: t('storage.electronOnly')
 			});
 		}
 
 		return backupLocationApi.chooseBackupDirectory();
-	}, []);
+	}, [ t ]);
 
 	const runBackupDirectoryChange = useCallback(async(
 		change: (backupLocationApi: SpotBackupLocationApi) => Promise<SetBackupDirectoryResult>
@@ -98,7 +98,7 @@ export const BackupLocationContextProvider = ({ children }: BackupLocationContex
 		if(!backupLocationApi) {
 			return {
 				ok: false,
-				message: ELECTRON_BACKUP_LOCATION_API_UNAVAILABLE_MESSAGE
+				message: t('storage.electronOnly')
 			};
 		}
 
@@ -119,7 +119,7 @@ export const BackupLocationContextProvider = ({ children }: BackupLocationContex
 				message: getErrorMessage(error)
 			};
 		}
-	}, []);
+	}, [ t ]);
 
 	const applyBackupDirectory = useCallback((directory: string): Promise<ApplyBackupDirectoryOutcome> => {
 		return runBackupDirectoryChange((backupLocationApi) => {

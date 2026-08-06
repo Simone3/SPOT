@@ -1,11 +1,8 @@
 import type { BrowserWindow, Dialog, IpcMain } from 'electron';
 import type { BackupLocationManager } from 'src/framework/main/config/BackupLocationManager';
 import { registerBackupLocationIpcHandlers as registerFrameworkBackupLocationIpcHandlers } from 'src/framework/main/ipc/BackupLocationIpc';
+import type { SpotTranslator } from 'src/i18n/Translations';
 import { SPOT_BACKUP_LOCATION_IPC_CHANNELS } from 'src/types/BackupLocationIpcChannels';
-
-export const BACKUP_DIRECTORY_DIALOG_TITLE = 'Choose the SPOT backup folder';
-export const BACKUP_DIRECTORY_DIALOG_MESSAGE = 'Choose the folder where SPOT writes backup copies of the task database.';
-export const BACKUP_DIRECTORY_DIALOG_BUTTON_LABEL = 'Use this folder';
 
 export { SPOT_BACKUP_LOCATION_IPC_CHANNELS } from 'src/types/BackupLocationIpcChannels';
 
@@ -17,6 +14,9 @@ export interface RegisterBackupLocationIpcHandlersOptions {
 	ipcMain: BackupLocationIpcMain;
 	dialog: BackupLocationDialog;
 	backupLocationManager: BackupLocationManager;
+
+	// Words the native folder dialog, which names the application and so cannot be worded by the framework
+	translator: SpotTranslator;
 	getParentWindow?: () => BrowserWindow | undefined;
 }
 
@@ -25,6 +25,7 @@ export const registerBackupLocationIpcHandlers = ({
 	ipcMain,
 	dialog,
 	backupLocationManager,
+	translator,
 	getParentWindow
 }: RegisterBackupLocationIpcHandlersOptions): void => {
 	registerFrameworkBackupLocationIpcHandlers({
@@ -32,9 +33,9 @@ export const registerBackupLocationIpcHandlers = ({
 		dialog,
 		channels: SPOT_BACKUP_LOCATION_IPC_CHANNELS,
 		dialogLabels: {
-			title: BACKUP_DIRECTORY_DIALOG_TITLE,
-			message: BACKUP_DIRECTORY_DIALOG_MESSAGE,
-			buttonLabel: BACKUP_DIRECTORY_DIALOG_BUTTON_LABEL
+			title: translator.t('backup.dialog.title'),
+			message: translator.t('backup.dialog.message'),
+			buttonLabel: translator.t('backup.dialog.buttonLabel')
 		},
 		backupLocationManager,
 		getParentWindow

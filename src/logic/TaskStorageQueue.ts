@@ -1,15 +1,32 @@
-import { STORAGE_CONFIG } from 'src/config/AppConfig';
+import { I18N_CONFIG, STORAGE_CONFIG } from 'src/config/AppConfig';
 import { createStorageQueue, type StorageQueueState } from 'src/framework/renderer/StorageQueue';
+import { createSpotTranslator, type SpotTranslator } from 'src/i18n/Translations';
 import type { SpotStorageApi, TaskStorageCommand, TaskStorageCommandResult } from 'src/types/TaskStorageTypes';
 
 export type TaskStorageQueueState = StorageQueueState;
 
+// The queue is created once for the whole renderer, before anything has mounted, but its messages are only worded when a write
+// actually fails. It therefore starts on the default language and is handed the real translator as soon as React knows it.
+let queueTranslator: SpotTranslator = createSpotTranslator(I18N_CONFIG.defaultLanguage);
+
+/**
+ * Tells the queue which language to word its failures in.
+ * Messages already produced keep the wording they were produced with, because they describe something that happened then.
+ * @param translator Translator for the current language.
+ */
+export const setTaskStorageQueueTranslator = (translator: SpotTranslator): void => {
+	queueTranslator = translator;
+};
+
 const createUnsavedChangesMessage = (message: string): string => {
-	return `Task storage update failed. ${message}`;
+	return queueTranslator.t('storage.updateFailed', { message });
 };
 
 const createAbandonedChangeMessage = (message: string): string => {
-	return `Task storage update failed ${STORAGE_CONFIG.maximumWriteAttempts} times and was given up on, so that change is not stored. ${message}`;
+	return queueTranslator.t('storage.updateAbandoned', {
+		attempts: STORAGE_CONFIG.maximumWriteAttempts,
+		message
+	});
 };
 
 const sendTaskCommandToMainProcess = (command: TaskStorageCommand): Promise<TaskStorageCommandResult> => {
@@ -19,7 +36,7 @@ const sendTaskCommandToMainProcess = (command: TaskStorageCommand): Promise<Task
 		return Promise.resolve({
 			ok: false,
 			reason: 'not-implemented',
-			message: 'SPOT must be opened from the Electron app.',
+			message: queueTranslator.t('storage.electronOnly'),
 			status: {
 				database: {
 					state: 'unavailable'

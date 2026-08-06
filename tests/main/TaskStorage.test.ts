@@ -1,15 +1,18 @@
 import { copyFileSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { initializeSpotTestLogger } from '../testUtils';
+import { initializeSpotTestLogger, makeTranslator } from '../testUtils';
 import { BACKUP_CONFIG, LOGGING_CONFIG, STORAGE_CONFIG } from 'src/config/AppConfig';
 import { appLogger, resetAppLoggerForTests, type CreateAppLoggerBackend, type CreateAppLoggerOptions } from 'src/framework/main/logging/AppLogger';
 import { isBackupFileName } from 'src/framework/main/storage/DatabaseBackup';
-import { STORAGE_CLOSED_MESSAGE } from 'src/framework/main/storage/DatabaseStorage';
 import { openSpotDatabase } from 'src/main/storage/SpotDatabase';
 import { TASK_INSERT_COLUMN_NAMES, TASK_SELECT_COLUMN_NAMES, createImmutableTaskFieldChangeMessage, createMissingRequiredTaskFieldMessage, taskRowToColumnValues, taskToTaskRow, type TaskRow } from 'src/main/storage/TaskRowMapping';
 import { createTaskStorage, type CreateTaskStorageOptions, type OperationalLogEntry, type TaskStorage, type TaskStorageCommand } from 'src/main/storage/TaskStorage';
 import type { PersistedTask } from 'src/types/TaskTypes';
+
+const translator = makeTranslator();
+
+const storageClosedMessage = translator.t('storage.closed');
 
 const makeTempStorageDirectory = (): string => {
 	return mkdtempSync(path.join(tmpdir(), 'spot-storage-'));
@@ -179,6 +182,7 @@ describe('TaskStorage', () => {
 		});
 
 		const taskStorage = createTaskStorage({
+			translator,
 			...taskStorageOptions,
 			databaseDirectory,
 			backupDirectory: taskStorageOptions.backupDirectory ?? path.join(databaseDirectory, BACKUP_CONFIG.directoryName)
@@ -357,17 +361,17 @@ describe('TaskStorage', () => {
 
 		expect(statusAfterShutdown.database).toEqual({
 			state: 'unavailable',
-			message: STORAGE_CLOSED_MESSAGE
+			message: storageClosedMessage
 		});
 		expect(loadResultAfterShutdown).toMatchObject({
 			ok: false,
 			reason: 'database-error',
-			message: STORAGE_CLOSED_MESSAGE
+			message: storageClosedMessage
 		});
 		expect(commandResultAfterShutdown).toMatchObject({
 			ok: false,
 			reason: 'database-error',
-			message: STORAGE_CLOSED_MESSAGE
+			message: storageClosedMessage
 		});
 
 		const schemaVersionReads = readOperationalLogEntries(storageDirectory).filter((entry) => {

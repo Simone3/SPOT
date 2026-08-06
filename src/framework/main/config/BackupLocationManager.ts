@@ -1,6 +1,6 @@
 import type { RuntimePaths } from 'src/framework/main/config/RuntimePaths';
 import { appLogger } from 'src/framework/main/logging/AppLogger';
-import { ensureBackupDirectory, validateBackupDirectory } from 'src/framework/main/storage/BackupDirectory';
+import { ensureBackupDirectory, validateBackupDirectory, type BackupDirectoryMessages, type BackupDirectoryValidation } from 'src/framework/main/storage/BackupDirectory';
 import { getErrorMessage } from 'src/framework/utils/ErrorUtils';
 import type { BackupLocation, SetBackupDirectoryResult } from 'src/framework/types/BackupTypes';
 
@@ -18,6 +18,7 @@ export interface CreateBackupLocationManagerOptions {
 	runtimePaths: RuntimePaths;
 	storage: BackupLocationStorage;
 	directoryStore: BackupDirectoryStore;
+	directoryMessages: BackupDirectoryMessages;
 	runExclusively?: <TResult>(operation: () => Promise<TResult>) => Promise<TResult>;
 	onBackupDirectoryChanged?: () => void;
 }
@@ -27,6 +28,9 @@ export interface BackupLocationManager {
 	getLocation: () => BackupLocation;
 	setBackupDirectory: (directory: string) => Promise<SetBackupDirectoryResult>;
 	setDefaultBackupDirectory: () => Promise<SetBackupDirectoryResult>;
+
+	// Checks a folder without selecting it, so the folder dialog can refuse one in the same words the manager would
+	validateDirectory: (directory: string) => BackupDirectoryValidation;
 }
 
 interface ApplyBackupDirectoryOptions {
@@ -39,11 +43,16 @@ export const createBackupLocationManager = ({
 	runtimePaths,
 	storage,
 	directoryStore,
+	directoryMessages,
 	runExclusively = (operation) => {
 		return operation();
 	},
 	onBackupDirectoryChanged
 }: CreateBackupLocationManagerOptions): BackupLocationManager => {
+	const validateDirectory = (directory: string): BackupDirectoryValidation => {
+		return validateBackupDirectory(directory, directoryMessages);
+	};
+
 	const createLocation = (directory: string, message?: string): BackupLocation => {
 		return {
 			directory,
@@ -77,7 +86,7 @@ export const createBackupLocationManager = ({
 			return createFailure(getErrorMessage(error));
 		}
 
-		const validation = validateBackupDirectory(directory);
+		const validation = validateDirectory(directory);
 
 		if(!validation.ok) {
 			return createFailure(validation.message);
@@ -146,6 +155,7 @@ export const createBackupLocationManager = ({
 		},
 		setDefaultBackupDirectory: () => {
 			return applyBackupDirectory(runtimePaths.defaultBackupDirectory, { persist: true });
-		}
+		},
+		validateDirectory
 	};
 };

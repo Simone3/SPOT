@@ -12,6 +12,7 @@ import { TagsPage } from 'src/components/tags/TagsPage';
 import { SettingsPage } from 'src/components/settings/SettingsPage';
 import { BackupLocationContextProvider } from 'src/contexts/BackupLocationContext';
 import { TasksContextProvider } from 'src/contexts/TasksContext';
+import { TranslationProvider } from 'src/i18n/TranslationContext';
 import { installPendingTaskChangesFlushHandler } from 'src/logic/PendingTaskChanges';
 
 // Saves buffered task changes when the window closes and when the main process asks for them, for the whole lifetime of the renderer
@@ -20,20 +21,22 @@ installPendingTaskChangesFlushHandler();
 const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
 root.render(
 	<React.StrictMode>
-		<BackupLocationContextProvider>
-			<TasksContextProvider>
-				<HashRouter>
-					<Sidebar/>
-					<MainContent>
-						<Routes>
-							<Route path='/' element={<TasksPage/>}/>
-							<Route path='/notes' element={<NotesPage/>}/>
-							<Route path='/tags' element={<TagsPage/>}/>
-							<Route path='/settings' element={<SettingsPage/>}/>
-						</Routes>
-					</MainContent>
-				</HashRouter>
-			</TasksContextProvider>
-		</BackupLocationContextProvider>
+		<TranslationProvider>
+			<BackupLocationContextProvider>
+				<TasksContextProvider>
+					<HashRouter>
+						<Sidebar/>
+						<MainContent>
+							<Routes>
+								<Route path='/' element={<TasksPage/>}/>
+								<Route path='/notes' element={<NotesPage/>}/>
+								<Route path='/tags' element={<TagsPage/>}/>
+								<Route path='/settings' element={<SettingsPage/>}/>
+							</Routes>
+						</MainContent>
+					</HashRouter>
+				</TasksContextProvider>
+			</BackupLocationContextProvider>
+		</TranslationProvider>
 	</React.StrictMode>
 );

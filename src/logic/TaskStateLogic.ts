@@ -4,7 +4,7 @@ import type { TaskFilters, TaskFilterChange } from 'src/types/FilterTypes';
 import type { Task, TaskChange, TasksContainer } from 'src/types/TaskTypes';
 import { cloneFilters, getInitialFilters, refreshTasksVisibility, refreshTaskVisibility } from 'src/logic/FiltersLogic';
 import { getInitialTasks, cloneTask, cloneTasks, loadBackEndTasks, addNewTask, deleteTask, updateTask, forceSortActiveTasksByImportance, moveActiveTask } from 'src/logic/TasksLogic';
-import { getInitialDomains, cloneDomains, addDomainsForTasks, removeDomainsForTask, updateDomainsForTask, addDomainsForTask, updateFiltersOnDomainsChange } from 'src/logic/DomainsLogic';
+import { getInitialDomains, cloneDomains, addDomainsForTasks, removeDomainsForTask, updateDomainsForTask, addDomainsForTask, updateFiltersOnDomainsChange, type DomainLabels } from 'src/logic/DomainsLogic';
 
 export interface TaskStateContainer {
 	tasksContainer: TasksContainer;
@@ -29,17 +29,17 @@ export interface BulkTaskStateUpdateResult {
 	previousTasksContainer: TasksContainer;
 }
 
-export const getInitialTaskState = (): TaskStateContainer => {
+export const getInitialTaskState = (domainLabels: DomainLabels): TaskStateContainer => {
 	return {
 		tasksContainer: getInitialTasks(),
-		domainsContainer: getInitialDomains(),
+		domainsContainer: getInitialDomains(domainLabels),
 		filters: getInitialFilters()
 	};
 };
 
-export const loadTasksIntoTaskState = (prevTaskState: TaskStateContainer, tasks: Task[]): TaskStateContainer => {
+export const loadTasksIntoTaskState = (prevTaskState: TaskStateContainer, tasks: Task[], domainLabels: DomainLabels): TaskStateContainer => {
 	const newTasksContainer = getInitialTasks();
-	const newDomainsContainer = getInitialDomains();
+	const newDomainsContainer = getInitialDomains(domainLabels);
 
 	// Add tasks to the proper state lists
 	loadBackEndTasks(newTasksContainer, tasks);
@@ -57,9 +57,9 @@ export const loadTasksIntoTaskState = (prevTaskState: TaskStateContainer, tasks:
 	};
 };
 
-export const loadTasksIntoState = (setTaskState: SetTaskState, tasks: Task[]): void => {
+export const loadTasksIntoState = (setTaskState: SetTaskState, tasks: Task[], domainLabels: DomainLabels): void => {
 	setTaskState((prevTaskState) => {
-		return loadTasksIntoTaskState(prevTaskState, tasks);
+		return loadTasksIntoTaskState(prevTaskState, tasks, domainLabels);
 	});
 };
 

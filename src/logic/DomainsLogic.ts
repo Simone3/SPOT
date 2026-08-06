@@ -14,70 +14,96 @@ type TaskDomainHandler = {
 	filtersField: FilterListField;
 };
 
-const PRIORITIES: DomainEntry[] = [{
-	key: 'urgent',
-	value: 'URGENT',
-	label: 'Urgent',
-	color: 'var(--colors-priority-urgent)',
-	persistent: true,
-	count: 0
-}, {
-	key: 'high',
-	value: 'HIGH',
-	label: 'High',
-	color: 'var(--colors-priority-high)',
-	persistent: true,
-	count: 0
-}, {
-	key: 'normal',
-	value: 'NORMAL',
-	label: 'Normal',
-	color: 'var(--colors-priority-normal)',
-	persistent: true,
-	count: 0
-}, {
-	key: 'low',
-	value: 'LOW',
-	label: 'Low',
-	color: 'var(--colors-priority-low)',
-	persistent: true,
-	count: 0
+/**
+ * Wording for the domain entries that are always there, whatever the tasks look like.
+ * Only the labels are translated: the values next to them are what a task stores, so they never change with the language.
+ */
+export interface DomainLabels {
+	urgent: string;
+	high: string;
+	normal: string;
+	low: string;
+	noOwner: string;
+	noDueDate: string;
 }
-];
 
-const NO_OWNER: DomainEntry = {
-	key: `no-owner-${crypto.randomUUID()}`,
-	value: '',
-	label: 'Me',
-	color: undefined,
-	persistent: true,
-	count: 0
+// The keys of the two entries that stand for "no value" are random, so they can never collide with an owner or a due date a
+// user typed. They are generated once, so that rebuilding the domains keeps React rendering the same elements.
+const NO_OWNER_KEY = `no-owner-${crypto.randomUUID()}`;
+const NO_DUE_DATE_KEY = `no-due-date-${crypto.randomUUID()}`;
+
+const createPriorityDomains = (labels: DomainLabels): DomainEntry[] => {
+	return [{
+		key: 'urgent',
+		value: 'URGENT',
+		label: labels.urgent,
+		color: 'var(--colors-priority-urgent)',
+		persistent: true,
+		count: 0
+	}, {
+		key: 'high',
+		value: 'HIGH',
+		label: labels.high,
+		color: 'var(--colors-priority-high)',
+		persistent: true,
+		count: 0
+	}, {
+		key: 'normal',
+		value: 'NORMAL',
+		label: labels.normal,
+		color: 'var(--colors-priority-normal)',
+		persistent: true,
+		count: 0
+	}, {
+		key: 'low',
+		value: 'LOW',
+		label: labels.low,
+		color: 'var(--colors-priority-low)',
+		persistent: true,
+		count: 0
+	}
+	];
 };
 
-const NO_DUE_DATE: DomainEntry = {
-	key: `no-due-date-${crypto.randomUUID()}`,
-	value: '',
-	label: 'None',
-	color: undefined,
-	persistent: true,
-	count: 0
+const createNoOwnerDomain = (labels: DomainLabels): DomainEntry => {
+	return {
+		key: NO_OWNER_KEY,
+		value: '',
+		label: labels.noOwner,
+		color: undefined,
+		persistent: true,
+		count: 0
+	};
+};
+
+const createNoDueDateDomain = (labels: DomainLabels): DomainEntry => {
+	return {
+		key: NO_DUE_DATE_KEY,
+		value: '',
+		label: labels.noDueDate,
+		color: undefined,
+		persistent: true,
+		count: 0
+	};
 };
 
 /**
  * Returns a new object containing the initial domains.
+ * Every list is built fresh, so the filter section and the form section count their entries on their own.
+ * @param labels Wording for the entries that are always present.
  * @returns Default filter and form domains.
  */
-export const getInitialDomains = (): DomainsContainer => {
+export const getInitialDomains = (labels: DomainLabels): DomainsContainer => {
 	return {
 		filters: {
-			priorities: PRIORITIES,
-			owners: [ NO_OWNER ],
-			dueDates: [ NO_DUE_DATE ],
+			priorities: createPriorityDomains(labels),
+			owners: [ createNoOwnerDomain(labels) ],
+			dueDates: [ createNoDueDateDomain(labels) ],
 			tags: []
 		},
 		form: {
-			priorities: PRIORITIES,
-			owners: [ NO_OWNER ],
+			priorities: createPriorityDomains(labels),
+			owners: [ createNoOwnerDomain(labels) ],
 			tags: []
 		}
 	};

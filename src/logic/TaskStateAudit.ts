@@ -1,5 +1,6 @@
 import { AUDIT_CONFIG } from 'src/config/AppConfig';
 import { getDifferingPersistedTaskFieldNames } from 'src/logic/TaskComparison';
+import type { SpotTranslationKey, SpotTranslator } from 'src/i18n/Translations';
 import type { Task } from 'src/types/TaskTypes';
 
 /**
@@ -93,12 +94,12 @@ export const auditTaskState = (stateTasks: Task[], databaseTasks: Task[]): TaskS
 	};
 };
 
-const AUDIT_TRAILER_MESSAGE = 'Nothing on screen is lost, but those tasks may come back differently the next time SPOT starts. The details are in the developer console.';
-
-const AUDIT_REASON_DESCRIPTIONS: readonly { reason: TaskStateAuditReason; description: string }[] = [
-	{ reason: 'missing-in-database', description: 'not stored yet' },
-	{ reason: 'missing-in-state', description: 'stored but not shown' },
-	{ reason: 'different-values', description: 'stored with different values' }
+// Each reason is its own sentence fragment rather than a count followed by a description, because how a language counts
+// and how it words the reason cannot be assumed to compose the same way English does
+const AUDIT_REASON_KEYS: readonly { reason: TaskStateAuditReason; key: SpotTranslationKey }[] = [
+	{ reason: 'missing-in-database', key: 'audit.details.missingInDatabase' },
+	{ reason: 'missing-in-state', key: 'audit.details.missingInState' },
+	{ reason: 'different-values', key: 'audit.details.differentValues' }
 ];
 
 const countDifferencesByReason = (report: TaskStateAuditReport, reason: TaskStateAuditReason): number => {
@@ -107,31 +108,36 @@ const countDifferencesByReason = (report: TaskStateAuditReport, reason: TaskStat
 	}).length;
 };
 
-const describeTaskCount = (count: number): string => {
-	return count === 1 ? '1 task' : `${count} tasks`;
-};
-
 /**
  * Describes an audit report for the user.
  * The wording stays a notice: the audit only reads, so what it found is never a reason to distrust what is on screen.
  * @param report Report to describe.
+ * @param translator Translator for the current language.
  * @returns The message, or undefined when the report found nothing.
  */
-export const createTaskStateAuditMessage = (report: TaskStateAuditReport): string | undefined => {
+export const createTaskStateAuditMessage = (report: TaskStateAuditReport, translator: SpotTranslator): string | undefined => {
 	if(report.isAligned) {
 		return undefined;
 	}
 
+	const trailer = translator.t('audit.trailer');
+
 	// The counts come from the capped list, so the report is only broken down by reason when the whole of it fits in that list
 	if(report.differenceCount > report.differences.length) {
-		return `${describeTaskCount(report.differenceCount)} on screen do not match what SPOT has stored. ${AUDIT_TRAILER_MESSAGE}`;
+		return translator.t('audit.report', {
+			details: translator.t('audit.cappedDetails', { count: report.differenceCount }),
+			trailer
+		});
 	}
 
-	const summary = AUDIT_REASON_DESCRIPTIONS.flatMap(({ reason, description }) => {
+	const details = AUDIT_REASON_KEYS.flatMap(({ reason, key }) => {
 		const count = countDifferencesByReason(report, reason);
 
-		return count > 0 ? [ `${describeTaskCount(count)} ${description}` ] : [];
-	}).join(', ');
+		return count > 0 ? [ translator.t(key, { count }) ] : [];
+	});
 
-	return `${summary}. ${AUDIT_TRAILER_MESSAGE}`;
+	return translator.t('audit.report', {
+		details: translator.formatList(details),
+		trailer
+	});
 };

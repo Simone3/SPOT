@@ -11,6 +11,7 @@ import { WarningIcon } from 'src/components/icons/WarningIcon';
 import type { TaskChangeFlushMode } from 'src/logic/PendingTaskChanges';
 import type { FormDomains } from 'src/types/DomainTypes';
 import type { Task as TaskType } from 'src/types/TaskTypes';
+import { useTranslator } from 'src/i18n/TranslationContext';
 
 /**
  * Returns a string value possibly changed to match an option capitalization
@@ -56,6 +57,7 @@ const getTagsWithTrailingInput = (tags: string[]): string[] => {
 };
 
 const TaskChips = ({ inputDomains, task, setOwner, setDueDate, setTags, flushTaskChanges, disabled }: TaskChipsProps): ReactElement => {
+	const { t } = useTranslator();
 	const {
 		state,
 		owner,
@@ -72,7 +74,7 @@ const TaskChips = ({ inputDomains, task, setOwner, setDueDate, setTags, flushTas
 			leftIcon={<OwnerIcon/>}>
 			<FreeSelectInput
 				value={owner || ''}
-				placeholder={'Me'}
+				placeholder={t('tasks.fields.ownerPlaceholder')}
 				onChange={(value) => {
 					setOwner(value, 'delayed');
 				}}
@@ -107,7 +109,7 @@ const TaskChips = ({ inputDomains, task, setOwner, setDueDate, setTags, flushTas
 				onChange={(value) => {
 					setDueDate(DateUtils.toStandardYearMonthDay(value), 'delayed');
 				}}
-				placeholder={'No due date'}
+				placeholder={t('tasks.fields.dueDatePlaceholder')}
 				onBlur={flushTaskChanges}
 				disabled={disabled}
 			/>
@@ -123,7 +125,7 @@ const TaskChips = ({ inputDomains, task, setOwner, setDueDate, setTags, flushTas
 				leftIcon={<TagsIcon/>}>
 				<FreeSelectInput
 					value={tagsWithTrailingInput[i]}
-					placeholder={'Add tag...'}
+					placeholder={t('tasks.fields.tagPlaceholder')}
 					onChange={(value) => {
 						// A tag the user is still typing is buffered but not saved on its own, so half-typed tags never reach the database
 						setTags((prevTags) => {

@@ -1,4 +1,5 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
+import { renderWithTranslations } from '../testUtils';
 import { TaskFilters } from 'src/components/tasks/TaskFilters';
 import { DateUtils } from 'src/framework/utils/DateUtils';
 import { getInitialFilters } from 'src/logic/FiltersLogic';
@@ -55,7 +56,7 @@ describe('TaskFilters', () => {
 		const onFilterChange = vi.fn();
 		const onResetDefaultFilters = vi.fn();
 
-		render(
+		renderWithTranslations(
 			<TaskFilters
 				domains={domains}
 				filters={getInitialFilters()}

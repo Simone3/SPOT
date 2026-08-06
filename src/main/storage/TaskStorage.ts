@@ -1,6 +1,7 @@
 import { BACKUP_CONFIG, STORAGE_CONFIG } from 'src/config/AppConfig';
 import { createDatabaseStorage } from 'src/framework/main/storage/DatabaseStorage';
 import type { OperationalLogWriteResult } from 'src/framework/types/StorageTypes';
+import type { SpotTranslator } from 'src/i18n/Translations';
 import { openSpotDatabase } from 'src/main/storage/SpotDatabase';
 import { executeTaskCommandOnDatabase } from 'src/main/storage/TaskCommandExecutor';
 import { readTasksFromDatabase } from 'src/main/storage/TaskRepository';
@@ -43,11 +44,14 @@ export interface TaskStorage {
 export interface CreateTaskStorageOptions {
 	databaseDirectory: string;
 	backupDirectory: string;
+
+	// Words the failure a command gets when it arrives after shutdown closed the database, which the renderer shows the user
+	translator: SpotTranslator;
 	now?: () => Date;
 }
 
 // Binds the framework storage core to SPOT: its database schema, its task commands, and its backup file naming
-export const createTaskStorage = ({ databaseDirectory, backupDirectory, now }: CreateTaskStorageOptions): TaskStorage => {
+export const createTaskStorage = ({ databaseDirectory, backupDirectory, translator, now }: CreateTaskStorageOptions): TaskStorage => {
 	const storage = createDatabaseStorage<TaskStorageCommand, Task>({
 		databaseDirectory,
 		databaseFileName: STORAGE_CONFIG.databaseFileName,
@@ -71,6 +75,7 @@ export const createTaskStorage = ({ databaseDirectory, backupDirectory, now }: C
 				payload: command.payload
 			};
 		},
+		storageClosedMessage: translator.t('storage.closed'),
 		now
 	});
 

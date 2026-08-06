@@ -1,11 +1,15 @@
 import type { Mock } from 'vitest';
 import type { App, IpcMain, IpcMainInvokeEvent } from 'electron';
-import { makeTask } from '../testUtils';
+import { makeTask, makeTranslator } from '../testUtils';
 import { SHUTDOWN_CONFIG } from 'src/config/AppConfig';
 import { appLogger, resetAppLoggerForTests } from 'src/framework/main/logging/AppLogger';
-import { registerTaskStorageIpcHandlers, SPOT_STORAGE_IPC_CHANNELS, TASK_STORAGE_SHUTDOWN_MESSAGE } from 'src/main/ipc/TaskStorageIpc';
+import { registerTaskStorageIpcHandlers, SPOT_STORAGE_IPC_CHANNELS } from 'src/main/ipc/TaskStorageIpc';
 import type { TaskStorage } from 'src/main/storage/TaskStorage';
 import type { LoadTasksResult, StorageStatus, TaskStorageCommand, TaskStorageCommandResult } from 'src/types/TaskStorageTypes';
+
+const translator = makeTranslator();
+
+const taskStorageShutdownMessage = translator.t('storage.shuttingDown');
 
 type RegisteredIpcHandler = (event: IpcMainInvokeEvent, ...args: unknown[]) => unknown;
 type RegisteredAppHandler = (...args: unknown[]) => unknown;
@@ -137,6 +141,7 @@ describe('TaskStorageIpc', () => {
 		};
 
 		registerTaskStorageIpcHandlers({
+			translator,
 			ipcMain,
 			taskStorage
 		});
@@ -183,6 +188,7 @@ describe('TaskStorageIpc', () => {
 		};
 
 		registerTaskStorageIpcHandlers({
+			translator,
 			app,
 			ipcMain,
 			taskStorage: {
@@ -228,6 +234,7 @@ describe('TaskStorageIpc', () => {
 		};
 
 		registerTaskStorageIpcHandlers({
+			translator,
 			app,
 			ipcMain,
 			taskStorage
@@ -238,7 +245,7 @@ describe('TaskStorageIpc', () => {
 		await expect(handlers.get(SPOT_STORAGE_IPC_CHANNELS.executeTaskCommand)!(event, command)).resolves.toEqual({
 			ok: false,
 			reason: 'shutdown',
-			message: TASK_STORAGE_SHUTDOWN_MESSAGE,
+			message: taskStorageShutdownMessage,
 			status
 		});
 		expect(taskStorage.executeTaskCommand).not.toHaveBeenCalled();
@@ -281,6 +288,7 @@ describe('TaskStorageIpc', () => {
 		};
 
 		registerTaskStorageIpcHandlers({
+			translator,
 			app,
 			ipcMain,
 			taskStorage: {
@@ -327,6 +335,7 @@ describe('TaskStorageIpc', () => {
 		};
 
 		registerTaskStorageIpcHandlers({
+			translator,
 			app,
 			ipcMain,
 			taskStorage,
@@ -342,7 +351,7 @@ describe('TaskStorageIpc', () => {
 		await expect(handlers.get(SPOT_STORAGE_IPC_CHANNELS.executeTaskCommand)!(event, command)).resolves.toEqual({
 			ok: false,
 			reason: 'shutdown',
-			message: TASK_STORAGE_SHUTDOWN_MESSAGE,
+			message: taskStorageShutdownMessage,
 			status
 		});
 		expect(taskStorage.executeTaskCommand).not.toHaveBeenCalled();
@@ -368,6 +377,7 @@ describe('TaskStorageIpc', () => {
 		const event = {} as IpcMainInvokeEvent;
 
 		registerTaskStorageIpcHandlers({
+			translator,
 			app,
 			ipcMain,
 			taskStorage: {
@@ -401,6 +411,7 @@ describe('TaskStorageIpc', () => {
 		vi.spyOn(appLogger, 'flush').mockResolvedValue(undefined);
 
 		registerTaskStorageIpcHandlers({
+			translator,
 			app,
 			ipcMain,
 			taskStorage,
@@ -439,6 +450,7 @@ describe('TaskStorageIpc', () => {
 		let isWindowClosed = false;
 
 		const { requestRendererFlushBeforeWindowClose } = registerTaskStorageIpcHandlers({
+			translator,
 			app,
 			ipcMain,
 			taskStorage: {
@@ -481,6 +493,7 @@ describe('TaskStorageIpc', () => {
 		const event = {} as IpcMainInvokeEvent;
 
 		const { requestRendererFlushBeforeWindowClose } = registerTaskStorageIpcHandlers({
+			translator,
 			app,
 			ipcMain,
 			taskStorage,
@@ -514,6 +527,7 @@ describe('TaskStorageIpc', () => {
 		const event = {} as IpcMainInvokeEvent;
 
 		const { requestRendererFlushBeforeWindowClose } = registerTaskStorageIpcHandlers({
+			translator,
 			app,
 			ipcMain,
 			taskStorage,
@@ -545,6 +559,7 @@ describe('TaskStorageIpc', () => {
 		const event = {} as IpcMainInvokeEvent;
 
 		const { requestRendererFlushBeforeWindowClose } = registerTaskStorageIpcHandlers({
+			translator,
 			app,
 			ipcMain,
 			taskStorage: {
@@ -581,6 +596,7 @@ describe('TaskStorageIpc', () => {
 		const event = {} as IpcMainInvokeEvent;
 
 		const { requestRendererFlushBeforeWindowClose } = registerTaskStorageIpcHandlers({
+			translator,
 			ipcMain,
 			taskStorage,
 			getRendererFlushTarget: () => {
@@ -607,6 +623,7 @@ describe('TaskStorageIpc', () => {
 		const { taskStorage } = createMockTaskStorage();
 
 		const { requestRendererFlushBeforeWindowClose } = registerTaskStorageIpcHandlers({
+			translator,
 			ipcMain,
 			taskStorage,
 			getRendererFlushTarget: () => {
@@ -637,6 +654,7 @@ describe('TaskStorageIpc', () => {
 		vi.spyOn(appLogger, 'flush').mockResolvedValue(undefined);
 
 		registerTaskStorageIpcHandlers({
+			translator,
 			app,
 			ipcMain,
 			taskStorage: {
@@ -674,6 +692,7 @@ describe('TaskStorageIpc', () => {
 		const event = {} as IpcMainInvokeEvent;
 
 		const { runExclusively } = registerTaskStorageIpcHandlers({
+			translator,
 			ipcMain,
 			taskStorage
 		});
@@ -747,6 +766,7 @@ describe('TaskStorageIpc', () => {
 		};
 
 		const { runExclusively } = registerTaskStorageIpcHandlers({
+			translator,
 			ipcMain,
 			taskStorage
 		});

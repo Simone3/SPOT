@@ -5,6 +5,7 @@ import { DeleteIcon } from 'src/components/icons/DeleteIcon';
 import { ConfirmModal } from 'src/components/common/ConfirmModal';
 import type { Task } from 'src/types/TaskTypes';
 import { Clickable } from 'src/components/common/Clickable';
+import { useTranslator } from 'src/i18n/TranslationContext';
 
 type TaskActionsProps = {
 	task: Task;
@@ -15,6 +16,7 @@ type TaskActionsProps = {
 };
 
 const TaskActions = ({ task, onChangeState, onDelete, dragHandle, disableSecondaryActions }: TaskActionsProps): ReactElement => {
+	const { t } = useTranslator();
 	const {
 		state
 	} = task;
@@ -34,16 +36,16 @@ const TaskActions = ({ task, onChangeState, onDelete, dragHandle, disableSeconda
 			</Clickable>
 			{confirmOpen &&
 				<ConfirmModal
-					title='Delete task?'
+					title={t('tasks.delete.title')}
 					content={
 						<>
-							<p>This will permanently delete this task.</p>
-							<p>This action cannot be undone.</p>
+							<p>{t('tasks.delete.permanentWarning')}</p>
+							<p>{t('tasks.delete.irreversibleWarning')}</p>
 						</>
 					}
-					confirmText='Delete Task'
+					confirmText={t('tasks.delete.confirm')}
 					onConfirm={onDelete}
-					cancelText='Keep Task'
+					cancelText={t('tasks.delete.cancel')}
 					onCancel={() => {
 						setConfirmOpen(false);
 					}}

@@ -1,6 +1,8 @@
-import { makeTask } from '../testUtils';
+import { makeTask, makeTranslator } from '../testUtils';
 import { AUDIT_CONFIG } from 'src/config/AppConfig';
 import { auditTaskState, createTaskStateAuditMessage } from 'src/logic/TaskStateAudit';
+
+const translator = makeTranslator();
 
 describe('TaskStateAudit', () => {
 	test('reports nothing when both sides hold the same tasks', () => {
@@ -15,7 +17,7 @@ describe('TaskStateAudit', () => {
 
 		expect(report.isAligned).toBe(true);
 		expect(report.differenceCount).toBe(0);
-		expect(createTaskStateAuditMessage(report)).toBeUndefined();
+		expect(createTaskStateAuditMessage(report, translator)).toBeUndefined();
 	});
 
 	test('ignores the differences that are never stored', () => {
@@ -48,7 +50,7 @@ describe('TaskStateAudit', () => {
 			taskText: 'Never written',
 			reason: 'missing-in-database'
 		}]);
-		expect(createTaskStateAuditMessage(report)).toContain('1 task not stored yet');
+		expect(createTaskStateAuditMessage(report, translator)).toContain('1 task not stored yet');
 	});
 
 	test('reports a task the task state does not hold', () => {
@@ -62,7 +64,7 @@ describe('TaskStateAudit', () => {
 			taskText: 'Still stored',
 			reason: 'missing-in-state'
 		}]);
-		expect(createTaskStateAuditMessage(report)).toContain('1 task stored but not shown');
+		expect(createTaskStateAuditMessage(report, translator)).toContain('1 task stored but not shown');
 	});
 
 	test('reports which fields a task is stored with differently', () => {
@@ -84,7 +86,7 @@ describe('TaskStateAudit', () => {
 			reason: 'different-values',
 			fieldNames: [ 'text', 'priority' ]
 		}]);
-		expect(createTaskStateAuditMessage(report)).toContain('1 task stored with different values');
+		expect(createTaskStateAuditMessage(report, translator)).toContain('1 task stored with different values');
 	});
 
 	test('breaks the message down by reason when every difference is listed', () => {
@@ -99,7 +101,7 @@ describe('TaskStateAudit', () => {
 		const report = auditTaskState([ changedTask, unstoredTask ], [ sharedTask, forgottenTask ]);
 
 		expect(report.differenceCount).toBe(3);
-		expect(createTaskStateAuditMessage(report)).toContain('1 task not stored yet, 1 task stored but not shown, 1 task stored with different values');
+		expect(createTaskStateAuditMessage(report, translator)).toContain('1 task not stored yet, 1 task stored but not shown, 1 task stored with different values');
 	});
 
 	test('caps the listed differences while still counting all of them', () => {
@@ -111,6 +113,6 @@ describe('TaskStateAudit', () => {
 
 		expect(report.differenceCount).toBe(AUDIT_CONFIG.maximumReportedTasks + 5);
 		expect(report.differences).toHaveLength(AUDIT_CONFIG.maximumReportedTasks);
-		expect(createTaskStateAuditMessage(report)).toContain(`${AUDIT_CONFIG.maximumReportedTasks + 5} tasks on screen do not match`);
+		expect(createTaskStateAuditMessage(report, translator)).toContain(`${AUDIT_CONFIG.maximumReportedTasks + 5} tasks on screen do not match`);
 	});
 });

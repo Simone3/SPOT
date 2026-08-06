@@ -7,7 +7,8 @@ import { getErrorMessage } from 'src/framework/utils/ErrorUtils';
 import type { BackupFileNaming } from 'src/framework/types/BackupTypes';
 import type { BackupResult, BackupStatus, LoadRecordsResult, OperationalLogEntry, OperationalLogWriteResult, StorageCommandResult, StorageDatabaseStatus, StorageFailure, StorageStatus } from 'src/framework/types/StorageTypes';
 
-export const STORAGE_CLOSED_MESSAGE = 'Storage is closed.';
+// Reported to the user when a command arrives after shutdown closed the database, so an application can say it in its own words
+export const DEFAULT_STORAGE_CLOSED_MESSAGE = 'Storage is closed.';
 
 export interface DatabaseStorage<TCommand, TRecord> {
 	loadRecords: () => Promise<LoadRecordsResult<TRecord>>;
@@ -35,6 +36,9 @@ export interface CreateDatabaseStorageOptions<TCommand, TRecord> {
 
 	// The fields written to the operational log when a renderer command arrives, so an application can log its own command shape
 	describeCommand?: (command: TCommand) => AppLogFields;
+
+	// Reported to the user when a command arrives after the database was closed
+	storageClosedMessage?: string;
 	now?: () => Date;
 }
 
@@ -55,6 +59,7 @@ export const createDatabaseStorage = <TCommand, TRecord>({
 			command
 		};
 	},
+	storageClosedMessage = DEFAULT_STORAGE_CLOSED_MESSAGE,
 	now
 }: CreateDatabaseStorageOptions<TCommand, TRecord>): DatabaseStorage<TCommand, TRecord> => {
 	let database: AppDatabase | undefined;
@@ -74,7 +79,7 @@ export const createDatabaseStorage = <TCommand, TRecord>({
 		// late, or to report a status, would leave behind a database nobody closes a second time and a write-ahead log that is never
 		// checkpointed, so storage stays closed instead and says so.
 		if(isClosed) {
-			throw new Error(STORAGE_CLOSED_MESSAGE);
+			throw new Error(storageClosedMessage);
 		}
 
 		if(!database) {

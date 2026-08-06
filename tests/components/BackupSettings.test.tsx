@@ -1,4 +1,5 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, screen } from '@testing-library/react';
+import { renderWithTranslations } from '../testUtils';
 import { BackupSettings } from 'src/components/storage/BackupSettings';
 import { BackupLocationContextProvider } from 'src/contexts/BackupLocationContext';
 import type { BackupLocation, SpotBackupLocationApi } from 'src/types/BackupLocationTypes';
@@ -98,7 +99,7 @@ describe('BackupSettings', () => {
 			lastBackupAt: '2026-06-06T10:00:00.000Z'
 		}));
 
-		render(
+		renderWithTranslations(
 			<BackupLocationContextProvider>
 				<BackupSettings/>
 			</BackupLocationContextProvider>
@@ -117,7 +118,7 @@ describe('BackupSettings', () => {
 			message: 'The backup folder is not available.'
 		}));
 
-		render(
+		renderWithTranslations(
 			<BackupLocationContextProvider>
 				<BackupSettings/>
 			</BackupLocationContextProvider>
@@ -131,7 +132,7 @@ describe('BackupSettings', () => {
 		setWindowApi('spotBackupLocation', backupLocationApi);
 		setWindowApi('spotStorage', createMockStorageApi(undefined));
 
-		render(
+		renderWithTranslations(
 			<BackupLocationContextProvider>
 				<BackupSettings/>
 			</BackupLocationContextProvider>

@@ -11,6 +11,11 @@ export const WINDOW_CONFIG = {
 	reactBuildIndexPathSegments: [ 'build', 'index.html' ]
 } as const;
 
+export const I18N_CONFIG = {
+	// Used when the runtime asks for a language SPOT does not ship a bundle for. It must be one of the languages in "src/i18n/Translations.ts".
+	defaultLanguage: 'en'
+} as const;
+
 export const STORAGE_CONFIG = {
 	directoryName: 'storage',
 	databaseFileName: 'spot.sqlite',
@@ -49,7 +54,10 @@ export const LOGGING_CONFIG = {
 export const TASKS_CONFIG = {
 	flushDelayMs: 5000,
 	stateChangeDelayMs: 3000,
-	sortPositionStep: 1000
+	sortPositionStep: 1000,
+
+	// How many days after tomorrow a due date is shown as a weekday name instead of a full date
+	dueDateWeekdayHorizonDays: 5
 } as const;
 
 export const AUDIT_CONFIG = {

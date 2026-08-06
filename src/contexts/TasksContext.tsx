@@ -3,8 +3,11 @@ import { AUDIT_CONFIG } from 'src/config/AppConfig';
 import { clearPendingTaskChanges, flushPendingTaskChanges, hasPendingTaskChanges, registerPendingTaskChangesApplier } from 'src/logic/PendingTaskChanges';
 import { createPersistedTaskChange, hasPersistedTaskChange, taskToPersistedTask } from 'src/logic/TaskComparison';
 import { auditTaskState, createTaskStateAuditMessage } from 'src/logic/TaskStateAudit';
-import { getTaskStorageQueueState, isTaskStorageQueueIdle, sendTaskStorageCommand, subscribeToTaskStorageQueue } from 'src/logic/TaskStorageQueue';
+import { getTaskStorageQueueState, isTaskStorageQueueIdle, sendTaskStorageCommand, setTaskStorageQueueTranslator, subscribeToTaskStorageQueue } from 'src/logic/TaskStorageQueue';
 import { findTaskById } from 'src/logic/TasksLogic';
+import { useTranslator } from 'src/i18n/TranslationContext';
+import type { SpotTranslator } from 'src/i18n/Translations';
+import type { DomainLabels } from 'src/logic/DomainsLogic';
 import { getInitialTaskState, addTaskToTaskState, refreshVisibleTasksInTaskState, deleteTaskFromTaskState, changeFiltersInTaskState, loadTasksIntoTaskState, resetFiltersTaskState, updateTaskInTaskState, sortTasksByImportanceInTaskState, moveActiveTaskInTaskState, type TaskStateContainer } from 'src/logic/TaskStateLogic';
 import type { PersistedTaskChange, Task, TaskChange, TasksContainer } from 'src/types/TaskTypes';
 import type { TaskFilterChange } from 'src/types/FilterTypes';
@@ -44,9 +47,17 @@ type TasksContextProviderProps = {
 	children: ReactNode;
 };
 
-const ELECTRON_STORAGE_API_UNAVAILABLE_MESSAGE = 'SPOT must be opened from the Electron app.';
-
-const TASK_STATE_AUDIT_LOG_MESSAGE = 'The tasks on screen and the tasks in the database are not the same';
+// The domain entries that are always there are worded once per language, then handed to the pure state logic, which stays free of translation itself
+const createDomainLabels = (translator: SpotTranslator): DomainLabels => {
+	return {
+		urgent: translator.t('tasks.priorities.urgent'),
+		high: translator.t('tasks.priorities.high'),
+		normal: translator.t('tasks.priorities.normal'),
+		low: translator.t('tasks.priorities.low'),
+		noOwner: translator.t('tasks.domains.noOwner'),
+		noDueDate: translator.t('tasks.domains.noDueDate')
+	};
+};
 
 const getErrorMessage = (error: unknown): string => {
 	if(error instanceof Error) {
@@ -94,12 +105,27 @@ const createSortPositionUpdates = (
 };
 
 export const TasksContextProvider = ({ children }: TasksContextProviderProps): ReactElement => {
-	const [ taskState, setTaskState ] = useState(getInitialTaskState());
+	const translator = useTranslator();
+	const [ taskState, setTaskState ] = useState(() => {
+		return getInitialTaskState(createDomainLabels(translator));
+	});
 	const [ taskStartupState, setTaskStartupState ] = useState<TaskStartupState>({ state: 'loading' });
 	const [ taskStorageWarning, setTaskStorageWarning ] = useState<string | undefined>();
 	const [ taskStorageStatus, setTaskStorageStatus ] = useState<StorageStatus | undefined>();
 	const [ taskStateAuditWarning, setTaskStateAuditWarning ] = useState<string | undefined>();
 	const taskStateRef = useRef(taskState);
+
+	// The effects below must not restart when the language changes: the startup load runs exactly once, and the audit schedule
+	// is deliberately its own. They therefore reach the current translator through a ref rather than through their dependencies.
+	const translatorRef = useRef(translator);
+	useEffect(() => {
+		translatorRef.current = translator;
+	});
+
+	// The write queue is created before anything mounts and words its failures whenever one happens, so it is told the language instead of asking for it
+	useEffect(() => {
+		setTaskStorageQueueTranslator(translator);
+	}, [ translator ]);
 
 	// Counts task state changes so that the audit can tell whether the one it started against is still the current one
 	const taskStateGenerationRef = useRef(0);
@@ -138,17 +164,18 @@ export const TasksContextProvider = ({ children }: TasksContextProviderProps): R
 			const spotStorage = window.spotStorage as SpotStorageApi | undefined;
 
 			if(!spotStorage) {
+				const unavailableMessage = translatorRef.current.t('storage.electronOnly');
 				const storageStatus: StorageStatus = {
 					database: {
 						state: 'unavailable',
-						message: ELECTRON_STORAGE_API_UNAVAILABLE_MESSAGE
+						message: unavailableMessage
 					}
 				};
 
 				setTaskStorageStatus(storageStatus);
 				setTaskStartupState({
 					state: 'startup-error',
-					message: ELECTRON_STORAGE_API_UNAVAILABLE_MESSAGE
+					message: unavailableMessage
 				});
 
 				return;
@@ -162,7 +189,7 @@ export const TasksContextProvider = ({ children }: TasksContextProviderProps): R
 				}
 
 				if(loadTasksResult.ok) {
-					commitTaskState(loadTasksIntoTaskState(taskStateRef.current, loadTasksResult.tasks));
+					commitTaskState(loadTasksIntoTaskState(taskStateRef.current, loadTasksResult.tasks, createDomainLabels(translatorRef.current)));
 					setTaskStartupState({ state: 'loaded' });
 					setTaskStorageStatus(loadTasksResult.status);
 				}
@@ -276,8 +303,8 @@ export const TasksContextProvider = ({ children }: TasksContextProviderProps): R
 			}
 
 			// The message says how much drifted, while the console holds which tasks and which fields
-			console.warn(TASK_STATE_AUDIT_LOG_MESSAGE, report);
-			setTaskStateAuditWarning(createTaskStateAuditMessage(report));
+			console.warn(translatorRef.current.t('audit.logMessage'), report);
+			setTaskStateAuditWarning(createTaskStateAuditMessage(report, translatorRef.current));
 		};
 
 		// The audit reschedules itself instead of running on an interval, so a read waiting behind a write or a backup can never

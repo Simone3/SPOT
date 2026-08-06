@@ -1,4 +1,4 @@
-import { makeTask } from '../testUtils';
+import { makeDomainLabels, makeTask } from '../testUtils';
 import { addDomainsForTasks, getInitialDomains, removeDomainsForTask, updateDomainsForTask, updateFiltersOnDomainsChange } from 'src/logic/DomainsLogic';
 import { getInitialFilters } from 'src/logic/FiltersLogic';
 import type { DomainEntry } from 'src/types/DomainTypes';
@@ -37,7 +37,7 @@ describe('DomainsLogic', () => {
 			active: [ activeAlice, activeNoDueDate ],
 			completed: [ completedBob ]
 		};
-		const domainsContainer = getInitialDomains();
+		const domainsContainer = getInitialDomains(makeDomainLabels());
 
 		addDomainsForTasks(domainsContainer, tasksContainer);
 
@@ -75,7 +75,7 @@ describe('DomainsLogic', () => {
 			owner: 'Bob',
 			tags: [ 'personal' ]
 		};
-		const domainsContainer = getInitialDomains();
+		const domainsContainer = getInitialDomains(makeDomainLabels());
 
 		addDomainsForTasks(domainsContainer, {
 			active: [ oldTask, otherAliceTask ],
@@ -100,7 +100,7 @@ describe('DomainsLogic', () => {
 			dueDate: '2026-05-10',
 			tags: [ 'work' ]
 		});
-		const domainsContainer = getInitialDomains();
+		const domainsContainer = getInitialDomains(makeDomainLabels());
 		const filters: TaskFilters = {
 			...getInitialFilters(),
 			owners: [ 'Alice', 'Missing' ],

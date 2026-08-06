@@ -1,11 +1,11 @@
 import type { App, IpcMain } from 'electron';
 import { SHUTDOWN_CONFIG } from 'src/config/AppConfig';
 import { registerStorageIpcHandlers, type RendererFlushTarget, type StorageCommandController } from 'src/framework/main/ipc/StorageCommandIpc';
+import type { SpotTranslator } from 'src/i18n/Translations';
 import type { TaskStorage } from 'src/main/storage/TaskStorage';
 import { SPOT_STORAGE_IPC_CHANNELS } from 'src/types/TaskStorageIpcChannels';
 import type { LoadTasksResult, TaskStorageCommand } from 'src/types/TaskStorageTypes';
 
-export const TASK_STORAGE_SHUTDOWN_MESSAGE = 'Task storage is shutting down.';
 export { SPOT_STORAGE_IPC_CHANNELS } from 'src/types/TaskStorageIpcChannels';
 export type { RendererFlushTarget, StorageCommandController as TaskStorageCommandController } from 'src/framework/main/ipc/StorageCommandIpc';
 
@@ -18,6 +18,9 @@ type TaskStorageIpcApi = Pick<TaskStorage, 'loadTasks' | 'executeTaskCommand' | 
 export interface RegisterTaskStorageIpcHandlersOptions {
 	ipcMain: TaskStorageIpcMain;
 	taskStorage: TaskStorageIpcApi;
+
+	// Words the failure a command gets once shutdown started refusing them
+	translator: SpotTranslator;
 	app?: TaskStorageIpcApp;
 	getRendererFlushTarget?: () => RendererFlushTarget | undefined;
 
@@ -36,6 +39,7 @@ export interface RegisterTaskStorageIpcHandlersOptions {
 export const registerTaskStorageIpcHandlers = ({
 	ipcMain,
 	taskStorage,
+	translator,
 	app,
 	getRendererFlushTarget,
 	onTaskCommandApplied,
@@ -66,7 +70,7 @@ export const registerTaskStorageIpcHandlers = ({
 			})
 		},
 		rendererFlushTimeoutMs: SHUTDOWN_CONFIG.rendererFlushTimeoutMs,
-		shutdownMessage: TASK_STORAGE_SHUTDOWN_MESSAGE,
+		shutdownMessage: translator.t('storage.shuttingDown'),
 		app,
 		getRendererFlushTarget,
 		onCommandApplied: onTaskCommandApplied,

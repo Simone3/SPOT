@@ -73,12 +73,19 @@ npm run build-icons
 - `src/index.tsx` mounts the React app and defines routes.
 - `src/index.css` defines global layout and theme variables.
 - `src/config/AppConfig.ts` holds the app-wide configuration constants shared by the Electron main process and the React renderer.
+- `src/i18n/lang/en.ts` holds every word SPOT shows the user, in English. It is the source of truth for the translation key type.
+- `src/i18n/Translations.ts` lists the languages SPOT ships, resolves one, and creates its translator. It is imported by the Electron main process as well as the renderer, so it holds no React and no Electron.
+- `src/i18n/TranslationContext.tsx` is the renderer binding: the `TranslationProvider` mounted at the top of the tree and the `useTranslator` hook every component that shows text reads.
 - `src/main/Main.ts` resolves the runtime paths, initializes the process-wide logger, creates the task storage, registers IPC handlers, creates the backup scheduler, resolves the backup folder, and creates the Electron `BrowserWindow` that loads the built React renderer.
 - `src/main/preload/Preload.ts` exposes the narrow renderer APIs through Electron's context bridge.
 - `src/framework` contains the reusable application scaffolding described in the Framework Layer section below. It never imports SPOT code.
 - `src/framework/utils/ErrorUtils.ts` reads a message out of an unknown thrown value.
 - `src/framework/utils/ManuallySortedList.ts` inserts, moves, and renumbers items that carry a `sortPosition`, with the position step supplied by the caller.
 - `src/framework/utils/DateUtils.ts` compares and formats dates at day granularity, including the relative day labels described in the Dates section.
+- `src/framework/i18n/Translator.ts` creates a translator over one translation bundle: dotted key lookup, `{name}` interpolation, `Intl.PluralRules` plural selection, locale number formatting, and `Intl.ListFormat` list joining.
+- `src/framework/i18n/LanguageResolution.ts` picks the language to run in out of the ones the application ships, falling a regional tag back to its base language.
+- `src/framework/renderer/TranslationContext.tsx` creates the React provider and hooks for one bundle, so the whole UI re-renders when the language changes.
+- `src/framework/types/TranslationTypes.ts` owns the translation bundle shape and derives the typed key union from it.
 - `src/framework/types/StorageTypes.ts` owns the storage result envelope: database and backup status, failure reasons, load and command results, and operational log entries.
 - `src/framework/types/BackupTypes.ts` owns the backup folder contract and the backup file naming shape.
 - `src/framework/main/logging/AppLogger.ts` configures `electron-log` behind a factory-created logger and exports the process-wide `appLogger` utility with `info`, `warn`, `error`, `debug`, and `flush` methods, newline-delimited JSON output, size-based rolling into a caller-chosen number of numbered archives, and writes whose outcome is deliberately not checked.
@@ -151,10 +158,12 @@ SPOT binds to the framework in a thin layer of adapters, and those adapters are 
 | `main/ipc/BackupLocationIpc.ts` | `src/main/ipc/BackupLocationIpc.ts` |
 | `main/window/WindowLoadTarget.ts` | `src/main/window/WindowLoadTarget.ts` |
 | `renderer/StorageQueue.ts` | `src/logic/TaskStorageQueue.ts` |
+| `i18n/Translator.ts`, `i18n/LanguageResolution.ts` | `src/i18n/Translations.ts` |
+| `renderer/TranslationContext.tsx` | `src/i18n/TranslationContext.tsx` |
 
 Not everything reusable was moved. UI primitives under `src/components` stay in SPOT: they are worth copying into a second application, not sharing from one place.
 
-The framework holds one exception to the no-module-level-state rule besides `appLogger`: `DateUtils` memoizes the start of the current day and the `Intl` formatters it builds. Those caches are pure, so two applications sharing them could not observe each other through them, and the day cache invalidates itself when the day changes.
+The framework holds one exception to the no-module-level-state rule besides `appLogger`: `DateUtils` memoizes the start of the current day and the `Intl` formatters it builds, and `i18n/Translator.ts` memoizes the `Intl.PluralRules`, `Intl.NumberFormat` and `Intl.ListFormat` objects it builds, keyed by locale. Those caches are pure, so two applications sharing them could not observe each other through them, and the day cache invalidates itself when the day changes.
 
 Tests for the framework live in `tests/framework` and use only framework modules, so they travel with the folder.
 
@@ -165,15 +174,16 @@ Tests for the framework live in `tests/framework` and use only framework modules
 The exported groups are:
 
 - `WINDOW_CONFIG`: `BrowserWindow` initial (pre-maximize) size, the preload script file name, and the built React index path segments.
+- `I18N_CONFIG`: the language used when the runtime asks for one SPOT does not ship a bundle for. It must be one of the languages listed in `src/i18n/Translations.ts`.
 - `STORAGE_CONFIG`: the database directory name, the SQLite database file name, the current schema version, the SQLite connection timeout, the delay before a failed task write is retried, and how many consecutive database errors on one write are retried before that change is given up on.
 - `BACKUP_CONFIG`: the default backup directory name, the backup file prefix and extension, the partial and temporary file names used while a backup is being written, the delay after the last task change before a backup runs, the number of retained backups, and the bounded time the shutdown backup is given.
 - `APP_CONFIG_FILE`: the development root directory name and the application configuration file name.
 - `LOGGING_CONFIG`: the log directory name, the operational log file name, the maximum file size, and how many rolled archives are kept. The last two bound the log directory together: it holds at most `retainedArchiveCount + 1` files of `maximumFileSizeBytes` each.
-- `TASKS_CONFIG`: the task flush delay, the task state change delay, and the manual sort position step.
+- `TASKS_CONFIG`: the task flush delay, the task state change delay, the manual sort position step, and how many days after tomorrow a due date is shown as a weekday name instead of a full date.
 - `AUDIT_CONFIG`: whether the task state audit runs at all, the delay before its first run, the delay between runs, and how many differing tasks one report lists.
 - `SHUTDOWN_CONFIG`: the bounded time the main process waits for the renderer to flush its buffered task changes before quitting, plus how many times the renderer flushes its buffer within that wait. The timeout is derived from the whole retry budget of one command, `STORAGE_CONFIG.writeRetryDelayMs` multiplied by `STORAGE_CONFIG.maximumWriteAttempts`, and not from a single retry delay: a retry that fails again schedules the next one, and the renderer cannot ask for that retry sooner while it is already waiting for the queue, so a wait covering only one delay would expire while the retry that saves the change has not run yet. The queue gives a change up after that many attempts, so the timeout is also the longest a quit can be held, and only while writes keep failing.
 
-Each group is declared `as const`, so consumers that pass a value to a widened parameter may need an explicit type annotation. User-facing and error message strings are not configuration and stay in the module that owns them.
+Each group is declared `as const`, so consumers that pass a value to a widened parameter may need an explicit type annotation. User-facing text is not configuration: it lives in the translation bundles described in the Text And Languages section. Developer-facing strings, meaning log messages, `console` output and the messages of errors only a bug can raise, stay in the module that owns them.
 
 ## Application Shell
 
@@ -469,6 +479,41 @@ Closing the window runs the same handshake, through `requestRendererFlushBeforeW
 
 `installPendingTaskChangesFlushHandler()`, installed once when the renderer starts, answers that request and also saves the whole buffer on the window `pagehide` event. The page hide save is only a last resort: the renderer is being torn down at that point, so the storage commands it queues cannot all be delivered, which is exactly why the close interception exists.
 
+## Text And Languages
+
+Every word SPOT shows the user lives in a translation bundle under `src/i18n/lang`. Only English ships today, and there is no language picker yet, but the whole path a language takes is in place.
+
+The framework owns the mechanism and the application owns the words:
+
+- `src/framework/i18n/Translator.ts` creates a translator over one bundle. It resolves a dotted key, replaces `{name}` placeholders, picks a plural form, formats interpolated numbers, and joins lists.
+- `src/i18n/lang/en.ts` is the bundle. It is exported `as const satisfies TranslationTree`, which is what makes English the source of truth for the key type: `t('tasks.filters.title')` autocompletes, a key that does not exist does not compile, and a key renamed in the bundle stops compiling everywhere it is used.
+- `src/i18n/Translations.ts` maps a language to its bundle and creates the translator. Its `TRANSLATION_BUNDLES` values are typed as the English bundle, so a second language that is missing a key is a compile error rather than a key appearing on screen.
+
+A second language is added by writing its bundle next to `lang/en.ts` and listing it in `TRANSLATION_BUNDLES`. Nothing else has to change.
+
+### Plurals, Numbers And Lists
+
+Plural forms are not a count compared against 1. A leaf may be an object of plural categories instead of a string, and the category is picked by `Intl.PluralRules` from the `count` parameter, because the categories a language has and which counts fall into them are not the same from one language to the next: Polish puts 1, 3 and 5 into three different categories that English does not have.
+
+Interpolated numbers are formatted with `Intl.NumberFormat` in the translator's locale rather than pasted in, so grouping follows the locale. Lists of already translated fragments are joined with `translator.formatList()`, which uses `Intl.ListFormat` with `type: 'unit'`: a plain enumeration, with the locale's separator and without a trailing conjunction. The task state audit is what uses all three at once.
+
+No library is used for any of this. Electron ships V8 with full ICU, so `Intl` already holds the rules; what a library would add over the roughly two hundred lines here is ICU MessageFormat, runtime bundle loading, and a translator-facing workflow, none of which SPOT needs yet. What it would not add is the typed keys, which are the part that actually pays for itself at this size.
+
+### Reaching The Translator
+
+- **Components** call `useTranslator()` from `src/i18n/TranslationContext.tsx`. `TranslationProvider` is mounted at the very top of `src/index.tsx`, above the two state contexts, because both of them word messages too.
+- **Pure logic** takes what it needs as a parameter, the same way `DateUtils` takes its date labels. `createTaskStateAuditMessage()` takes the translator; `getInitialDomains()` takes only the six labels it needs, as a `DomainLabels` object, so the domain logic stays free of translation itself.
+- **The renderer write queue** is created before anything mounts and words its failures whenever one happens, so it is told the language instead of asking for it: `setTaskStorageQueueTranslator()` is called from `TasksContext` when the translator changes.
+- **The Electron main process** creates its own translator in `src/main/Main.ts` from `app.getLocale()`, resolved through the same `resolveSpotLanguage()` the renderer uses on `navigator.languages`. It words the native folder dialog, the message a command gets once shutdown started refusing them, the message a command gets after the database is closed, and the reasons a backup folder cannot be used. This is why `src/i18n/Translations.ts` and the bundles must stay free of React and Electron, exactly like `AppConfig`.
+
+### What Is Not Translated
+
+Developer-facing strings stay where they are and stay in English: log messages, `console` output, and the messages of errors only a bug can raise, such as a task field mapped to an immutable column. Translating a bug report helps nobody. The stored task values are not translated either: a priority stores `URGENT` and only its label is worded, so changing the language never touches the database.
+
+### Changing Language At Runtime
+
+`TranslationProvider` holds the language in state and rebuilds the translator when it changes, so everything below it re-renders in the new language. `useLanguage()` exposes the current language and the setter a picker would use. Nothing calls the setter yet. Two things are deliberately not re-worded when the language changes: messages already produced by the write queue, which describe something that happened at the time, and the labels of domain entries that came from what the user typed, which were never translated to begin with.
+
 ## Task Data Model
 
 The current task shape is defined as a TypeScript interface in `src/types/TaskTypes.ts`:
@@ -632,11 +677,13 @@ Filter behavior:
 
 `src/logic/DomainsLogic.ts` builds option domains for filters and form inputs.
 
-Persistent domains:
+Persistent domains, whose labels are translated while their values are not:
 
-- priorities: Urgent, High, Normal, Low
+- priorities: Urgent, High, Normal, Low, stored as `URGENT`, `HIGH`, `NORMAL`, `LOW`
 - owner: `Me`, represented by an empty string
 - due date: `None`, represented by an empty string
+
+`getInitialDomains()` takes those six labels as a `DomainLabels` argument rather than reading them itself, so the domain logic stays pure and free of translation. `TasksContext` builds them from the translator. Every list is built fresh on each call, so the filter section and the form section count their entries independently.
 
 Dynamic domains:
 
@@ -657,7 +704,7 @@ Domain entries contain:
 }
 ```
 
-Domain counts are incremented or decremented as tasks change. Non-persistent domains are removed when their count reaches zero. Existing filters are cleaned when a selected domain value disappears.
+Domain counts are incremented or decremented as tasks change. Non-persistent domains are removed when their count reaches zero. Existing filters are cleaned when a selected domain value disappears. A dynamic entry takes its label from the task value itself, so it is never translated.
 
 ## Sorting
 
@@ -686,7 +733,7 @@ Completed tasks are sorted by `completionDate` descending, then by ID. A complet
 - `YYYY-MM-DD` conversion for stored due dates, in both directions
 - the next working day after a given day
 
-`toSmartString(date, options)` picks the closest thing the reader recognizes: the label for today, yesterday, or tomorrow; a weekday name for the next `weekdayHorizonDays` days after tomorrow; and a full date for everything else. A label that is not supplied falls through to the next rule, so an application can name only the days it cares about. The framework owns the rules, the application owns the wording: SPOT declares its labels in `src/components/tasks/TaskFilters.tsx`, the only place that formats a date this way.
+`toSmartString(date, options)` picks the closest thing the reader recognizes: the label for today, yesterday, or tomorrow; a weekday name for the next `weekdayHorizonDays` days after tomorrow; and a full date for everything else. A label that is not supplied falls through to the next rule, so an application can name only the days it cares about. The framework owns the rules, the application owns the wording: `src/components/tasks/TaskFilters.tsx`, the only place that formats a date this way, builds those options from the translator. The labels come from the `dates` keys of the bundle and the locale comes from `translator.locale`, so the named days and the weekday and full-date wording `Intl` falls back to are always in the same language.
 
 There is no date context and no current-date React state. `DateUtils` computes the current day when it is asked, and caches it only until the day changes, which is cheaper than holding it in a provider and cannot go stale in the way stored state does. An application left open across midnight therefore shows correct labels again on the next render, without a timer and without a provider to refresh. What remains is that nothing forces that render: a view left untouched across midnight keeps the labels it last drew until something else re-renders it.
 
@@ -751,6 +798,8 @@ Current test coverage includes focused regression checks for:
 - filter cloning and task visibility matching
 - domain counting, active/filter domain separation, and selected-filter cleanup
 - date comparison and display formatting
+- translation lookup at any key depth, placeholder interpolation and unfilled placeholders left alone, locale number formatting, plural category selection including a language whose categories English does not have, the fallback bundle, a key no bundle holds being reported and shown as itself, a group never being mistaken for a translation, and locale list joining
+- language resolution: an available language taken as it is, case-insensitive matching, a regional tag falling back to its base language, the first language that can actually be served winning over the first one asked for, and the fallback when nothing matches
 - smoke coverage for task filters and task list interactions
 - SQLite storage setup, task row mapping, command execution, transaction rollback, and optional operational logging behavior
 - storage IPC handler registration, channel delegation, shutdown drain, post-shutdown command failure behavior, exclusive access that finalizes in-flight commands and queues later ones, and two overlapping exclusive operations running one after the other with no command in between
@@ -772,7 +821,7 @@ Tests that cover `src/framework` live in `tests/framework` and depend only on fr
 - the task state surviving navigation: leaving the task page and coming back keeps the loaded tasks, the changes made to them, and the filters, without a loading step and without reading the database again
 - the task write queue: in-order writing, retrying a failed or thrown write while keeping the warning until it goes through, later commands not overtaking a failed one, keeping a command refused while storage was closing, retrying immediately when the retry delay cannot be waited out, dropping a refused command instead of retrying it forever, giving up on a write the database keeps failing so later commands are still written, not counting writes refused while storage was closing against that limit, keeping a dropped command's warning through later successful writes, database status reporting, and the queue reporting itself as busy from the moment a command is queued until it is written, including while a failed write waits out its retry delay
 - task comparison: dropping the runtime-only fields and the empty tags a task is never stored with, normalizing an emptied optional field to the undefined the database reads back, reporting no change when two tasks only differ in ways that are never stored, reporting a cleared field as an undefined value so it is stored as NULL, comparing dates by their instant and tags by their contents, and listing every field two tasks disagree on
-- the task state audit: reporting nothing when both sides hold the same tasks, ignoring the differences that are never stored, reporting a task the database does not hold, a task the task state does not hold, and which fields a task is stored with differently, breaking the message down by reason, and capping the listed differences while still counting all of them
+- the task state audit, whose message is built from plural translation forms and a locale-joined list: reporting nothing when both sides hold the same tasks, ignoring the differences that are never stored, reporting a task the database does not hold, a task the task state does not hold, and which fields a task is stored with differently, breaking the message down by reason, and capping the listed differences while still counting all of them
 - smoke coverage for the audit in the running page: reading the database back after the audit delay and reporting what the two do not agree on, and not auditing at all while a task change has not reached storage yet
 - task edit durability corner cases: edits still saved after the task is filtered out of the list, never saved for a deleted task, task state values shown again when the parent replaces the task, what the user is typing kept while the parent replaces the task, a tag saved when the task disappears before its input is ever left, a tag not saved while it is still being typed and the empty input waiting after it, a tag saved when its input is left, and everything saved before the renderer goes away
 - generic logging success, public log levels, startup file-open failures, a write the log file could not receive being ignored, an entry holding a value JSON cannot represent being ignored, synchronous writing, shutdown flush behavior, rolling the log file into a numbered archive once it passes the size limit, keeping as many archives as asked for while dropping the oldest, and keeping none when none were asked for
@@ -780,6 +829,8 @@ Tests that cover `src/framework` live in `tests/framework` and depend only on fr
 - date handling: day-granularity comparison, whole-day offsets, relative labels and the weekday horizon, labels that are not supplied falling through, relative labels following the clock past midnight, stored `YYYY-MM-DD` conversion in both directions, and the next working day
 
 Tests run on Vitest, configured in the `test` section of `vite.config.mts`: it reuses the same `src` alias as the build, runs in `jsdom`, and exposes `describe`, `test`, `expect` and `vi` as globals. `tests/setupTests.ts` is the shared setup file, and `tests/vitest-env.d.ts` is what makes those globals visible to TypeScript.
+
+Components that show text need `TranslationProvider` above them, so component tests render through `renderWithTranslations()` from `tests/testUtils`. It passes the provider as the Testing Library `wrapper` rather than wrapping the element, so `rerender` keeps it in place. `makeTranslator()` and `makeDomainLabels()` in the same helper supply the English translator and the domain labels the pure logic takes. Tests assert on English wording on purpose: English is the bundle that defines the keys, so a key that stops existing has to fail somewhere.
 
 `tests/setupTests.ts` defines a global `jest` object holding a single `advanceTimersByTime` helper that forwards to `vi`. That is not leftover Jest: Testing Library decides whether fake timers are installed by probing for a global `jest`, and without one its `findBy` queries poll on timers Vitest has already frozen and hang until the test times out. The test suite itself uses `vi` everywhere.
 

@@ -1,7 +1,7 @@
 import type { Mock } from 'vitest';
-import { act, fireEvent, render, screen, type RenderResult } from '@testing-library/react';
+import { act, fireEvent, screen, type RenderResult } from '@testing-library/react';
 import type { ReactElement } from 'react';
-import { makeTask } from '../testUtils';
+import { makeTask, renderWithTranslations } from '../testUtils';
 import { AUDIT_CONFIG } from 'src/config/AppConfig';
 import { flushPendingTaskChanges, resetPendingTaskChangesForTests } from 'src/logic/PendingTaskChanges';
 import { resetTaskStorageQueueForTests, waitForTaskStorageQueue } from 'src/logic/TaskStorageQueue';
@@ -204,7 +204,7 @@ const createLoadTasks = (tasks: Task[]): Mock<() => Promise<LoadTasksResult>> =>
 
 // The task state lives in the provider, so the page is always rendered inside it, exactly as the application shell does
 const renderTasksPage = (): RenderResult => {
-	return render(
+	return renderWithTranslations(
 		<TasksContextProvider>
 			<TasksPage/>
 		</TasksContextProvider>
@@ -651,7 +651,7 @@ describe('TasksPage', () => {
 		});
 		setWindowSpotStorage(createMockSpotStorage(loadTasks, executeTaskCommand));
 
-		const { rerender } = render(<NavigableApp isOnTasksPage={true}/>);
+		const { rerender } = renderWithTranslations(<NavigableApp isOnTasksPage={true}/>);
 		expect(await screen.findByText('Persisted startup task')).toBeInTheDocument();
 
 		await clickAndSettle(screen.getByRole('button', { name: 'Show completed' }));

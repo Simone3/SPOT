@@ -6,6 +6,8 @@ import { TasksContext } from 'src/contexts/TasksContext';
 import type { StorageStatus } from 'src/types/TaskStorageTypes';
 import { TasksList } from 'src/components/tasks/TasksList';
 import { TaskFilters } from 'src/components/tasks/TaskFilters';
+import { useTranslator } from 'src/i18n/TranslationContext';
+import type { SpotTranslator } from 'src/i18n/Translations';
 
 interface TaskStorageFeedback {
 	role: 'alert' | 'status';
@@ -14,29 +16,30 @@ interface TaskStorageFeedback {
 	statusMessage?: string;
 }
 
-const createStorageStatusMessage = (storageStatus: StorageStatus): string | undefined => {
+const createStorageStatusMessage = (storageStatus: StorageStatus, translator: SpotTranslator): string | undefined => {
 	if(storageStatus.database.state === 'healthy') {
 		return undefined;
 	}
 
-	const databaseState = storageStatus.database.state === 'not-configured' ? 'not configured' : storageStatus.database.state;
+	const state = translator.t(`storage.databaseStates.${storageStatus.database.state}`);
 
 	return storageStatus.database.message ?
-		`Database status: ${databaseState}. ${storageStatus.database.message}` :
-		`Database status: ${databaseState}.`;
+		translator.t('storage.databaseStatusWithMessage', { state, message: storageStatus.database.message }) :
+		translator.t('storage.databaseStatus', { state });
 };
 
 const createTaskStorageFeedback = (
 	taskStorageWarning: string | undefined,
 	taskStorageStatus: StorageStatus | undefined,
-	taskStateAuditWarning: string | undefined
+	taskStateAuditWarning: string | undefined,
+	translator: SpotTranslator
 ): TaskStorageFeedback | undefined => {
-	const statusMessage = taskStorageStatus ? createStorageStatusMessage(taskStorageStatus) : undefined;
+	const statusMessage = taskStorageStatus ? createStorageStatusMessage(taskStorageStatus, translator) : undefined;
 
 	if(taskStorageWarning) {
 		return {
 			role: 'alert',
-			title: 'Tasks are not saved',
+			title: translator.t('storage.unsavedChangesTitle'),
 			message: taskStorageWarning,
 			statusMessage
 		};
@@ -45,7 +48,7 @@ const createTaskStorageFeedback = (
 	if(statusMessage) {
 		return {
 			role: taskStorageStatus?.database.state === 'unavailable' ? 'alert' : 'status',
-			title: 'Task storage needs attention',
+			title: translator.t('storage.needsAttentionTitle'),
 			message: statusMessage
 		};
 	}
@@ -54,8 +57,8 @@ const createTaskStorageFeedback = (
 	if(taskStorageStatus?.backup?.state === 'failed') {
 		return {
 			role: 'status',
-			title: 'Backup copies are not being written',
-			message: 'Your tasks are saved, but SPOT could not write a backup copy to the backup folder. You can check the folder in Settings.',
+			title: translator.t('storage.backupFailedTitle'),
+			message: translator.t('storage.backupFailedMessage'),
 			statusMessage: taskStorageStatus.backup.message
 		};
 	}
@@ -64,7 +67,7 @@ const createTaskStorageFeedback = (
 	if(taskStateAuditWarning) {
 		return {
 			role: 'status',
-			title: 'Tasks on screen and stored tasks differ',
+			title: translator.t('audit.driftTitle'),
 			message: taskStateAuditWarning
 		};
 	}
@@ -89,14 +92,16 @@ const TasksPage = (): ReactElement => {
 		onAddNewTask,
 		onDeleteTask
 	} = useContext(TasksContext)!;
-	const taskStorageFeedback = createTaskStorageFeedback(taskStorageWarning, taskStorageStatus, taskStateAuditWarning);
+	const translator = useTranslator();
+	const { t } = translator;
+	const taskStorageFeedback = createTaskStorageFeedback(taskStorageWarning, taskStorageStatus, taskStateAuditWarning, translator);
 
 	if(taskStartupState.state === 'loading') {
 		return (
 			<Page>
 				<Pane relativeSize={1}>
 					<div className='tasks-page-status' role='status'>
-						Loading tasks...
+						{t('tasks.loading')}
 					</div>
 				</Pane>
 			</Page>
@@ -108,7 +113,7 @@ const TasksPage = (): ReactElement => {
 			<Page>
 				<Pane relativeSize={1}>
 					<div className='tasks-page-status tasks-page-status-error' role='alert'>
-						<h3 className='tasks-page-status-title'>Task storage is unavailable</h3>
+						<h3 className='tasks-page-status-title'>{t('storage.startupErrorTitle')}</h3>
 						<p className='tasks-page-status-message'>{taskStartupState.message}</p>
 					</div>
 				</Pane>
@@ -137,7 +142,7 @@ const TasksPage = (): ReactElement => {
 					</div>
 				}
 				<TasksList
-					title='Tasks'
+					title={t('tasks.activeListTitle')}
 					tasks={taskState.tasksContainer.active}
 					inputDomains={taskState.domainsContainer.form}
 					onDeleteTask={onDeleteTask}
@@ -149,7 +154,7 @@ const TasksPage = (): ReactElement => {
 				/>
 				{taskState.filters.showCompleted &&
 					<TasksList
-						title='Completed Tasks'
+						title={t('tasks.completedListTitle')}
 						tasks={taskState.tasksContainer.completed}
 						inputDomains={taskState.domainsContainer.form}
 						onDeleteTask={onDeleteTask}

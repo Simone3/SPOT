@@ -1,6 +1,5 @@
 import type { BrowserWindow, Dialog, IpcMain, OpenDialogOptions } from 'electron';
 import type { BackupLocationManager } from 'src/framework/main/config/BackupLocationManager';
-import { validateBackupDirectory } from 'src/framework/main/storage/BackupDirectory';
 import type { ChooseBackupDirectoryResult } from 'src/framework/types/BackupTypes';
 
 type BackupLocationIpcMain = Pick<IpcMain, 'handle'>;
@@ -62,7 +61,7 @@ export const registerBackupLocationIpcHandlers = ({
 			};
 		}
 
-		const validation = validateBackupDirectory(directory);
+		const validation = backupLocationManager.validateDirectory(directory);
 
 		if(!validation.ok) {
 			return {

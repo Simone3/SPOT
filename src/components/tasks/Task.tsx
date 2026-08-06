@@ -10,6 +10,7 @@ import { TaskPriority } from 'src/components/tasks/TaskPriority';
 import { TaskActions } from 'src/components/tasks/TaskActions';
 import { TaskChips } from 'src/components/tasks/TaskChips';
 import { TaskDragHandle } from 'src/components/tasks/TaskDragHandle';
+import { useTranslator } from 'src/i18n/TranslationContext';
 
 type TaskProps = {
 	id: string;
@@ -26,6 +27,8 @@ type TaskContainerStyle = CSSProperties & {
 };
 
 const Task = ({ id, index, task: taskFromProps, inputDomains, onDelete, showDragHandle }: TaskProps): ReactElement => {
+	const { t } = useTranslator();
+
 	// The task changes the user did not save yet live outside this component, so that they survive filtering, re-renders and unmounts
 	const subscribeToChanges = useCallback((onChange: () => void) => {
 		return subscribeToPendingTaskChanges(id, onChange);
@@ -100,7 +103,7 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onDelete, showDrag
 			/>
 			<div className='task-content'>
 				<TextArea
-					placeholder={'Add content...'}
+					placeholder={t('tasks.fields.contentPlaceholder')}
 					value={text}
 					onChange={(value) => {
 						setTaskValue('text', value, 'delayed');

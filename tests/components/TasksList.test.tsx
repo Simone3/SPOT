@@ -1,8 +1,8 @@
 import type { Mock } from 'vitest';
 import type { ChangeEvent, ReactElement, ReactNode } from 'react';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, screen } from '@testing-library/react';
 import { useSortable } from '@dnd-kit/react/sortable';
-import { makeFormDomains, makeTask } from '../testUtils';
+import { makeFormDomains, makeTask, renderWithTranslations } from '../testUtils';
 import { registerPendingTaskChangesApplier, resetPendingTaskChangesForTests } from 'src/logic/PendingTaskChanges';
 import { TasksList } from 'src/components/tasks/TasksList';
 import type { Task, TaskChange } from 'src/types/TaskTypes';
@@ -86,7 +86,7 @@ const renderTasksList = (tasks: Task[]) => {
 
 	registerPendingTaskChangesApplier(applyPendingTaskChanges);
 
-	const rendered = render(<TasksList {...props}/>);
+	const rendered = renderWithTranslations(<TasksList {...props}/>);
 
 	return {
 		...rendered,

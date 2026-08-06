@@ -4,6 +4,7 @@ import path from 'node:path';
 import { createBackupLocationManager, type BackupDirectoryStore } from 'src/framework/main/config/BackupLocationManager';
 import type { RuntimePaths } from 'src/framework/main/config/RuntimePaths';
 import { resetAppLoggerForTests } from 'src/framework/main/logging/AppLogger';
+import type { BackupDirectoryMessages } from 'src/framework/main/storage/BackupDirectory';
 
 const DATABASE_FILE_NAME = 'app.sqlite';
 
@@ -15,6 +16,20 @@ interface FakeStorage {
 }
 
 const tempDirectories: string[] = [];
+
+// The framework only decides which of these applies, so the tests supply the wording an application would
+const directoryMessages: BackupDirectoryMessages = {
+	noDirectorySelected: 'No folder selected.',
+	createMissingDirectoryMessage: (directory) => {
+		return `Missing: ${directory}`;
+	},
+	createNotADirectoryMessage: (directory) => {
+		return `Not a folder: ${directory}`;
+	},
+	createUnusableDirectoryMessage: (directory) => {
+		return `Unusable: ${directory}`;
+	}
+};
 
 const makeTempDirectory = (): string => {
 	const directory = mkdtempSync(path.join(tmpdir(), 'backup-location-'));
@@ -85,7 +100,7 @@ describe('BackupLocationManager', () => {
 		const runtimePaths = createRuntimePaths(rootDirectory);
 		const { directoryStore } = createFakeDirectoryStore();
 		const { selectedDirectories, storage } = createFakeStorage();
-		const manager = createBackupLocationManager({ runtimePaths, storage, directoryStore });
+		const manager = createBackupLocationManager({ runtimePaths, storage, directoryStore, directoryMessages });
 
 		const location = await manager.initialize();
 
@@ -105,7 +120,7 @@ describe('BackupLocationManager', () => {
 		const runtimePaths = createRuntimePaths(rootDirectory);
 		const { directoryStore } = createFakeDirectoryStore(savedDirectory);
 		const { selectedDirectories, storage } = createFakeStorage();
-		const manager = createBackupLocationManager({ runtimePaths, storage, directoryStore });
+		const manager = createBackupLocationManager({ runtimePaths, storage, directoryStore, directoryMessages });
 
 		const location = await manager.initialize();
 
@@ -122,7 +137,7 @@ describe('BackupLocationManager', () => {
 		const runtimePaths = createRuntimePaths(rootDirectory);
 		const { directoryStore } = createFakeDirectoryStore(blockedDirectory);
 		const { storage } = createFakeStorage();
-		const manager = createBackupLocationManager({ runtimePaths, storage, directoryStore });
+		const manager = createBackupLocationManager({ runtimePaths, storage, directoryStore, directoryMessages });
 
 		const location = await manager.initialize();
 
@@ -136,7 +151,7 @@ describe('BackupLocationManager', () => {
 		const runtimePaths = createRuntimePaths(rootDirectory, true);
 		const { directoryStore } = createFakeDirectoryStore(savedDirectory);
 		const { selectedDirectories, storage } = createFakeStorage();
-		const manager = createBackupLocationManager({ runtimePaths, storage, directoryStore });
+		const manager = createBackupLocationManager({ runtimePaths, storage, directoryStore, directoryMessages });
 
 		const location = await manager.initialize();
 
@@ -152,7 +167,7 @@ describe('BackupLocationManager', () => {
 		const { directoryStore, getSavedDirectory } = createFakeDirectoryStore();
 		const { selectedDirectories, storage } = createFakeStorage();
 		const onBackupDirectoryChanged = vi.fn();
-		const manager = createBackupLocationManager({ runtimePaths, storage, directoryStore, onBackupDirectoryChanged });
+		const manager = createBackupLocationManager({ runtimePaths, storage, directoryStore, directoryMessages, onBackupDirectoryChanged });
 
 		await manager.initialize();
 		const result = await manager.setBackupDirectory(chosenDirectory);
@@ -175,7 +190,7 @@ describe('BackupLocationManager', () => {
 		const runtimePaths = createRuntimePaths(rootDirectory);
 		const { directoryStore, getSavedDirectory } = createFakeDirectoryStore();
 		const { storage } = createFakeStorage();
-		const manager = createBackupLocationManager({ runtimePaths, storage, directoryStore });
+		const manager = createBackupLocationManager({ runtimePaths, storage, directoryStore, directoryMessages });
 
 		await manager.initialize();
 		const result = await manager.setBackupDirectory(blockedDirectory);
@@ -197,7 +212,7 @@ describe('BackupLocationManager', () => {
 
 			return operation();
 		};
-		const manager = createBackupLocationManager({ runtimePaths, storage, directoryStore, runExclusively });
+		const manager = createBackupLocationManager({ runtimePaths, storage, directoryStore, directoryMessages, runExclusively });
 
 		await manager.initialize();
 		await manager.setBackupDirectory(chosenDirectory);

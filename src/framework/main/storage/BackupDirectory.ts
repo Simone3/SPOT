@@ -7,30 +7,33 @@ export type BackupDirectoryValidation = {
 	message: string;
 };
 
-export const createMissingBackupDirectoryMessage = (directory: string): string => {
-	return `The backup folder "${directory}" does not exist. It may have been deleted, renamed, or it may be on a drive that is not currently available.`;
-};
+// A folder the user picked themselves is reported back to them when it cannot be used, so the wording is the application's
+// and only the rules that decide which of these applies are the framework's
+export interface BackupDirectoryMessages {
+	noDirectorySelected: string;
+	createMissingDirectoryMessage: (directory: string) => string;
+	createNotADirectoryMessage: (directory: string) => string;
+	createUnusableDirectoryMessage: (directory: string) => string;
+}
 
-export const createUnusableBackupDirectoryMessage = (directory: string): string => {
-	return `The backup folder "${directory}" cannot be read and written.`;
-};
-
-export const createNotABackupDirectoryMessage = (directory: string): string => {
-	return `The backup path "${directory}" is not a folder.`;
-};
-
-export const validateBackupDirectory = (directory: string): BackupDirectoryValidation => {
+/**
+ * Checks that a folder exists, is a folder, and can be read and written.
+ * @param directory Folder to check.
+ * @param messages Wording for each way the folder can be refused.
+ * @returns Whether the folder can be used, and why not when it cannot.
+ */
+export const validateBackupDirectory = (directory: string, messages: BackupDirectoryMessages): BackupDirectoryValidation => {
 	if(!directory) {
 		return {
 			ok: false,
-			message: 'No backup folder is selected.'
+			message: messages.noDirectorySelected
 		};
 	}
 
 	if(!existsSync(directory)) {
 		return {
 			ok: false,
-			message: createMissingBackupDirectoryMessage(directory)
+			message: messages.createMissingDirectoryMessage(directory)
 		};
 	}
 
@@ -38,7 +41,7 @@ export const validateBackupDirectory = (directory: string): BackupDirectoryValid
 		if(!statSync(directory).isDirectory()) {
 			return {
 				ok: false,
-				message: createNotABackupDirectoryMessage(directory)
+				message: messages.createNotADirectoryMessage(directory)
 			};
 		}
 
@@ -48,7 +51,7 @@ export const validateBackupDirectory = (directory: string): BackupDirectoryValid
 	catch {
 		return {
 			ok: false,
-			message: createUnusableBackupDirectoryMessage(directory)
+			message: messages.createUnusableDirectoryMessage(directory)
 		};
 	}
 

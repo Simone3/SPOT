@@ -9,6 +9,7 @@ import { Header, type HeaderAction } from 'src/components/common/Header';
 import type { FormDomains } from 'src/types/DomainTypes';
 import type { Task as TaskType } from 'src/types/TaskTypes';
 import { Task } from 'src/components/tasks/Task';
+import { useTranslator } from 'src/i18n/TranslationContext';
 
 type TasksListProps = {
 	title: string;
@@ -23,6 +24,7 @@ type TasksListProps = {
 };
 
 const TasksList = ({ title, tasks, inputDomains, onRefreshTasks, onMoveTask, onSortTasksByImportance, onAddNewTask, onDeleteTask, showActions }: TasksListProps): ReactElement => {
+	const { t } = useTranslator();
 	const visibleTasks: TaskType[] = [];
 	const originalIndices: number[] = [];
 	for(let i = 0; i < tasks.length; i++) {
@@ -51,17 +53,17 @@ const TasksList = ({ title, tasks, inputDomains, onRefreshTasks, onMoveTask, onS
 		actions.push({
 			id: 'refresh',
 			icon: <RefreshIcon />,
-			label: 'Refresh',
+			label: t('tasks.actions.refresh'),
 			onClick: onRefreshTasks!
 		}, {
 			id: 'sort',
 			icon: <SortIcon />,
-			label: 'Sort by importance',
+			label: t('tasks.actions.sortByImportance'),
 			onClick: onSortTasksByImportance!
 		}, {
 			id: 'add',
 			icon: <AddIcon />,
-			label: 'Add task',
+			label: t('tasks.actions.add'),
 			onClick: onAddNewTask!
 		});
 	}
@@ -88,7 +90,7 @@ const TasksList = ({ title, tasks, inputDomains, onRefreshTasks, onMoveTask, onS
 				})
 				}
 			</DragDropProvider>
-			{visibleTasks.length === 0 && <div className='tasks-list-empty-message'>No task found! Change the current filters or create new tasks.</div>}
+			{visibleTasks.length === 0 && <div className='tasks-list-empty-message'>{t('tasks.emptyList')}</div>}
 		</div>
 	);
 };

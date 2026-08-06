@@ -4,16 +4,16 @@ import { ConfirmModal } from 'src/components/common/ConfirmModal';
 import { Button } from 'src/components/inputs/Button';
 import { BACKUP_CONFIG } from 'src/config/AppConfig';
 import { BackupLocationContext } from 'src/contexts/BackupLocationContext';
+import { useTranslator } from 'src/i18n/TranslationContext';
+import type { SpotTranslator } from 'src/i18n/Translations';
 import type { BackupStatus, SpotStorageApi } from 'src/types/TaskStorageTypes';
-
-const DEVELOPMENT_NOTICE = 'Development run: the backup folder can be changed to test the app, but the next development startup goes back to the development folder.';
 
 interface BackupFeedback {
 	role: 'alert' | 'status';
 	message: string;
 }
 
-const createBackupStatusMessage = (backupStatus: BackupStatus | undefined): BackupFeedback | undefined => {
+const createBackupStatusMessage = (backupStatus: BackupStatus | undefined, translator: SpotTranslator): BackupFeedback | undefined => {
 	if(!backupStatus) {
 		return undefined;
 	}
@@ -21,20 +21,24 @@ const createBackupStatusMessage = (backupStatus: BackupStatus | undefined): Back
 	if(backupStatus.state === 'failed') {
 		return {
 			role: 'alert',
-			message: `The last backup could not be written. Your tasks are still saved. ${backupStatus.message ?? ''}`.trim()
+			message: backupStatus.message ?
+				translator.t('backup.status.failedWithMessage', { message: backupStatus.message }) :
+				translator.t('backup.status.failed')
 		};
 	}
 
 	if(backupStatus.state === 'idle') {
 		return {
 			role: 'status',
-			message: 'No backup copy has been written yet. The next one follows your next task change.'
+			message: translator.t('backup.status.idle')
 		};
 	}
 
 	return {
 		role: 'status',
-		message: `Last backup copy written on ${new Date(backupStatus.lastBackupAt ?? '').toLocaleString()}.`
+		message: translator.t('backup.status.lastWritten', {
+			timestamp: new Date(backupStatus.lastBackupAt ?? '').toLocaleString(translator.locale)
+		})
 	};
 };
 
@@ -73,6 +77,8 @@ const useBackupStatus = (): BackupStatus | undefined => {
 };
 
 const BackupSettings = (): ReactElement => {
+	const translator = useTranslator();
+	const { t } = translator;
 	const backupLocation = useContext(BackupLocationContext);
 	const backupStatus = useBackupStatus();
 	const [ pendingDirectory, setPendingDirectory ] = useState<string | undefined>();
@@ -82,7 +88,7 @@ const BackupSettings = (): ReactElement => {
 	const location = backupLocation?.location;
 	const currentDirectory = location?.directory;
 	const defaultDirectory = location?.defaultDirectory;
-	const statusFeedback = feedback ?? createBackupStatusMessage(backupStatus);
+	const statusFeedback = feedback ?? createBackupStatusMessage(backupStatus, translator);
 
 	const onChooseFolder = (): void => {
 		if(!backupLocation || isChangingDirectory) {
@@ -96,7 +102,7 @@ const BackupSettings = (): ReactElement => {
 				if(choice.reason !== 'cancelled') {
 					setFeedback({
 						role: 'alert',
-						message: choice.message || 'The selected folder cannot be used.'
+						message: choice.message || t('backup.folderUnusable')
 					});
 				}
 
@@ -106,7 +112,7 @@ const BackupSettings = (): ReactElement => {
 			if(choice.directory === currentDirectory) {
 				setFeedback({
 					role: 'status',
-					message: 'The selected folder is already in use.'
+					message: t('backup.folderAlreadyInUse')
 				});
 
 				return;
@@ -126,7 +132,7 @@ const BackupSettings = (): ReactElement => {
 		if(defaultDirectory === currentDirectory) {
 			setFeedback({
 				role: 'status',
-				message: 'The default folder is already in use.'
+				message: t('backup.defaultFolderAlreadyInUse')
 			});
 
 			return;
@@ -154,11 +160,11 @@ const BackupSettings = (): ReactElement => {
 				setFeedback(outcome.ok ?
 					{
 						role: 'status',
-						message: `Backup copies are now written to "${directory}".`
+						message: t('backup.folderChanged', { directory })
 					} :
 					{
 						role: 'alert',
-						message: outcome.message || 'The backup folder could not be changed.'
+						message: outcome.message || t('backup.folderChangeFailed')
 					});
 			})
 			.finally(() => {
@@ -168,44 +174,36 @@ const BackupSettings = (): ReactElement => {
 
 	return (
 		<div className='backup-settings'>
-			<h3 className='backup-settings-title'>Task database</h3>
-			<p className='backup-settings-description'>
-				SPOT keeps all your tasks in a single spot.sqlite database inside its own application folder. This is always where your
-				tasks are read from and written to, and it cannot be moved.
-			</p>
-			<p className='backup-settings-directory'>{location?.databasePath || 'Unknown.'}</p>
+			<h3 className='backup-settings-title'>{t('backup.databaseTitle')}</h3>
+			<p className='backup-settings-description'>{t('backup.databaseDescription')}</p>
+			<p className='backup-settings-directory'>{location?.databasePath || t('backup.unknownDatabasePath')}</p>
 
-			<h3 className='backup-settings-title backup-settings-title-spaced'>Backup folder</h3>
+			<h3 className='backup-settings-title backup-settings-title-spaced'>{t('backup.folderTitle')}</h3>
 			<p className='backup-settings-description'>
-				A complete copy of the database is written here a couple of minutes after you stop making changes, and once more when SPOT
-				closes. The {BACKUP_CONFIG.retainedBackupCount} most recent copies are kept and the older ones are removed.
+				{t('backup.folderDescription', { retainedBackupCount: BACKUP_CONFIG.retainedBackupCount })}
 			</p>
-			<p className='backup-settings-warning'>
-				This folder is a backup destination, not a shared one. A folder synchronized by OneDrive, Google Drive, Dropbox or iCloud is
-				safe to use, because each copy is written as one finished file. SPOT never reads these copies back though: it does not keep two
-				computers in sync, and restoring a backup is a manual step.
-			</p>
-			<p className='backup-settings-directory'>{currentDirectory || 'No folder is selected.'}</p>
+			<p className='backup-settings-warning'>{t('backup.folderWarning')}</p>
+			<p className='backup-settings-directory'>{currentDirectory || t('backup.noFolderSelected')}</p>
 			{location?.isDevelopment &&
-				<p className='backup-settings-notice'>{DEVELOPMENT_NOTICE}</p>
+				<p className='backup-settings-notice'>{t('backup.developmentNotice')}</p>
 			}
 			{location?.message &&
 				<p className='backup-settings-notice' role='alert'>{location.message}</p>
 			}
 			<div className='backup-settings-actions'>
 				<Button
-					label='Change folder...'
+					label={t('backup.changeFolder')}
 					onClick={onChooseFolder}
 				/>
 				{defaultDirectory &&
 					<Button
-						label='Use default folder'
+						label={t('backup.useDefaultFolder')}
 						onClick={onUseDefaultFolder}
 					/>
 				}
 			</div>
 			{isChangingDirectory &&
-				<p className='backup-settings-feedback' role='status'>Changing the backup folder...</p>
+				<p className='backup-settings-feedback' role='status'>{t('backup.changingFolder')}</p>
 			}
 			{!isChangingDirectory && statusFeedback &&
 				<p
@@ -216,18 +214,18 @@ const BackupSettings = (): ReactElement => {
 			}
 			{pendingDirectory &&
 				<ConfirmModal
-					title='Change the backup folder?'
+					title={t('backup.confirm.title')}
 					content={
 						<>
-							<p>Current folder: {currentDirectory}</p>
-							<p>New folder: {pendingDirectory}</p>
-							<p>The copies already written to the current folder are left where they are.</p>
-							<p>Your tasks are not moved: they stay in the database in the SPOT application folder.</p>
+							<p>{t('backup.confirm.currentFolder', { directory: currentDirectory ?? '' })}</p>
+							<p>{t('backup.confirm.newFolder', { directory: pendingDirectory })}</p>
+							<p>{t('backup.confirm.copiesStay')}</p>
+							<p>{t('backup.confirm.tasksStay')}</p>
 						</>
 					}
-					confirmText='Change folder'
+					confirmText={t('backup.confirm.confirm')}
 					onConfirm={onConfirmChange}
-					cancelText='Cancel'
+					cancelText={t('backup.confirm.cancel')}
 					onCancel={() => {
 						setPendingDirectory(undefined);
 					}}

@@ -3,7 +3,9 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { Mock } from 'vitest';
 import type { IpcMain, IpcMainInvokeEvent, OpenDialogReturnValue } from 'electron';
+import { makeTranslator } from '../testUtils';
 import type { BackupLocationManager } from 'src/framework/main/config/BackupLocationManager';
+import { validateBackupDirectory } from 'src/framework/main/storage/BackupDirectory';
 import { registerBackupLocationIpcHandlers, SPOT_BACKUP_LOCATION_IPC_CHANNELS } from 'src/main/ipc/BackupLocationIpc';
 import type { BackupLocation, ChooseBackupDirectoryResult, SetBackupDirectoryResult } from 'src/types/BackupLocationTypes';
 
@@ -63,7 +65,23 @@ const createMockManager = (location: BackupLocation): BackupLocationManager => {
 		}),
 		setDefaultBackupDirectory: vi.fn(async() => {
 			return setResult;
-		})
+		}),
+
+		// The folder dialog refuses a folder through the manager, so the mock validates for real instead of always accepting
+		validateDirectory: (directory: string) => {
+			return validateBackupDirectory(directory, {
+				noDirectorySelected: 'No folder selected.',
+				createMissingDirectoryMessage: (value) => {
+					return `Missing: ${value}`;
+				},
+				createNotADirectoryMessage: (value) => {
+					return `Not a folder: ${value}`;
+				},
+				createUnusableDirectoryMessage: (value) => {
+					return `Unusable: ${value}`;
+				}
+			});
+		}
 	};
 };
 
@@ -74,6 +92,8 @@ const createMockDialog = (dialogResult: OpenDialogReturnValue): { showOpenDialog
 		})
 	};
 };
+
+const translator = makeTranslator();
 
 describe('BackupLocationIpc', () => {
 	afterAll(() => {
@@ -91,7 +111,8 @@ describe('BackupLocationIpc', () => {
 		registerBackupLocationIpcHandlers({
 			ipcMain,
 			dialog: createMockDialog({ canceled: true, filePaths: [] }),
-			backupLocationManager
+			backupLocationManager,
+			translator
 		});
 
 		expect(Array.from(handlers.keys())).toEqual([
@@ -114,7 +135,8 @@ describe('BackupLocationIpc', () => {
 		registerBackupLocationIpcHandlers({
 			ipcMain,
 			dialog: createMockDialog({ canceled: true, filePaths: [] }),
-			backupLocationManager
+			backupLocationManager,
+			translator
 		});
 
 		const result = await handlers.get(SPOT_BACKUP_LOCATION_IPC_CHANNELS.chooseBackupDirectory)!({} as IpcMainInvokeEvent) as ChooseBackupDirectoryResult;
@@ -138,7 +160,8 @@ describe('BackupLocationIpc', () => {
 			registerBackupLocationIpcHandlers({
 				ipcMain,
 				dialog: createMockDialog({ canceled: false, filePaths: [ directory ] }),
-				backupLocationManager
+				backupLocationManager,
+				translator
 			});
 
 			return await handlers.get(SPOT_BACKUP_LOCATION_IPC_CHANNELS.chooseBackupDirectory)!({} as IpcMainInvokeEvent) as ChooseBackupDirectoryResult;
