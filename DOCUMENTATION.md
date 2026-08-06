@@ -11,8 +11,8 @@ SPOT is the Simple Planner & Organizer Tool: a small Electron + React task manag
 - Main-process storage modules exist under `src/main/storage`. Storage initializes SQLite in the local database folder, owns one lazy database connection per storage instance, loads task rows, executes task write commands, writes through the process-wide operational logger, reports database health, writes rotated backup copies, and closes the database during shutdown. Electron exposes that boundary through storage IPC and `window.spotStorage`; React uses it for startup loading, task mutations, non-healthy database status feedback, and backup failure notices.
 - The database always lives in the Electron user-data folder and cannot be moved. The user only chooses the backup folder, which receives rotated write-only copies of the database and defaults to `<userData>/backups`. Startup never blocks on a folder choice. Configuration and log files also always stay in the Electron user-data folder.
 - Electron main and preload TypeScript sources are bundled by `scripts/build-electron.js` into ignored `dist/electron` files before Electron starts or packages. The bundling step uses exact-version `esbuild` to remove the former custom runtime TypeScript/module resolver.
-- Electron loads the built React `build/index.html` file in packaged mode and in every run started through `npm start`. `vite.config.mts` sets `base` to `./` so asset URLs stay relative under file loading, and points `build.outDir` at `build` so the main process and the packaging step keep finding the renderer where they always did.
-- `npm run dev` is the hot-reloading development loop instead: the renderer is served by a Vite development server and hot-reloaded in place, and the Electron main and preload bundles are watched and relaunch the application when they change. The Development Loop section describes it.
+- Electron loads the built React `build/index.html` file in packaged mode and in every run started through `npm run start-packaged`. `vite.config.mts` sets `base` to `./` so asset URLs stay relative under file loading, and points `build.outDir` at `build` so the main process and the packaging step keep finding the renderer where they always did.
+- `npm start` is the hot-reloading development loop instead: the renderer is served by a Vite development server and hot-reloaded in place, and the Electron main and preload bundles are watched and relaunch the application when they change. The Development Loop section describes it.
 - The Notes and Tags routes exist as placeholder pages. The Settings route owns the database and backup folder settings.
 - The implemented persistence architecture is one local SQLite database as the source of truth, one append-only rolled `spot-logs.ndjson` operational log, and a rotated set of backup copies in the backup folder.
 - The implemented persistence behavior is documented below. Startup loading, task mutations, shutdown draining, packaged React loading, and user-facing database health feedback are wired in Electron.
@@ -27,16 +27,16 @@ Install dependencies:
 npm install
 ```
 
-Run the Electron app the way a packaged one runs, from files built once:
+Run the Electron app with hot reloading, as described in the Development Loop section:
 
 ```sh
 npm start
 ```
 
-Work on it with hot reloading, as described in the Development Loop section:
+Run it the way a packaged one runs instead, from files built once:
 
 ```sh
-npm run dev
+npm run start-packaged
 ```
 
 Run validation:
@@ -57,7 +57,7 @@ npm run package
 npm run make
 ```
 
-`npm start`, `npm run package`, and `npm run make` build the React renderer and Electron main/preload bundles first so Electron always loads local generated files.
+`npm run start-packaged`, `npm run package`, and `npm run make` build the React renderer and Electron main/preload bundles first so Electron always loads local generated files.
 
 Regenerating the application icons is a separate step, because their generated files are committed:
 
@@ -67,12 +67,14 @@ npm run build-icons
 
 ## Development Loop
 
-`npm start` builds everything once and starts the application from those files, so it shows what a packaged SPOT does but reflects no source change until it is started again. `npm run dev` runs `scripts/dev.js`, which is the loop to work in:
+`npm start` runs `scripts/dev.js`, which is the loop to work in. `npm run start-packaged` is the other run: it builds everything once and starts the application from those files, so it shows what a packaged SPOT does but reflects no source change until it is started again.
+
+The loop does this:
 
 - It starts a Vite development server through Vite's programmatic API and lets it pick its own port, so nothing has to agree on a port number in advance.
 - It passes the URL that server reported to Electron in the `SPOT_DEVELOPMENT_SERVER_URL` environment variable, named by `WINDOW_CONFIG.developmentServerUrlVariable`. `resolveWindowLoadTarget()` turns that into a `url` load target, and `Main.ts` loads it with `loadURL()` instead of `loadFile()`. A renderer edit is then hot-reloaded by Vite in place, and React Fast Refresh keeps component state across it.
 - It builds the Electron main and preload bundles with a watching `esbuild` context, and relaunches Electron after every successful rebuild. A rebuild that failed leaves the running application alone, because relaunching into a bundle that does not exist would only replace the error with a second one.
-- Electron is spawned directly from the `electron` package rather than through `electron-forge start`, so a relaunch costs no more than the process restart. Forge stays the entry point of `npm start`, `npm run package`, and `npm run make`, whose plugins all run at package time.
+- Electron is spawned directly from the `electron` package rather than through `electron-forge start`, so a relaunch costs no more than the process restart. Forge stays the entry point of `npm run start-packaged`, `npm run package`, and `npm run make`, whose plugins all run at package time.
 - Closing the application stops the loop, and stopping the loop closes the application, the development server, and the esbuild watcher.
 
 Two consequences worth knowing:

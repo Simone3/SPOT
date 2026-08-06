@@ -5,8 +5,8 @@ const electronExecutablePath = require('electron');
 const { electronBundleOptions, projectRoot } = require('./electron-bundle');
 
 // The development loop: the renderer is served by a Vite development server, so editing a component hot-reloads it in place, and the
-// Electron main and preload sources are rebuilt by a watching esbuild that relaunches Electron whenever they change. "npm start" stays
-// the run that builds everything once and starts the application the way a packaged one starts.
+// Electron main and preload sources are rebuilt by a watching esbuild that relaunches Electron whenever they change. This is what
+// "npm start" runs, while "npm run start-packaged" builds everything once and starts the application the way a packaged one starts.
 
 // Must match WINDOW_CONFIG.developmentServerUrlVariable in "src/config/AppConfig.ts", which is TypeScript this plain Node script cannot read
 const DEVELOPMENT_SERVER_URL_VARIABLE = 'SPOT_DEVELOPMENT_SERVER_URL';

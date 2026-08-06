@@ -11,13 +11,13 @@ SPOT (Simple Planner & Organizer Tool) is an Electron + React task manager for m
 ## Commands
 
 ```sh
-npm run lint        # ESLint flat config (eslint.config.js)
-npm run typecheck   # tsc --noEmit
-npm test            # Vitest, tests/ only
-npm run dev         # hot-reloading loop: Vite dev server for the renderer, watched Electron bundles that relaunch the app
-npm start           # build React + Electron bundles, then electron-forge start
-npm run build       # build-react + build-electron
-npm run build-icons # regenerate assets/icon.{icns,ico,png} from assets/icon.svg
+npm run lint           # ESLint flat config (eslint.config.js)
+npm run typecheck      # tsc --noEmit
+npm test               # Vitest, tests/ only
+npm start              # hot-reloading loop: Vite dev server for the renderer, watched Electron bundles that relaunch the app
+npm run start-packaged # build React + Electron bundles once, then electron-forge start
+npm run build          # build-react + build-electron
+npm run build-icons    # regenerate assets/icon.{icns,ico,png} from assets/icon.svg
 ```
 
 Prefer running a single test file while iterating:

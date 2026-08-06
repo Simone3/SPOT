@@ -22,7 +22,7 @@ export const resolveWindowLoadTarget = ({
 		appRootDirectory,
 		rendererIndexPathSegments: WINDOW_CONFIG.reactBuildIndexPathSegments,
 
-		// The development server is not known until "npm run dev" starts it, so the port it picked is passed to this process in its environment
+		// The development server is not known until "npm start" starts it, so the port it picked is passed to this process in its environment
 		// eslint-disable-next-line no-process-env
 		developmentServerUrl: isPackaged ? undefined : process.env[WINDOW_CONFIG.developmentServerUrlVariable]
 	});
