@@ -14,6 +14,7 @@ SPOT (Simple Planner & Organizer Tool) is an Electron + React task manager for m
 npm run lint        # ESLint flat config (eslint.config.js)
 npm run typecheck   # tsc --noEmit
 npm test            # Vitest, tests/ only
+npm run dev         # hot-reloading loop: Vite dev server for the renderer, watched Electron bundles that relaunch the app
 npm start           # build React + Electron bundles, then electron-forge start
 npm run build       # build-react + build-electron
 npm run build-icons # regenerate assets/icon.{icns,ico,png} from assets/icon.svg
@@ -35,6 +36,7 @@ npm test -- tests/logic/SomeFile.spec.ts
 - Build and test tooling may own the build: Vite bundles the renderer and Vitest runs the tests. Do NOT add an application framework such as Next.js, Remix or Astro: nothing may own routing, rendering or the component model. The application code stays plain React + TypeScript + CSS.
 - Leave ignored files and `.gitignore` patterns alone.
 - Do not add an external SQLite dependency. The implementation uses Electron's bundled `node:sqlite`; any exception must be documented in `DOCUMENTATION.md`.
+- A packaged run always loads the renderer from the built `build/index.html` on disk. The development server URL is read from the environment, so it must never be honoured when `app.isPackaged`: anything able to set an environment variable would otherwise put a page of its own choosing behind the preload bridge. The strict Content-Security-Policy in `index.html` is relaxed for the development server's page only, never for the built one.
 - `src/framework` is reusable scaffolding meant to be lifted into another application as it is. It must NEVER import from `src/components`, `src/contexts`, `src/logic`, `src/main`, `src/types`, `src/utils`, or `src/config`. Anything it needs about SPOT is passed in through its options. ESLint enforces this.
 
 ## Code Conventions

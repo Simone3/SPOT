@@ -60,7 +60,8 @@ const createWindow = ({ requestRendererFlushBeforeWindowClose }: CreateWindowOpt
 	});
 
 	const loadTarget = resolveWindowLoadTarget({
-		appRootDirectory: app.getAppPath()
+		appRootDirectory: app.getAppPath(),
+		isPackaged: app.isPackaged
 	});
 
 	mainWindow = win;
@@ -89,7 +90,12 @@ const createWindow = ({ requestRendererFlushBeforeWindowClose }: CreateWindowOpt
 		}
 	});
 
-	void win.loadFile(loadTarget.value);
+	if(loadTarget.type === 'url') {
+		void win.loadURL(loadTarget.value);
+	}
+	else {
+		void win.loadFile(loadTarget.value);
+	}
 };
 
 // What a second launch gets instead of a second instance: the window the first one already has

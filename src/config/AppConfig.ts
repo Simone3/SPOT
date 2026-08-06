@@ -8,7 +8,11 @@ export const WINDOW_CONFIG = {
 	widthPixels: 800,
 	heightPixels: 600,
 	preloadScriptFileName: 'preload.js',
-	reactBuildIndexPathSegments: [ 'build', 'index.html' ]
+	reactBuildIndexPathSegments: [ 'build', 'index.html' ],
+
+	// "npm run dev" sets this to the Vite development server it started, and the main process loads the renderer from there instead of
+	// from disk. Every other run leaves it unset and loads the built "build/index.html".
+	developmentServerUrlVariable: 'SPOT_DEVELOPMENT_SERVER_URL'
 } as const;
 
 export const I18N_CONFIG = {

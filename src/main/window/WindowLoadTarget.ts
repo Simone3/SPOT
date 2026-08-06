@@ -8,13 +8,22 @@ export type { WindowLoadTarget } from 'src/framework/main/window/WindowLoadTarge
 
 export interface ResolveWindowLoadTargetOptions {
 	appRootDirectory: string;
+
+	// A packaged SPOT always loads the renderer from disk. Honouring the development server variable there would let anything that can set
+	// an environment variable put a page of its own choosing behind the preload bridge.
+	isPackaged: boolean;
 }
 
 export const resolveWindowLoadTarget = ({
-	appRootDirectory
+	appRootDirectory,
+	isPackaged
 }: ResolveWindowLoadTargetOptions): WindowLoadTarget => {
 	return resolveFrameworkWindowLoadTarget({
 		appRootDirectory,
-		rendererIndexPathSegments: WINDOW_CONFIG.reactBuildIndexPathSegments
+		rendererIndexPathSegments: WINDOW_CONFIG.reactBuildIndexPathSegments,
+
+		// The development server is not known until "npm run dev" starts it, so the port it picked is passed to this process in its environment
+		// eslint-disable-next-line no-process-env
+		developmentServerUrl: isPackaged ? undefined : process.env[WINDOW_CONFIG.developmentServerUrlVariable]
 	});
 };

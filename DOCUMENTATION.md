@@ -11,7 +11,8 @@ SPOT is the Simple Planner & Organizer Tool: a small Electron + React task manag
 - Main-process storage modules exist under `src/main/storage`. Storage initializes SQLite in the local database folder, owns one lazy database connection per storage instance, loads task rows, executes task write commands, writes through the process-wide operational logger, reports database health, writes rotated backup copies, and closes the database during shutdown. Electron exposes that boundary through storage IPC and `window.spotStorage`; React uses it for startup loading, task mutations, non-healthy database status feedback, and backup failure notices.
 - The database always lives in the Electron user-data folder and cannot be moved. The user only chooses the backup folder, which receives rotated write-only copies of the database and defaults to `<userData>/backups`. Startup never blocks on a folder choice. Configuration and log files also always stay in the Electron user-data folder.
 - Electron main and preload TypeScript sources are bundled by `scripts/build-electron.js` into ignored `dist/electron` files before Electron starts or packages. The bundling step uses exact-version `esbuild` to remove the former custom runtime TypeScript/module resolver.
-- Electron loads the built React `build/index.html` file in both development and packaged mode. `vite.config.mts` sets `base` to `./` so asset URLs stay relative under file loading, and points `build.outDir` at `build` so the main process and the packaging step keep finding the renderer where they always did.
+- Electron loads the built React `build/index.html` file in packaged mode and in every run started through `npm start`. `vite.config.mts` sets `base` to `./` so asset URLs stay relative under file loading, and points `build.outDir` at `build` so the main process and the packaging step keep finding the renderer where they always did.
+- `npm run dev` is the hot-reloading development loop instead: the renderer is served by a Vite development server and hot-reloaded in place, and the Electron main and preload bundles are watched and relaunch the application when they change. The Development Loop section describes it.
 - The Notes and Tags routes exist as placeholder pages. The Settings route owns the database and backup folder settings.
 - The implemented persistence architecture is one local SQLite database as the source of truth, one append-only rolled `spot-logs.ndjson` operational log, and a rotated set of backup copies in the backup folder.
 - The implemented persistence behavior is documented below. Startup loading, task mutations, shutdown draining, packaged React loading, and user-facing database health feedback are wired in Electron.
@@ -26,10 +27,16 @@ Install dependencies:
 npm install
 ```
 
-Run the Electron app:
+Run the Electron app the way a packaged one runs, from files built once:
 
 ```sh
 npm start
+```
+
+Work on it with hot reloading, as described in the Development Loop section:
+
+```sh
+npm run dev
 ```
 
 Run validation:
@@ -58,6 +65,25 @@ Regenerating the application icons is a separate step, because their generated f
 npm run build-icons
 ```
 
+## Development Loop
+
+`npm start` builds everything once and starts the application from those files, so it shows what a packaged SPOT does but reflects no source change until it is started again. `npm run dev` runs `scripts/dev.js`, which is the loop to work in:
+
+- It starts a Vite development server through Vite's programmatic API and lets it pick its own port, so nothing has to agree on a port number in advance.
+- It passes the URL that server reported to Electron in the `SPOT_DEVELOPMENT_SERVER_URL` environment variable, named by `WINDOW_CONFIG.developmentServerUrlVariable`. `resolveWindowLoadTarget()` turns that into a `url` load target, and `Main.ts` loads it with `loadURL()` instead of `loadFile()`. A renderer edit is then hot-reloaded by Vite in place, and React Fast Refresh keeps component state across it.
+- It builds the Electron main and preload bundles with a watching `esbuild` context, and relaunches Electron after every successful rebuild. A rebuild that failed leaves the running application alone, because relaunching into a bundle that does not exist would only replace the error with a second one.
+- Electron is spawned directly from the `electron` package rather than through `electron-forge start`, so a relaunch costs no more than the process restart. Forge stays the entry point of `npm start`, `npm run package`, and `npm run make`, whose plugins all run at package time.
+- Closing the application stops the loop, and stopping the loop closes the application, the development server, and the esbuild watcher.
+
+Two consequences worth knowing:
+
+- A main-process relaunch kills the running process, so the shutdown drain and the renderer flush handshake do not run: task changes still buffered in the renderer are lost. Renderer edits are unaffected, because they never restart the process.
+- The relaunch waits for the old process to be gone before spawning the new one. It has to: the single instance lock in `Main.ts` would make the new process quit immediately otherwise.
+
+`scripts/electron-bundle.js` holds the one esbuild description that both `scripts/build-electron.js` and `scripts/dev.js` use, so a development run never runs through a different bundle than the built one.
+
+The renderer's strict Content-Security-Policy in `index.html` cannot be satisfied by a development server: React Fast Refresh installs its runtime through an inline module script, and the hot update channel is a WebSocket back to the server. The `spot-development-content-security-policy` plugin in `vite.config.mts` rewrites the two policy meta tags for the served page only, allowing inline scripts and a WebSocket connection to the local server, and it throws if it finds no policy to rewrite so the two files cannot drift apart unnoticed. The built `index.html` keeps the strict policy it is packaged with, which is also why a packaged run ignores the environment variable entirely: honouring it there would let anything that can set an environment variable put a page of its own choosing behind the preload bridge.
+
 ## Repository Map
 
 - `CLAUDE.md` contains contributor and coding-agent instructions. Keep it aligned with this document.
@@ -66,9 +92,11 @@ npm run build-icons
 - `DOCUMENTATION.md` is this detailed project reference.
 - `eslint.config.js` contains the flat ESLint configuration used by `npm run lint`.
 - `scripts/build-electron.js` bundles Electron main and preload TypeScript sources into ignored `dist/electron` runtime files.
+- `scripts/electron-bundle.js` holds the esbuild description of that bundle, shared by the one-shot build and the watching development loop.
+- `scripts/dev.js` runs the hot-reloading development loop described in the Development Loop section.
 - `scripts/build-icons.js` regenerates the packaged application icons from `assets/icon.svg`, as described in the Application Icon section.
 - `assets/icon.svg` is the application icon master artwork, and `assets/icon.icns`, `assets/icon.ico`, and `assets/icon.png` are the generated files Electron Forge packages. They are committed, so packaging never depends on regenerating them. The folder is tracked because `build` and `dist` are both ignored.
-- `vite.config.mts` configures the Vite renderer build and the Vitest test run. It is an ES module because `package.json` has no `"type": "module"`, so the `.mts` extension is what keeps the native config loader from treating it as CommonJS.
+- `vite.config.mts` configures the Vite renderer build, the development server's Content-Security-Policy, and the Vitest test run. It is an ES module because `package.json` has no `"type": "module"`, so the `.mts` extension is what keeps the native config loader from treating it as CommonJS.
 - `index.html` is the React renderer HTML template and the Vite entry point, so it lives in the repository root and loads `src/index.tsx` directly.
 - `src/index.tsx` mounts the React app and defines routes.
 - `src/index.css` defines global layout and theme variables.
@@ -173,7 +201,7 @@ Tests for the framework live in `tests/framework` and use only framework modules
 
 The exported groups are:
 
-- `WINDOW_CONFIG`: `BrowserWindow` initial (pre-maximize) size, the preload script file name, and the built React index path segments.
+- `WINDOW_CONFIG`: `BrowserWindow` initial (pre-maximize) size, the preload script file name, the built React index path segments, and the environment variable a development run names its renderer server in.
 - `I18N_CONFIG`: the language used when the runtime asks for one SPOT does not ship a bundle for. It must be one of the languages listed in `src/i18n/Translations.ts`.
 - `STORAGE_CONFIG`: the database directory name, the SQLite database file name, the current schema version, the SQLite connection timeout, the delay before a failed task write is retried, and how many consecutive database errors on one write are retried before that change is given up on.
 - `BACKUP_CONFIG`: the default backup directory name, the backup file prefix and extension, the partial and temporary file names used while a backup is being written, the delay after the last task change before a backup runs, the number of retained backups, and the bounded time the shutdown backup is given.
@@ -226,7 +254,7 @@ A second instance is prevented rather than supported because nothing in the pers
 
 Operating systems disagree on how easily a second launch happens, which is why the lock is taken rather than left to them: macOS refuses a second launch of the same bundle from Finder or the Dock but not `open -n`, while Windows and Linux start as many processes as the user asks for. The lock is keyed on the Electron user-data folder, so a development run and an installed SPOT exclude each other even though they keep their files in separate roots.
 
-`src/main/Main.ts` is the composition root: it resolves the runtime paths with `resolveSpotRuntimePaths()` and initializes `appLogger` with the `LOGGING_CONFIG` settings as soon as Electron is ready. It then creates the task storage on the runtime database folder, registers a sample `ping` IPC handler, the storage IPC handlers from `src/main/ipc/TaskStorageIpc.ts`, which also attach the storage shutdown drain to Electron's `before-quit` event, the backup scheduler, and the backup location handlers from `src/main/ipc/BackupLocationIpc.ts`. It resolves the backup folder through `BackupLocationManager.initialize()` before creating the `BrowserWindow`. The window is created hidden and maximized to the screen work area on its `ready-to-show` event before being shown, so it starts at full screen size without engaging macOS's separate native fullscreen window state. It uses `resolveWindowLoadTarget()` from `src/main/window/WindowLoadTarget.ts` to load the built React `build/index.html` file through `loadFile()` in both development and packaged mode.
+`src/main/Main.ts` is the composition root: it resolves the runtime paths with `resolveSpotRuntimePaths()` and initializes `appLogger` with the `LOGGING_CONFIG` settings as soon as Electron is ready. It then creates the task storage on the runtime database folder, registers a sample `ping` IPC handler, the storage IPC handlers from `src/main/ipc/TaskStorageIpc.ts`, which also attach the storage shutdown drain to Electron's `before-quit` event, the backup scheduler, and the backup location handlers from `src/main/ipc/BackupLocationIpc.ts`. It resolves the backup folder through `BackupLocationManager.initialize()` before creating the `BrowserWindow`. The window is created hidden and maximized to the screen work area on its `ready-to-show` event before being shown, so it starts at full screen size without engaging macOS's separate native fullscreen window state. It uses `resolveWindowLoadTarget()` from `src/main/window/WindowLoadTarget.ts` to decide what the window loads: the built React `build/index.html` file through `loadFile()`, or the development server through `loadURL()` when an unpackaged run was started with one, as the Development Loop section describes.
 
 Every window `Main.ts` creates also intercepts its own `close` event with `requestRendererFlushBeforeWindowClose()` from the storage IPC handlers: the close is prevented, the renderer flush handshake runs, and the window is destroyed only once the renderer reported or the handshake timed out. Without it the buffered task edits would be lost on the usual way of closing the application, because closing the window destroys the renderer before `before-quit` runs on Windows and Linux and without quitting at all on macOS.
 
@@ -849,7 +877,7 @@ Current test coverage includes focused regression checks for:
 
 Tests that cover `src/framework` live in `tests/framework` and depend only on framework modules, so they move with the folder. Tests that cover how SPOT binds to it stay under `tests/main`, `tests/logic`, and `tests/components`.
 - smoke coverage for the Settings panel showing the fixed database location, reporting a failed backup without claiming the tasks are lost, and the confirmed backup folder change
-- Electron window load-target resolution for local built React loading
+- Electron window load-target resolution: the built React file on disk, the development server when an unpackaged run was started with one, an empty server URL falling back to the built file, and a packaged run ignoring the development server variable altogether
 - React task-page startup loading, Electron preload API requirement, persisted Electron loading, and startup-error rendering
 - React task-page storage commands for create, update, delete, complete, restore, manual reorder, and importance sort, plus the empty tag of a tag input never reaching a storage command, the write-failure warning, storage-health feedback, and the task state being kept as it is after a rejected write
 - the task state surviving navigation: leaving the task page and coming back keeps the loaded tasks, the changes made to them, and the filters, without a loading step and without reading the database again
