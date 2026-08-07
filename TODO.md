@@ -1,46 +1,20 @@
 
-
 # current
-
-
-## ui
-
-manually adjust filter pane length / collapse entirely
-
-priority icons in the filters?
-
-ui feedback when clicking a button
-change inputs, buttons and clickables on hover (e.g. change font to white?)
-
-don't render dropboxes and hide them with css, just don't create them unless open = true!
-
-fix focus on all components for consistency
-	calendar, selectbox, etc.
-	delete icon not focusable (all clickables probably)
-	think about on-hover inputs, those are not focusable
-	grey box-shadow on focus maybe?
-	tabs behaviour too
-	focus (tab) on all icons (e.g. edit button)
-	click on chip icon auto-focuses on input
-
-improve autocomplete
-	bold the REMAINING part (not the substring that matches!) -> like amazon
-	sort options by count desc
-	show only the first N matches (no scrollbar)
-
-scrollbar style?
-
-
-## finalize
 
 re-review all files created/modified after "Add hover feedback" commit (jun 2)
 
-finalize first version, check if anything important is missing, close up documentation (e.g. near-term work, current status, etc.)
+move ui components to framework? like AppErrorBaundary?
 
 complete full tests on real build, on windows too!
 
+release on github, merge main, update readme with minimal instructions
+
+
+
 
 ------------------------------------------------------------------------------------------------------
+
+
 
 
 # maybe in the future
@@ -66,6 +40,10 @@ limit total filter chips + expand + way to filter them if many values
 responsive for half-screen format (e.g. move filters on top?)
 
 better accessibility (e.g. label + ID) for ButtonsSelect - maybe use the default <select> input styled as buttons?
+
+priority icons in the filters?
+
+scrollbar style?
 
 
 ## logic
@@ -125,7 +103,7 @@ moveInManuallySortedList removes and adds (splice twice)
 
 updateTask always refreshes all domains even if none changed
 
-
+don't render dropboxes and hide them with css, just don't create them unless open = true!
 
 
 
