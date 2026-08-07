@@ -111,7 +111,7 @@ describe('BackupSettings', () => {
 	});
 
 	// Backups nobody knows how to use are not backups, and SPOT never reads one back on its own
-	test('says how to restore a backup copy', async() => {
+	test('says how to restore a backup copy, in the notice about the folder', async() => {
 		setWindowApi('spotBackupLocation', createMockBackupLocationApi());
 		setWindowApi('spotStorage', createMockStorageApi(undefined));
 
@@ -121,9 +121,10 @@ describe('BackupSettings', () => {
 			</BackupLocationContextProvider>
 		);
 
-		expect(await screen.findByText('Restoring a backup')).toBeInTheDocument();
-		expect(screen.getByText(/Quit SPOT first/)).toBeInTheDocument();
-		expect(screen.getByText(/any task change made after that backup was written is gone/)).toBeInTheDocument();
+		const notice = await screen.findByText(/it does not keep two computers in sync/);
+
+		expect(notice).toHaveTextContent('close SPOT and copy one of these files over the database above');
+		expect(notice).toHaveTextContent('replaces every change made after that copy was written');
 	});
 
 	test('reports a failed backup without claiming the tasks are lost', async() => {

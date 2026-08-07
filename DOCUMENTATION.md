@@ -1,21 +1,10 @@
 # SPOT Documentation
 
-SPOT is the Simple Planner & Organizer Tool: a small Electron + React task manager intended to run on macOS, Windows, and Linux. The project is still in progress. The React renderer is considered done for now, and the initial Electron persistence layer is wired for startup loading, task mutations, shutdown draining, packaged loading, and rotated database backups. Standalone browser mode is no longer a supported runtime.
+SPOT is the Simple Planner & Organizer Tool: a small Electron + React task manager for macOS, Windows, and Linux, meant to manage tasks in a simple and direct way. Tasks are the finished surface; Notes and Tags are routes that exist but hold placeholder pages.
 
-## Current Status
+Its persistence is one local SQLite database as the source of truth, one append-only rolled `spot-logs.ndjson` operational log beside it, and a rotated set of backup copies in a folder the user chooses. Electron owns all three. Standalone browser mode is not a supported runtime: the renderer requires the preload bridge and reports storage as unavailable without it.
 
-- The React renderer is the primary working surface and is considered done for now.
-- Task data loads through `window.spotStorage.loadTasks()` in Electron. If the renderer is opened without the Electron preload API, the task page reports storage as unavailable.
-- Task changes are applied optimistically in React state. Add, edit, delete, complete, restore, manual reorder, and importance sort send storage commands through `window.spotStorage.executeTaskCommand()`.
-- Because those updates are optimistic, a periodic audit reads the database back while the application runs and reports what it and the task state do not agree on. It only reads and never reconciles, and it is switched on through `AUDIT_CONFIG.enabled` as a first-period safety net rather than a permanent part of the write path.
-- Main-process storage modules exist under `src/main/storage`. Storage initializes SQLite in the local database folder, owns one lazy database connection per storage instance, loads task rows, executes task write commands, writes through the process-wide operational logger, reports database health, writes rotated backup copies, and closes the database during shutdown. Electron exposes that boundary through storage IPC and `window.spotStorage`; React uses it for startup loading, task mutations, non-healthy database status feedback, and backup failure notices.
-- The database always lives in the Electron user-data folder and cannot be moved. The user only chooses the backup folder, which receives rotated write-only copies of the database and defaults to `<userData>/backups`. Startup never blocks on a folder choice. Configuration and log files also always stay in the Electron user-data folder.
-- Electron main and preload TypeScript sources are bundled by `scripts/build-electron.js` into ignored `dist/electron` files before Electron starts or packages. The bundling step uses exact-version `esbuild` to remove the former custom runtime TypeScript/module resolver.
-- Electron loads the built React `build/index.html` file in packaged mode and in every run started through `npm run start-packaged`. `vite.config.mts` sets `base` to `./` so asset URLs stay relative under file loading, and points `build.outDir` at `build` so the main process and the packaging step keep finding the renderer where they always did.
-- `npm start` is the hot-reloading development loop instead: the renderer is served by a Vite development server and hot-reloaded in place, and the Electron main and preload bundles are watched and relaunch the application when they change. The Development Loop section describes it.
-- The Notes and Tags routes exist as placeholder pages. The Settings route owns the database and backup folder settings.
-- The implemented persistence architecture is one local SQLite database as the source of truth, one append-only rolled `spot-logs.ndjson` operational log, and a rotated set of backup copies in the backup folder.
-- The implemented persistence behavior is documented below. Startup loading, task mutations, shutdown draining, packaged React loading, and user-facing database health feedback are wired in Electron.
+What is worth knowing before changing anything: task writes are optimistic and queued, the database never moves, and a quit is a handshake rather than an exit. The Persistence sections below describe each of those.
 
 ## How To Run
 
@@ -244,6 +233,8 @@ Routes:
 - `/tags` renders `TagsPage`
 - `/settings` renders `SettingsPage`
 
+`Sidebar` links only Tasks and Settings. Notes and Tags keep their routes and their placeholder pages, but nothing navigates to them: a released SPOT should not offer a page that does nothing. Restoring them is putting their `SidebarElement` back.
+
 Every context provider is mounted above `HashRouter`, so route state is the only thing navigation changes. Page components hold what only they need: anything that must survive navigation belongs to a provider. There is no single application-wide store, because a shared one would re-render every page on any change; each provider owns one area.
 
 Nothing gates the app at startup: the database is always in the user-data folder, so the task page renders right away and the backup folder is only a Settings concern.
@@ -315,7 +306,7 @@ The live database always lives on the local user-data disk and is never placed i
 - Because the database is local, write-ahead logging is safe to use, and its `-wal` and `-shm` companion files never have to be understood by a synchronization client.
 - The backup folder only ever receives finished files. Each backup is built locally and published with an atomic rename, so a synchronization client watching that folder cannot observe a database that is still being written.
 
-The backup folder is therefore a write-only destination. SPOT never reads a backup back, never compares one against the live database, and does not keep two computers in sync. Restoring a backup is a manual step: copy the chosen file over `spot.sqlite` in the database folder while SPOT is closed. The Settings page says so as well, next to the database path the copy has to go to, because a backup nobody knows how to use is not a backup. It also says what the copy costs: everything changed after that backup was written is gone, so the current database is worth keeping aside first.
+The backup folder is therefore a write-only destination. SPOT never reads a backup back, never compares one against the live database, and does not keep two computers in sync. Restoring a backup is a manual step: with SPOT closed, copy the chosen file over `spot.sqlite` in the database folder. The Settings notice about the backup folder says this too, because a backup nobody knows how to use is not a backup, and it says what the copy costs: every change made after that copy was written is replaced.
 
 ### Storage Files
 
@@ -706,8 +697,7 @@ Active list actions:
 `SettingsPage` renders `BackupSettings` from `src/components/storage` and `AppInfoSettings` from `src/components/settings`. The backup section is written to make the persistence model obvious to the user, because the two folders it names mean very different things:
 
 - The task database section states that the tasks live in a single `spot.sqlite` file inside the SPOT application folder, that this is always where they are read from and written to, and that it cannot be moved. It shows the full database path.
-- The backup folder section states how often copies are written, how many are kept, and that a synchronized folder is safe to use but that SPOT never reads these copies back, does not keep two computers in sync, and leaves restoring to the user.
-- The restore section says how to do that restoring, since nothing in SPOT will: quit first, copy a file from the backup folder over the database file under that exact name, start again. It also says what is lost, because the copy replaces everything written after that backup, and suggests keeping the current database aside first.
+- The backup folder section states how often copies are written and how many are kept. Its notice states that a synchronized folder is safe to use, that SPOT never reads these copies back and does not keep two computers in sync, and then how to restore one by hand, since nothing in SPOT will: close SPOT, copy a file over the database above under that exact name, which replaces every change made after that copy was written. The restore instructions sit in that notice rather than in a section of their own, because restoring is the other half of what the notice already says about copies never being read back.
 
 It also shows the current backup folder, a development-run notice when the run is not packaged, the reason a saved folder could not be used, the outcome of the last backup, and two actions:
 
@@ -908,51 +898,19 @@ Anything clickable is a real control and not a clickable `div`, so that the keyb
 
 ## Testing
 
-Current test coverage includes focused regression checks for:
-
-- insertion at start, middle, and end
-- manual sort position recomputation, move operations, and random operation checks
-- task shallow cloning, task loading, loading a completed task that has no completion date, importance sorting, state changes, and new-task defaults
-- filter cloning and task visibility matching
-- domain counting, active/filter domain separation, the filter lists sorted by value while the form lists are sorted by descending count behind their persistent entries, and selected-filter cleanup
-- the free-select input: options that exist only while the dropdown is open, and a filtered option showing the typed part as it is with the rest of its label in bold
-- date comparison and display formatting
-- translation lookup at any key depth, placeholder interpolation and unfilled placeholders left alone, locale number formatting, plural category selection including a language whose categories English does not have, the fallback bundle, a key no bundle holds being reported and shown as itself, a group never being mistaken for a translation, and locale list joining
-- language resolution: an available language taken as it is, case-insensitive matching, a regional tag falling back to its base language, the first language that can actually be served winning over the first one asked for, and the fallback when nothing matches
-- smoke coverage for task filters and task list interactions
-- the resizable pane split: the default split it starts on, dragging the divider and stopping when the button is released, neither pane being dragged below the width it needs, each pane being kept wide enough for the header it holds down to the exact pixel, the keyboard steps and the narrowest and widest keys, the double click that restores the default split, the panes being given the width they need again when the window becomes narrower, and the split surviving the page being left and opened again
-- the pane layout rules: a share the layout allows left alone, the widths kept for the pane on either side of the divider, a page too narrow for both panes, a page that has not been laid out yet, and per-layout shares notifying only their own subscribers and only when they actually change
-- SQLite storage setup, task row mapping, command execution, transaction rollback, and optional operational logging behavior
-- storage IPC handler registration, channel delegation, shutdown drain, post-shutdown command failure behavior, exclusive access that finalizes in-flight commands and queues later ones, and two overlapping exclusive operations running one after the other with no command in between
-- the shutdown flush handshake: buffered renderer changes saved before the database is closed, commands refused only after the renderer reported, the application told to stop collecting changes before the first command is refused and before the drain starts, that same notice arriving right away when there is no renderer to ask, and a bounded wait when the renderer never reports
-- the window close flush handshake: buffered renderer changes saved while the database stays open, no wait when the window closes as part of a quit or its renderer is already gone, one single handshake shared by a window close and a quit, and a new handshake for a window closed later
-- the buffered task changes: save delays and their restart, immediate saves, forgetting a reverted value, the shorter state change delay, updater-form changes, dropping the buffer of a deleted task, a buffered value never starting a save of its own, a buffered value riding along with the save another change already scheduled, keeping changes when no applier is registered, keeping them buffered when the applier throws, saving the other tasks when one of them cannot be saved, per-task subscriber notification with stable snapshots, page hide saving, waiting for in-flight storage commands, retrying a failed write as soon as the flush is requested, reporting to the main process only once storage caught up, and reporting the task IDs whose values are still buffered when the flush rounds are used up
-- the window navigation guard: the page the window was loaded with allowed, another file on disk and a remote page prevented, any path of the development server's own origin allowed while another origin is not, a URL that cannot be parsed refused, every window the page tries to open denied, and each refusal reported
-- the process crash handlers: an exception that reached the top of the process and a promise nobody handled both logged with their stack, the failure described to the application, a thrown value that is not an error still reported, and a reporting handler that throws never becoming the next uncaught exception
-- the renderer error boundary: children rendered while nothing throws, the fallback shown instead of an empty page once a render throws, the failure and the component that threw handed to the application, the failure given to the fallback, and the children rendered again once the fallback resets it
-- runtime path resolution for packaged and development runs
-- backup folder resolution at startup, saved-folder reuse, the development folder override, the fallback to the default folder when the saved or chosen one cannot be used, configuration persistence, and running the change on the storage chain
-- backup location IPC registration, cancelled folder dialogs, and rejecting a chosen path that is not a usable folder
-- backup file naming and chronological sorting, a written copy that reopens as a valid database, backup folder creation, pruning down to the retained count while leaving other files alone, clearing a partial copy left by an interrupted backup, and failing without leaving a temporary file behind
-- backup scheduling: waiting for the task changes to settle and restarting that wait, skipping a backup when nothing changed, retrying after a failure, reporting every outcome, running on the storage chain, backing up once more at shutdown while cancelling the pending schedule, and giving up on a shutdown backup that takes too long
-- a backup copy holding the stored tasks, and a failed backup that leaves the database healthy
-
 Tests that cover `src/framework` live in `tests/framework` and depend only on framework modules, so they move with the folder. Tests that cover how SPOT binds to it stay under `tests/main`, `tests/logic`, and `tests/components`.
-- smoke coverage for the Settings panel showing the fixed database location, saying how to restore a backup copy and what that costs, reporting a failed backup without claiming the tasks are lost, and the confirmed backup folder change
-- the About section: the version the main process reports shown, and the version reported as unknown rather than left blank both when the request fails and when there is no Electron bridge at all
-- the application info IPC: the one channel registered, the version Electron reports answered back, and the version read again on every request rather than captured once
-- Electron window load-target resolution: the built React file on disk, the development server when an unpackaged run was started with one, an empty server URL falling back to the built file, and a packaged run ignoring the development server variable altogether
-- React task-page startup loading, Electron preload API requirement, persisted Electron loading, and startup-error rendering
-- React task-page storage commands for create, update, delete, complete, restore, manual reorder, and importance sort, plus the empty tag of a tag input never reaching a storage command, the write-failure warning, storage-health feedback, and the task state being kept as it is after a rejected write
-- the task state surviving navigation: leaving the task page and coming back keeps the loaded tasks, the changes made to them, and the filters, without a loading step and without reading the database again
-- the task write queue: in-order writing, retrying a failed or thrown write while keeping the warning until it goes through, later commands not overtaking a failed one, keeping a command refused while storage was closing, retrying immediately when the retry delay cannot be waited out, dropping a refused command instead of retrying it forever, giving up on a write the database keeps failing so later commands are still written, not counting writes refused while storage was closing against that limit, keeping a dropped command's warning through later successful writes, database status reporting, and the queue reporting itself as busy from the moment a command is queued until it is written, including while a failed write waits out its retry delay
-- task comparison: dropping the runtime-only fields and the empty tags a task is never stored with, normalizing an emptied optional field to the undefined the database reads back, reporting no change when two tasks only differ in ways that are never stored, reporting a cleared field as an undefined value so it is stored as NULL, comparing dates by their instant and tags by their contents, and listing every field two tasks disagree on
-- the task state audit, whose message is built from plural translation forms and a locale-joined list: reporting nothing when both sides hold the same tasks, ignoring the differences that are never stored, reporting a task the database does not hold, a task the task state does not hold, and which fields a task is stored with differently, breaking the message down by reason, and capping the listed differences while still counting all of them
-- smoke coverage for the audit in the running page: reading the database back after the audit delay and reporting what the two do not agree on, and not auditing at all while a task change has not reached storage yet
-- task edit durability corner cases: edits still saved after the task is filtered out of the list, never saved for a deleted task, task state values shown again when the parent replaces the task, what the user is typing kept while the parent replaces the task, a tag saved when the task disappears before its input is ever left, a tag not saved while it is still being typed and the empty input waiting after it, a tag saved when its input is left, and everything saved before the renderer goes away
-- generic logging success, public log levels, startup file-open failures, a write the log file could not receive being ignored, an entry holding a value JSON cannot represent being ignored, synchronous writing, shutdown flush behavior, rolling the log file into a numbered archive once it passes the size limit, keeping as many archives as asked for while dropping the oldest, and keeping none when none were asked for
-- the manually sorted list utility: insertion at every position, moves, and sort position renumbering
-- date handling: day-granularity comparison, whole-day offsets, relative labels and the weekday horizon, labels that are not supplied falling through, relative labels following the clock past midnight, stored `YYYY-MM-DD` conversion in both directions, and the next working day
+
+The test files are the list of what is covered, and they are named after what they cover. What follows is why each area is tested, since that is the part a file name cannot carry:
+
+- **Pure task logic** (`tests/logic`, `tests/framework/ManuallySortedList.test.ts`) is where most of the coverage sits, because it is where a mistake is silent: sort positions, filter matching, domain counting and task cloning all produce a plausible-looking result when they are wrong.
+- **The persisted shape of a task** (`TaskComparison`) is tested hard because it decides what reaches SQLite. A field the user cleared has to arrive as `undefined` so it is stored as NULL, and a difference that is never stored must not look like a change.
+- **The write path** (`TaskStorageQueue`, `PendingTaskChanges`) is tested for its failure branches rather than its happy one: retries and their bounds, a refused command that must not be retried forever, later commands never overtaking a failed one, and the buffer surviving a task being filtered out, re-rendered or deleted.
+- **The audit** (`TaskStateAudit`) is tested against the same comparison rules as the write path, so the two cannot disagree about what a difference is, and for never reporting one while a change has not reached storage yet.
+- **Storage and the main process** (`tests/main`, the framework storage and backup tests) cover SQLite setup, row mapping, one transaction per command and its rollback, the backup file lifecycle including a copy that reopens as a valid database, and the scheduler's timing rules.
+- **Shutdown** (`TaskStorageIpc`, `PendingTaskChanges`) is covered on both handshakes, quit and window close, because the buffered edits are lost if either one is wrong, and both are timing-dependent enough that a reader cannot verify them by inspection.
+- **The failure nets** (`ProcessCrashHandlers`, `WindowNavigationGuard`, `ErrorBoundary`) are covered for the case that matters: that they catch, log and report rather than letting a failure vanish, and that a reporting handler which throws never replaces the failure it was reporting.
+- **Translation** (`Translator`, `LanguageResolution`) covers key lookup, interpolation, plural categories a language has that English does not, and the fallbacks, so a missing key fails somewhere rather than reaching the screen.
+- **Components** (`tests/components`) are smoke coverage only, on the flows where a regression would be invisible: task list and filter interaction, edit durability across re-render and unmount, task state surviving navigation, and the Settings panel saying where the database is and how to restore it.
 
 Tests run on Vitest, configured in the `test` section of `vite.config.mts`: it reuses the same `src` alias as the build, runs in `jsdom`, and exposes `describe`, `test`, `expect` and `vi` as globals. `tests/setupTests.ts` is the shared setup file, and `tests/vitest-env.d.ts` is what makes those globals visible to TypeScript.
 
@@ -968,11 +926,6 @@ npm run typecheck
 npm test
 ```
 
-Future testing priorities:
-
-- broader interaction coverage as task editing and drag-and-drop behavior are polished
-- Electron-shell integration coverage for persisted startup, mutation, shutdown, and packaged loading flows
-
 ## Development Rules
 
 `CLAUDE.md` is the single source of truth for contributor and agent rules: hard constraints, code conventions, testing expectations, and the commit workflow. It is intentionally short so it can be read in full before any change. Do not restate those rules here; update `CLAUDE.md` instead and keep this document aligned with it.
@@ -982,12 +935,4 @@ The two rules that govern this document itself:
 - Keep `README.md` minimal.
 - Keep this document detailed and current, and aligned with `CLAUDE.md`.
 
-## Near-Term Work
-
-The most important remaining work is:
-
-- Add persistence and Electron-shell integration tests for runtime startup, mutation, shutdown, and packaged loading flows.
-- Improve accessibility and focus behavior in reusable inputs and clickables.
-- Continue polishing drag-and-drop feedback as the task interaction model settles.
-- Continue polishing reload feedback.
-- Finish Notes and Tags pages, and the rest of the Settings page, when their scope is clear.
+`TODO.md` holds the outstanding work and the ideas that have not been committed to. It is not maintained here, and this document does not duplicate it: a plan written in two places goes stale in one of them.

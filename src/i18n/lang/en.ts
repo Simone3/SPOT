@@ -161,14 +161,9 @@ export const EN_TRANSLATIONS = {
 		databaseTitle: 'Task database',
 		databaseDescription: 'SPOT keeps all your tasks in a single spot.sqlite database inside its own application folder. This is always where your tasks are read from and written to, and it cannot be moved.',
 		unknownDatabasePath: 'Unknown.',
-
-		// Restoring is a manual step by design: SPOT never reads a backup copy back on its own, so the one way to use one has to be written down
-		restoreTitle: 'Restoring a backup',
-		restoreDescription: 'Quit SPOT first, so it is not writing to the database. Then copy a file out of the backup folder over the database file above, keeping that exact name, and start SPOT again. The copy replaces everything: any task change made after that backup was written is gone, so it is worth keeping the current database somewhere else before overwriting it.',
-
 		folderTitle: 'Backup folder',
 		folderDescription: 'A complete copy of the database is written here a couple of minutes after you stop making changes, and once more when SPOT closes. The {retainedBackupCount} most recent copies are kept and the older ones are removed.',
-		folderWarning: 'This folder is a backup destination, not a shared one. A folder synchronized by OneDrive, Google Drive, Dropbox or iCloud is safe to use, because each copy is written as one finished file. SPOT never reads these copies back though: it does not keep two computers in sync, and restoring a backup is a manual step.',
+		folderWarning: 'This folder is a backup destination, not a shared one. A folder synchronized by OneDrive, Google Drive, Dropbox or iCloud is safe to use, because each copy is written as one finished file. SPOT never reads these copies back though: it does not keep two computers in sync, and restoring is a manual step. To restore, close SPOT and copy one of these files over the database above under that exact name, which replaces every change made after that copy was written.',
 		noFolderSelected: 'No folder is selected.',
 		developmentNotice: 'Development run: the backup folder can be changed to test the app, but the next development startup goes back to the development folder.',
 

@@ -6,7 +6,7 @@ Instructions for Claude Code when working in this repository.
 
 ## Project
 
-SPOT (Simple Planner & Organizer Tool) is an Electron + React task manager for macOS, Windows, and Linux, meant to manage tasks in a simple and direct way (no frills). Work in progress: the React renderer is considered done for now, and the Electron persistence layer is wired for startup loading, task mutations, shutdown draining, packaged loading, and rotated backups into the user-selected backup folder. Standalone browser mode is not a supported runtime.
+SPOT (Simple Planner & Organizer Tool) is an Electron + React task manager for macOS, Windows, and Linux, meant to manage tasks in a simple and direct way (no frills). Tasks are the finished surface; the Notes and Tags routes hold placeholder pages and are not linked from the sidebar. Standalone browser mode is not a supported runtime.
 
 ## Commands
 
@@ -23,7 +23,7 @@ npm run build-icons    # regenerate assets/icon.{icns,ico,png} from assets/icon.
 Prefer running a single test file while iterating:
 
 ```sh
-npm test -- tests/logic/SomeFile.spec.ts
+npm test -- tests/logic/SomeFile.test.ts
 ```
 
 ## Hard Rules
@@ -56,7 +56,8 @@ npm test -- tests/logic/SomeFile.spec.ts
 - Database failures are user-facing: surface task-save feedback on write failure and reconcile state. Operational-log failures are best-effort and ignored by React when SQLite succeeds. Backup failures are user-facing too, but as a soft notice: they must never be routed through the database error path, because the tasks are already saved locally.
 - The live `spot.sqlite` database always lives in the Electron user-data folder and never moves. The user-selected folder only receives rotated write-only backup copies; SPOT never reads them back and does not sync across devices. Configuration and log files also stay in the user-data folder, and development runs keep their own root folder there.
 - Never place the live database in a folder a synchronization client controls, and never copy it with a plain file copy: build backups with `VACUUM INTO` locally, then publish them with an atomic rename.
-- Only one SPOT process may run at a time. The single instance lock is taken before anything else in `Main.ts`, and nothing may assume a second process could share the database: the optimistic write path, the audit, the backup rotation and the log rotation all assume a single writer.
+- Only one SPOT process may run at a time. `Main.ts` turns away the Windows installer's own launches and then takes the single instance lock, before anything else, and nothing may assume a second process could share the database: the optimistic write path, the audit, the backup rotation and the log rotation all assume a single writer.
+- Failures that reach the top of the main process must leave a trace and, once the language is resolved, reach the user. A render error must not empty the window. Neither path may be removed without replacing it: a silent failure in a released build is unreportable.
 
 ## Testing
 

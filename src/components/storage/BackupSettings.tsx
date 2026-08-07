@@ -212,9 +212,6 @@ const BackupSettings = (): ReactElement => {
 					{statusFeedback.message}
 				</p>
 			}
-			<h3 className='backup-settings-title backup-settings-title-spaced'>{t('backup.restoreTitle')}</h3>
-			<p className='backup-settings-description'>{t('backup.restoreDescription')}</p>
-
 			{pendingDirectory &&
 				<ConfirmModal
 					title={t('backup.confirm.title')}
