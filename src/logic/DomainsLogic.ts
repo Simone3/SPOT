@@ -136,7 +136,7 @@ export const cloneDomains = (domainsContainer: DomainsContainer): DomainsContain
  * @param entryB Second domain entry to compare.
  * @returns The domain value sort order.
  */
-const domainCompareFunction = (entryA: DomainEntry, entryB: DomainEntry): number => {
+const domainValueCompareFunction = (entryA: DomainEntry, entryB: DomainEntry): number => {
 	if(entryA.value < entryB.value) {
 		return -1;
 	}
@@ -147,16 +147,34 @@ const domainCompareFunction = (entryA: DomainEntry, entryB: DomainEntry): number
 };
 
 /**
+ * Comparator for domain entries (persistent entries first, then by descending count, then by value).
+ * @param entryA First domain entry to compare.
+ * @param entryB Second domain entry to compare.
+ * @returns The domain count sort order.
+ */
+const domainCountCompareFunction = (entryA: DomainEntry, entryB: DomainEntry): number => {
+	if(entryA.persistent !== entryB.persistent) {
+		return entryA.persistent ? -1 : 1;
+	}
+	if(entryA.count !== entryB.count) {
+		return entryB.count - entryA.count;
+	}
+	return domainValueCompareFunction(entryA, entryB);
+};
+
+/**
  * Sorts all domains.
  * @param domainsContainer Domain lists to sort in place.
  */
 const sortAllDomains = (domainsContainer: DomainsContainer): void => {
-	// Sort all lists (except priorities, which are already sorted by default)
-	domainsContainer.filters.owners.sort(domainCompareFunction);
-	domainsContainer.filters.dueDates.sort(domainCompareFunction);
-	domainsContainer.filters.tags.sort(domainCompareFunction);
-	domainsContainer.form.owners.sort(domainCompareFunction);
-	domainsContainer.form.tags.sort(domainCompareFunction);
+	// The filter lists are a checklist the user reads front to back, so they stay in value order (priorities are already
+	// sorted by default). The form lists are suggestions the user picks one entry from, so the most used ones come first,
+	// with the entry that stands for "no value" kept at the top because it is the default rather than a suggestion.
+	domainsContainer.filters.owners.sort(domainValueCompareFunction);
+	domainsContainer.filters.dueDates.sort(domainValueCompareFunction);
+	domainsContainer.filters.tags.sort(domainValueCompareFunction);
+	domainsContainer.form.owners.sort(domainCountCompareFunction);
+	domainsContainer.form.tags.sort(domainCountCompareFunction);
 };
 
 /**

@@ -48,10 +48,6 @@
 	margin-left: 6px;
 }
 
-.free-select-input-dropdown-container-closed {
-	display: none;
-}
-
 .free-select-input-options-container {
 	width: 100%;
 	overflow: auto;
@@ -75,6 +71,11 @@
 	overflow: hidden;
 	text-overflow: ellipsis;
 	border-radius: 5px;
+}
+
+/* What the user has not typed yet, which is what picking the option would add to what is already in the input */
+.free-select-input-option-completion {
+	font-weight: bold;
 }
 
 /* The option under the pointer and the option the keyboard is on look the same, and the latter draws the ring too */

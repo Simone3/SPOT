@@ -11,6 +11,12 @@ const domainByValue = (domains: DomainEntry[], value: string): DomainEntry | und
 	});
 };
 
+const domainValues = (domains: DomainEntry[]): string[] => {
+	return domains.map((domain) => {
+		return domain.value;
+	});
+};
+
 describe('DomainsLogic', () => {
 	test('builds filter domains from active tasks and form domains from all tasks', () => {
 		const activeAlice = makeTask({
@@ -91,6 +97,28 @@ describe('DomainsLogic', () => {
 		expect(domainByValue(domainsContainer.form.owners, 'Bob')?.count).toBe(2);
 		expect(domainByValue(domainsContainer.filters.tags, 'work')?.count).toBe(1);
 		expect(domainByValue(domainsContainer.filters.tags, 'personal')?.count).toBe(1);
+	});
+
+	test('sorts filter domains by value and form domains by descending count', () => {
+		const tasksContainer: TasksContainer = {
+			active: [
+				makeTask({ owner: 'Zoe', tags: [ 'work' ] }),
+				makeTask({ owner: 'Zoe', tags: [ 'work', 'home' ] }),
+				makeTask({ owner: 'Alice', tags: [ 'work', 'home' ] }),
+				makeTask({ owner: '', tags: [ 'errands' ] })
+			],
+			completed: []
+		};
+		const domainsContainer = getInitialDomains(makeDomainLabels());
+
+		addDomainsForTasks(domainsContainer, tasksContainer);
+
+		expect(domainValues(domainsContainer.filters.owners)).toEqual([ '', 'Alice', 'Zoe' ]);
+		expect(domainValues(domainsContainer.filters.tags)).toEqual([ 'errands', 'home', 'work' ]);
+
+		// The persistent "no owner" entry stays first whatever its count, and equal counts fall back to the value order
+		expect(domainValues(domainsContainer.form.owners)).toEqual([ '', 'Zoe', 'Alice' ]);
+		expect(domainValues(domainsContainer.form.tags)).toEqual([ 'work', 'home', 'errands' ]);
 	});
 
 	test('cleans selected filters when the last matching active domain disappears', () => {

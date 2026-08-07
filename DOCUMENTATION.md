@@ -747,6 +747,11 @@ Domain entries contain:
 
 Domain counts are incremented or decremented as tasks change. Non-persistent domains are removed when their count reaches zero. Existing filters are cleaned when a selected domain value disappears. A dynamic entry takes its label from the task value itself, so it is never translated.
 
+The two sections are kept in different orders, because the user reads them differently:
+
+- Filter lists are a checklist read front to back, so they are sorted by value. Priorities are left in the order they are created, which is already the order they mean.
+- Form lists are suggestions the user picks a single entry from, so they are sorted by descending count and then by value, putting the values the user actually uses at the top of the dropdown. Persistent entries come first whatever their count, which is what keeps the `Me` owner entry at the top: it is the default rather than a suggestion.
+
 ## Sorting
 
 Active tasks have two sorting modes:
@@ -806,6 +811,12 @@ Input components:
 - `TextInput`
 
 `ButtonsSelect` and `FreeSelectInput` are string-valued input components. They accept simple option objects instead of app-specific domain types.
+
+`FreeSelectInput` is a text input with a suggestion dropdown, and shows the options in the order the caller gives them:
+
+- The dropdown exists only while it is open. The options are neither computed nor rendered otherwise, which matters because a task list renders one of these inputs per owner and per tag of every visible task, and only one of them can be open at a time.
+- Every option is shown until the user types, after which the list keeps the options whose label contains what was typed, case-insensitively, minus the one that is already exactly it.
+- A filtered option shows the typed part as it is and the rest of the label in bold, so what picking it would add is what stands out. The match can start anywhere in the label, so a label can have a bold part on either side of it.
 
 `Clickable` makes anything the caller renders clickable, and carries no look of its own beyond the pointer, the disabled state and the shared focus ring. It renders a `button` and takes an optional label, which is what names a control that is only an icon, such as the task delete action. The header actions are named by the label they already show, so they pass none.
 
@@ -878,7 +889,8 @@ Current test coverage includes focused regression checks for:
 - manual sort position recomputation, move operations, and random operation checks
 - task shallow cloning, task loading, loading a completed task that has no completion date, importance sorting, state changes, and new-task defaults
 - filter cloning and task visibility matching
-- domain counting, active/filter domain separation, and selected-filter cleanup
+- domain counting, active/filter domain separation, the filter lists sorted by value while the form lists are sorted by descending count behind their persistent entries, and selected-filter cleanup
+- the free-select input: options that exist only while the dropdown is open, and a filtered option showing the typed part as it is with the rest of its label in bold
 - date comparison and display formatting
 - translation lookup at any key depth, placeholder interpolation and unfilled placeholders left alone, locale number formatting, plural category selection including a language whose categories English does not have, the fallback bundle, a key no bundle holds being reported and shown as itself, a group never being mistaken for a translation, and locale list joining
 - language resolution: an available language taken as it is, case-insensitive matching, a regional tag falling back to its base language, the first language that can actually be served winning over the first one asked for, and the fallback when nothing matches

@@ -1,5 +1,5 @@
 import 'src/components/inputs/FreeSelectInput.css';
-import { useState, useId, useRef, useEffect, type FocusEvent, type ReactElement } from 'react';
+import { useState, useId, useRef, useEffect, type FocusEvent, type ReactElement, type ReactNode } from 'react';
 
 type FreeSelectOption = {
 	key: string;
@@ -16,6 +16,63 @@ type FreeSelectInputProps = {
 	value: string;
 	onChange: (value: string) => void;
 	onFinishEditing?: (value: string) => void;
+};
+
+/**
+ * An option to show in the dropdown, with the position of the typed text inside its label (-1 when nothing was typed).
+ */
+type MatchedOption = {
+	option: FreeSelectOption;
+	matchIndex: number;
+};
+
+/**
+ * Returns the options to show in the dropdown, each with the position of the typed text inside its label.
+ * @param options All available options.
+ * @param filterValue Text the user typed, or an empty string to show every option.
+ * @returns The matching options, in the order they were given.
+ */
+const getMatchedOptions = (options: FreeSelectOption[], filterValue: string): MatchedOption[] => {
+	if(!filterValue) {
+		return options.map((option) => {
+			return { option, matchIndex: -1 };
+		});
+	}
+
+	const lowerCaseFilterValue = filterValue.toLowerCase();
+	const matchedOptions: MatchedOption[] = [];
+	for(const option of options) {
+		// Match case-insensitive substrings but not exactly the same string (case-sensitive)
+		const matchIndex = option.label.toLowerCase().indexOf(lowerCaseFilterValue);
+		if(matchIndex !== -1 && option.label !== filterValue) {
+			matchedOptions.push({ option, matchIndex });
+		}
+	}
+	return matchedOptions;
+};
+
+/**
+ * Renders an option label with the part the user did not type in bold, so that what picking the option would add stands out.
+ * @param label Option label.
+ * @param matchIndex Position of the typed text inside the label, or -1 when nothing was typed.
+ * @param matchLength Length of the typed text.
+ * @returns The option label content.
+ */
+const renderOptionLabel = (label: string, matchIndex: number, matchLength: number): ReactNode => {
+	if(matchIndex === -1) {
+		return label;
+	}
+
+	const beforeMatch = label.slice(0, matchIndex);
+	const match = label.slice(matchIndex, matchIndex + matchLength);
+	const afterMatch = label.slice(matchIndex + matchLength);
+	return (
+		<>
+			{beforeMatch && <span className='free-select-input-option-completion'>{beforeMatch}</span>}
+			{match}
+			{afterMatch && <span className='free-select-input-option-completion'>{afterMatch}</span>}
+		</>
+	);
 };
 
 /**
@@ -66,14 +123,11 @@ const FreeSelectInput = (props: FreeSelectInputProps): ReactElement => {
 	};
 
 	// Filter dropdown options, but only after the user typed something in the free text input
-	const currentStringValue = value;
+	const filterValue = changedAfterOpen ? value : '';
 
-	const filteredOptions = changedAfterOpen && currentStringValue ?
-		options.filter((option) => {
-			// Match case-insensitive substrings but not exactly the same string (case-sensitive)
-			return option.label.toLowerCase().indexOf(currentStringValue.toLowerCase()) !== -1 && option.label !== currentStringValue;
-		}) :
-		options;
+	// The options exist only while the dropdown is open: a closed dropdown then costs nothing at all, which matters
+	// because a task list renders one of these inputs per owner and per tag of every visible task
+	const matchedOptions = open ? getMatchedOptions(options, filterValue) : [];
 
 	const onBlur = (e: FocusEvent<HTMLElement>): void => {
 		if(!containerRef.current!.contains(e.relatedTarget)) {
@@ -96,7 +150,7 @@ const FreeSelectInput = (props: FreeSelectInputProps): ReactElement => {
 					spellCheck='false'
 					autoComplete='off'
 					placeholder={placeholder}
-					value={currentStringValue}
+					value={value}
 					onChange={(e) => {
 						onChange(e.target.value);
 						doSetChanged();
@@ -105,27 +159,29 @@ const FreeSelectInput = (props: FreeSelectInputProps): ReactElement => {
 					onBlur={onBlur}
 				/>
 			</div>
-			<div className={`free-select-input-dropdown-container free-select-input-dropdown-container-${open && filteredOptions.length > 0 ? 'open' : 'closed'}`}>
-				<div className='free-select-input-options-container'>
-					<ul className='free-select-input-options'>
-						{filteredOptions.map((option) => {
-							return (
-								<li
-									key={option.key}
-									className='free-select-input-option'
-									tabIndex={0}
-									onBlur={onBlur}
-									onClick={() => {
-										onChange(option.value);
-										doClose(option.value);
-									}}>
-									{option.label}
-								</li>
-							);
-						})}
-					</ul>
+			{matchedOptions.length > 0 && (
+				<div className='free-select-input-dropdown-container'>
+					<div className='free-select-input-options-container'>
+						<ul className='free-select-input-options'>
+							{matchedOptions.map(({ option, matchIndex }) => {
+								return (
+									<li
+										key={option.key}
+										className='free-select-input-option'
+										tabIndex={0}
+										onBlur={onBlur}
+										onClick={() => {
+											onChange(option.value);
+											doClose(option.value);
+										}}>
+										{renderOptionLabel(option.label, matchIndex, filterValue.length)}
+									</li>
+								);
+							})}
+						</ul>
+					</div>
 				</div>
-			</div>
+			)}
 		</div>
 	);
 };
