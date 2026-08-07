@@ -8,6 +8,7 @@ import { resetTaskStorageQueueForTests, waitForTaskStorageQueue } from 'src/logi
 import { TasksContextProvider } from 'src/contexts/TasksContext';
 import { TasksPage } from 'src/components/tasks/TasksPage';
 import type { Task, TaskChange } from 'src/types/TaskTypes';
+import type { SpotDiagnosticsApi } from 'src/types/DiagnosticsTypes';
 import type { TaskFilterChange } from 'src/types/FilterTypes';
 import type { LoadTasksResult, SpotStorageApi, StorageStatus, TaskStorageCommand, TaskStorageCommandResult } from 'src/types/TaskStorageTypes';
 
@@ -153,6 +154,16 @@ const healthyStatus: StorageStatus = {
 
 const originalSpotStorage = window.spotStorage;
 
+const originalSpotDiagnostics = window.spotDiagnostics;
+
+const setWindowSpotDiagnostics = (spotDiagnostics: SpotDiagnosticsApi | undefined): void => {
+	Object.defineProperty(window, 'spotDiagnostics', {
+		configurable: true,
+		writable: true,
+		value: spotDiagnostics
+	});
+};
+
 const setWindowSpotStorage = (spotStorage: SpotStorageApi | undefined): void => {
 	Object.defineProperty(window, 'spotStorage', {
 		configurable: true,
@@ -245,6 +256,7 @@ const createDeferred = <T,>(): { promise: Promise<T>; resolve: (value: T) => voi
 describe('TasksPage', () => {
 	afterEach(() => {
 		setWindowSpotStorage(originalSpotStorage);
+		setWindowSpotDiagnostics(originalSpotDiagnostics);
 		resetPendingTaskChangesForTests();
 		resetTaskStorageQueueForTests();
 		vi.restoreAllMocks();
@@ -681,7 +693,10 @@ describe('TasksPage', () => {
 			id: 'audited-task',
 			text: 'Audited task'
 		});
-		const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const reportTaskStateDrift: Mock<SpotDiagnosticsApi['reportTaskStateDrift']> = vi.fn(async() => {
+			return { logFilePath: '/tmp/spot-logs/spot-logs.ndjson' };
+		});
+		setWindowSpotDiagnostics({ reportTaskStateDrift });
 		const loadTasks: Mock<() => Promise<LoadTasksResult>> = vi.fn(async(): Promise<LoadTasksResult> => {
 			return {
 				ok: true,
@@ -709,8 +724,18 @@ describe('TasksPage', () => {
 		expect(auditNotice).toHaveTextContent('Tasks on screen and stored tasks differ');
 		expect(auditNotice).toHaveTextContent('1 task not stored yet');
 
-		// The message only says how much drifted, so the tasks and the fields it found are reported to the console
-		expect(consoleWarn).toHaveBeenCalledTimes(1);
+		// The message only says how much drifted, so the tasks and the fields it found go to the main process, which writes them to
+		// the operational log and answers with the file the notice then points the user at
+		expect(reportTaskStateDrift).toHaveBeenCalledTimes(1);
+		expect(reportTaskStateDrift.mock.calls[0][0]).toMatchObject({
+			differenceCount: 1,
+			differences: [{
+				taskId: 'audited-task',
+				taskText: 'Audited task',
+				reason: 'missing-in-database'
+			}]
+		});
+		expect(auditNotice).toHaveTextContent('/tmp/spot-logs/spot-logs.ndjson');
 	});
 
 	test('does not audit while a task change has not reached storage yet', async() => {

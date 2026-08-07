@@ -131,9 +131,12 @@ export const EN_TRANSLATIONS = {
 	// The audit only reads, so its wording stays a notice: what it found is never a reason to distrust what is on screen
 	audit: {
 		driftTitle: 'Tasks on screen and stored tasks differ',
-		logMessage: 'The tasks on screen and the tasks in the database are not the same',
 		report: '{details}. {trailer}',
-		trailer: 'Nothing on screen is lost, but those tasks may come back differently the next time SPOT starts. The details are in the developer console.',
+		trailer: 'Nothing on screen is lost, but those tasks may come back differently the next time SPOT starts. {logLocation}',
+
+		// The notice says how much drifted, so it points at the log file, which holds the tasks and the fields behind it
+		logLocation: 'SPOT wrote which tasks and which fields to its log file, {logFilePath}.',
+		unknownLogLocation: 'SPOT wrote which tasks and which fields to its log file.',
 
 		// Used when there were more differences than the report lists, so they cannot be broken down by reason
 		cappedDetails: {

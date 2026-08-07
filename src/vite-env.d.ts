@@ -2,6 +2,7 @@
 
 import type { SpotAppInfoApi } from 'src/types/AppInfoTypes';
 import type { SpotBackupLocationApi } from 'src/types/BackupLocationTypes';
+import type { SpotDiagnosticsApi } from 'src/types/DiagnosticsTypes';
 import type { SpotStorageApi } from 'src/types/TaskStorageTypes';
 
 declare global {
@@ -9,6 +10,7 @@ declare global {
 		spotStorage: SpotStorageApi;
 		spotBackupLocation: SpotBackupLocationApi;
 		spotAppInfo: SpotAppInfoApi;
+		spotDiagnostics: SpotDiagnosticsApi;
 	}
 }
 

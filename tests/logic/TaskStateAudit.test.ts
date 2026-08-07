@@ -53,6 +53,22 @@ describe('TaskStateAudit', () => {
 		expect(createTaskStateAuditMessage(report, translator)).toContain('1 task not stored yet');
 	});
 
+	// The message only says how much drifted, so it has to say where the tasks and the fields behind it were written
+	test('points at the log file the drift was written to', () => {
+		const report = auditTaskState([ makeTask() ], []);
+
+		expect(createTaskStateAuditMessage(report, translator, '/logs/spot-logs.ndjson'))
+			.toContain('SPOT wrote which tasks and which fields to its log file, /logs/spot-logs.ndjson.');
+	});
+
+	// Logging that could not open its file would send the user to a file that is not there
+	test('names no log file when the main process could not name one', () => {
+		const message = createTaskStateAuditMessage(auditTaskState([ makeTask() ], []), translator);
+
+		expect(message).toContain('SPOT wrote which tasks and which fields to its log file.');
+		expect(message).not.toContain('developer console');
+	});
+
 	test('reports a task the task state does not hold', () => {
 		const shownTask = makeTask();
 		const forgottenTask = makeTask({ text: 'Still stored' });

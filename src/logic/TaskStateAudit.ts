@@ -1,32 +1,11 @@
 import { AUDIT_CONFIG } from 'src/config/AppConfig';
 import { getDifferingPersistedTaskFieldNames } from 'src/logic/TaskComparison';
 import type { SpotTranslationKey, SpotTranslator } from 'src/i18n/Translations';
+import type { TaskStateAuditDifference, TaskStateAuditReason, TaskStateAuditReport } from 'src/types/TaskAuditTypes';
 import type { Task } from 'src/types/TaskTypes';
 
-/**
- * Why one task is not aligned.
- * "missing-in-database" is the one that loses data on the next launch, so it is reported first.
- */
-export type TaskStateAuditReason = 'missing-in-database' | 'missing-in-state' | 'different-values';
-
-export interface TaskStateAuditDifference {
-	taskId: string;
-	taskText: string;
-	reason: TaskStateAuditReason;
-
-	// Only set for "different-values": the persisted fields the two tasks disagree on
-	fieldNames?: string[];
-}
-
-export interface TaskStateAuditReport {
-	isAligned: boolean;
-	stateTaskCount: number;
-	databaseTaskCount: number;
-	differenceCount: number;
-
-	// Capped at AUDIT_CONFIG.maximumReportedTasks, while differenceCount stays the real total
-	differences: TaskStateAuditDifference[];
-}
+// The report travels to the main process, which writes it to the operational log, so its shape is owned by "src/types" and re-exported here
+export type { TaskStateAuditDifference, TaskStateAuditReason, TaskStateAuditReport } from 'src/types/TaskAuditTypes';
 
 const createTaskMap = (tasks: Task[]): Map<string, Task> => {
 	return new Map(tasks.map((task) => {
@@ -113,14 +92,18 @@ const countDifferencesByReason = (report: TaskStateAuditReport, reason: TaskStat
  * The wording stays a notice: the audit only reads, so what it found is never a reason to distrust what is on screen.
  * @param report Report to describe.
  * @param translator Translator for the current language.
+ * @param logFilePath Operational log file the report was written to, when the main process could name one.
  * @returns The message, or undefined when the report found nothing.
  */
-export const createTaskStateAuditMessage = (report: TaskStateAuditReport, translator: SpotTranslator): string | undefined => {
+export const createTaskStateAuditMessage = (report: TaskStateAuditReport, translator: SpotTranslator, logFilePath?: string): string | undefined => {
 	if(report.isAligned) {
 		return undefined;
 	}
 
-	const trailer = translator.t('audit.trailer');
+	// The message only says how much drifted, so it has to say where the tasks and the fields behind it can be read
+	const trailer = translator.t('audit.trailer', {
+		logLocation: logFilePath ? translator.t('audit.logLocation', { logFilePath }) : translator.t('audit.unknownLogLocation')
+	});
 
 	// The counts come from the capped list, so the report is only broken down by reason when the whole of it fits in that list
 	if(report.differenceCount > report.differences.length) {

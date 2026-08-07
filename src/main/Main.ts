@@ -16,6 +16,7 @@ import { createSpotBackupDirectoryStore, createSpotConfigStore } from 'src/main/
 import { resolveSpotRuntimePaths } from 'src/main/config/SpotRuntimePaths';
 import { registerAppInfoIpcHandlers } from 'src/main/ipc/AppInfoIpc';
 import { registerBackupLocationIpcHandlers } from 'src/main/ipc/BackupLocationIpc';
+import { registerDiagnosticsIpcHandlers } from 'src/main/ipc/DiagnosticsIpc';
 import { registerTaskStorageIpcHandlers } from 'src/main/ipc/TaskStorageIpc';
 import { createTaskStorage } from 'src/main/storage/TaskStorage';
 import { installSpotApplicationMenu } from 'src/main/window/AppMenu';
@@ -211,6 +212,9 @@ const startApplication = (): void => {
 		});
 
 		registerAppInfoIpcHandlers({ ipcMain, app });
+
+		// Registered after the logger, which is the file it writes what the renderer reports to
+		registerDiagnosticsIpcHandlers({ ipcMain });
 
 		// The scheduler needs the storage chain that registering the handlers returns, and the handlers need the scheduler to start and finish backups
 		let backupScheduler: BackupScheduler | undefined;
