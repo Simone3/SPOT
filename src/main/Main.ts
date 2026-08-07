@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { app, BrowserWindow, dialog, ipcMain } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu } from 'electron';
 import squirrelStartup from 'electron-squirrel-startup';
 import { BACKUP_CONFIG, LOGGING_CONFIG, WINDOW_CONFIG } from 'src/config/AppConfig';
 import { createBackupLocationManager } from 'src/framework/main/config/BackupLocationManager';
@@ -18,7 +18,8 @@ import { registerAppInfoIpcHandlers } from 'src/main/ipc/AppInfoIpc';
 import { registerBackupLocationIpcHandlers } from 'src/main/ipc/BackupLocationIpc';
 import { registerTaskStorageIpcHandlers } from 'src/main/ipc/TaskStorageIpc';
 import { createTaskStorage } from 'src/main/storage/TaskStorage';
-import { resolveWindowLoadTarget, type WindowLoadTarget } from 'src/main/window/WindowLoadTarget';
+import { installSpotApplicationMenu } from 'src/main/window/AppMenu';
+import { isDevelopmentRun, resolveWindowLoadTarget, type WindowLoadTarget } from 'src/main/window/WindowLoadTarget';
 import { SPOT_STORAGE_IPC_CHANNELS } from 'src/types/TaskStorageIpcChannels';
 
 let mainWindow: BrowserWindow | undefined;
@@ -77,9 +78,12 @@ const getAllowedNavigationUrl = (loadTarget: WindowLoadTarget): string => {
 // "requestRendererFlushBeforeWindowClose" saves the task changes the renderer still buffers, or returns undefined when the window can close right away
 interface CreateWindowOptions {
 	requestRendererFlushBeforeWindowClose: () => Promise<void> | undefined;
+
+	// What the window loads, resolved once at startup so that every window of this run loads the same page and the menu was decided from it
+	loadTarget: WindowLoadTarget;
 }
 
-const createWindow = ({ requestRendererFlushBeforeWindowClose }: CreateWindowOptions): void => {
+const createWindow = ({ requestRendererFlushBeforeWindowClose, loadTarget }: CreateWindowOptions): void => {
 	const win = new BrowserWindow({
 		width: WINDOW_CONFIG.widthPixels,
 		height: WINDOW_CONFIG.heightPixels,
@@ -95,11 +99,6 @@ const createWindow = ({ requestRendererFlushBeforeWindowClose }: CreateWindowOpt
 	win.once('ready-to-show', () => {
 		win.maximize();
 		win.show();
-	});
-
-	const loadTarget = resolveWindowLoadTarget({
-		appRootDirectory: app.getAppPath(),
-		isPackaged: app.isPackaged
 	});
 
 	// The renderer's Content-Security-Policy says what the page may load, not where it may go. Without this, a link or a script
@@ -180,6 +179,21 @@ const startApplication = (): void => {
 		// the same way the renderer resolves it from the browser.
 		const translator = createSpotTranslator(resolveSpotLanguage([ app.getLocale() ]));
 		fatalErrorTranslator = translator;
+
+		// Resolved before the window, because the menu is decided from it and every window of this run then loads the same page
+		const loadTarget = resolveWindowLoadTarget({
+			appRootDirectory: app.getAppPath(),
+			isPackaged: app.isPackaged
+		});
+
+		// Replaces the menu Electron installs by itself, which carries the reload and developer tools entries an installed SPOT
+		// should not offer. A development run keeps that default menu instead.
+		installSpotApplicationMenu({
+			menu: Menu,
+			isDevelopmentRun: isDevelopmentRun(loadTarget),
+			translator,
+			platform: process.platform
+		});
 
 		const runtimePaths = resolveSpotRuntimePaths(app);
 
@@ -262,11 +276,11 @@ const startApplication = (): void => {
 
 		await backupLocationManager.initialize();
 
-		createWindow({ requestRendererFlushBeforeWindowClose });
+		createWindow({ requestRendererFlushBeforeWindowClose, loadTarget });
 
 		app.on('activate', () => {
 			if(BrowserWindow.getAllWindows().length === 0) {
-				createWindow({ requestRendererFlushBeforeWindowClose });
+				createWindow({ requestRendererFlushBeforeWindowClose, loadTarget });
 			}
 		});
 	});

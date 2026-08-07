@@ -10,6 +10,16 @@ module.exports = {
 	packagerConfig: {
 		asar: true,
 		icon: iconBasePath,
+
+		// The identity the operating systems keep SPOT under. Without these the packager falls back to Electron's own defaults, which
+		// name the application after Electron rather than after SPOT and file it under developer tools.
+		//
+		// The bundle identifier is the one value here that cannot be changed lightly once SPOT is installed anywhere: macOS keeps
+		// permissions, window state and launch services entries under it, and a new identifier reads as a different application. It is
+		// in the "io.github" namespace because that is the repository hosting SPOT and therefore the only reversed domain name that is
+		// unambiguously ours.
+		appBundleId: 'io.github.simone3.spot',
+		appCategoryType: 'public.app-category.productivity',
 		ignore: [
 			// The icons are read from the repository at package time, so they do not need to be copied into the application itself
 			/^\/assets($|\/)/,
@@ -25,6 +35,12 @@ module.exports = {
 		{
 			name: '@electron-forge/maker-squirrel',
 			config: {
+				// "productName" names the executable the packager writes, so the installer has to look for that same name rather than for
+				// the lowercase package name it would otherwise assume. The identifier itself stays free of spaces because it also becomes
+				// the package name Squirrel keeps the installation under.
+				name: 'SPOT',
+				exe: 'SPOT.exe',
+				setupExe: 'SPOT-Setup.exe',
 				setupIcon: `${iconBasePath}.ico`
 			}
 		},
@@ -36,6 +52,10 @@ module.exports = {
 			name: '@electron-forge/maker-deb',
 			config: {
 				options: {
+					// Linux package names are conventionally lowercase, while the binary inside the package is the one the packager wrote
+					name: 'spot',
+					productName: 'SPOT',
+					bin: 'SPOT',
 					icon: `${iconBasePath}.png`
 				}
 			}
@@ -44,6 +64,9 @@ module.exports = {
 			name: '@electron-forge/maker-rpm',
 			config: {
 				options: {
+					name: 'spot',
+					productName: 'SPOT',
+					bin: 'SPOT',
 					icon: `${iconBasePath}.png`
 				}
 			}

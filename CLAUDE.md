@@ -58,6 +58,8 @@ npm test -- tests/logic/SomeFile.test.ts
 - Never place the live database in a folder a synchronization client controls, and never copy it with a plain file copy: build backups with `VACUUM INTO` locally, then publish them with an atomic rename.
 - Only one SPOT process may run at a time. `Main.ts` turns away the Windows installer's own launches and then takes the single instance lock, before anything else, and nothing may assume a second process could share the database: the optimistic write path, the audit, the backup rotation and the log rotation all assume a single writer.
 - Failures that reach the top of the main process must leave a trace and, once the language is resolved, reach the user. A render error must not empty the window. Neither path may be removed without replacing it: a silent failure in a released build is unreportable.
+- `productName` in `package.json` and `packagerConfig.appBundleId` in `forge.config.js` are fixed now that SPOT is installed. The user-data folder holding the live database is named after `productName`, so renaming it strands every task in the old folder, and macOS keeps permissions and window state under the bundle identifier, so changing it makes SPOT a different application. The makers must keep naming the same executable.
+- The application menu must always offer the Edit submenu, because on macOS the standard editing shortcuts are its accelerators and a menu without it takes copy and paste away from every task input. An installed SPOT must offer no reload or developer tools entry; only a development run keeps the menu Electron installs by itself.
 
 ## Testing
 

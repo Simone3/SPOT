@@ -15,6 +15,13 @@ export const EN_TRANSLATIONS = {
 		settings: 'Settings'
 	},
 
+	// The native application menu. Every entry SPOT builds from an Electron role is worded and translated by Electron itself, in the
+	// language the operating system runs in, so these are only the two submenu titles that have no role to take a title from.
+	menu: {
+		file: 'File',
+		view: 'View'
+	},
+
 	// Names for the days around today. The framework decides which day a date falls on, so these only name the ones SPOT calls out.
 	dates: {
 		today: 'Today',

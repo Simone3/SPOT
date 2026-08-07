@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { WINDOW_CONFIG } from 'src/config/AppConfig';
-import { REACT_BUILD_INDEX_RELATIVE_PATH, resolveWindowLoadTarget } from 'src/main/window/WindowLoadTarget';
+import { isDevelopmentRun, REACT_BUILD_INDEX_RELATIVE_PATH, resolveWindowLoadTarget } from 'src/main/window/WindowLoadTarget';
 
 const BUILT_INDEX_TARGET = {
 	type: 'file',
@@ -38,5 +38,22 @@ describe('WindowLoadTarget', () => {
 			appRootDirectory: '/app/root',
 			isPackaged: true
 		})).toEqual(BUILT_INDEX_TARGET);
+	});
+
+	// The development run is read back from the resolved target, so the refusal above decides it too: a packaged run is never one
+	describe('isDevelopmentRun', () => {
+		test('recognizes the run that loads the renderer from the development server', () => {
+			expect(isDevelopmentRun({
+				type: 'url',
+				value: 'http://localhost:5173/'
+			})).toBe(true);
+		});
+
+		test('does not recognize the run that loads the built renderer', () => {
+			expect(isDevelopmentRun({
+				type: 'file',
+				value: '/app/root/build/index.html'
+			})).toBe(false);
+		});
 	});
 });

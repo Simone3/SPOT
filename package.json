@@ -1,5 +1,6 @@
 {
 	"name": "spot",
+	"productName": "SPOT",
 	"version": "1.0.0",
 	"description": "Simple Planner & Organizer Tool",
 	"main": "dist/electron/main.js",

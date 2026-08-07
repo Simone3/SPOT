@@ -27,3 +27,14 @@ export const resolveWindowLoadTarget = ({
 		developmentServerUrl: isPackaged ? undefined : process.env[WINDOW_CONFIG.developmentServerUrlVariable]
 	});
 };
+
+/**
+ * Tells whether SPOT is running the way "npm start" runs it.
+ * This is read from the resolved load target rather than from the environment again, so the one place that refuses the development
+ * server variable in a packaged run also decides this: a packaged SPOT is never a development run, whatever its environment says.
+ * @param loadTarget What the window was told to load.
+ * @returns True when the renderer comes from the development server.
+ */
+export const isDevelopmentRun = (loadTarget: WindowLoadTarget): boolean => {
+	return loadTarget.type === 'url';
+};
