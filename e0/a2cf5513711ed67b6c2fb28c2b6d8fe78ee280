@@ -1,0 +1,30 @@
+CLAUDE.md
+  s_526b033dacacb3::t_9a12836e1d5c46 9,26,59-60
+DOCUMENTATION.md
+  s_526b033dacacb3::t_84607313f21e29 3-7,236-237,309,700,902-913,938
+src/i18n/lang/en.ts
+  s_526b033dacacb3::t_7ab53afc2aa0f3 166
+tests/components/BackupSettings.test.tsx
+  s_526b033dacacb3::t_964affa19503dc 114,124-127
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "e0a2cf5513711ed67b6c2fb28c2b6d8fe78ee280",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_526b033dacacb3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "0b36110d-63ce-45dc-baed-c38100c8d0a8",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
