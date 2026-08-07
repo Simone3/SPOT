@@ -1,5 +1,6 @@
 import { createContext, useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from 'react';
 import { AUDIT_CONFIG } from 'src/config/AppConfig';
+import { reportTaskStateDrift } from 'src/logic/Diagnostics';
 import { clearPendingTaskChanges, flushPendingTaskChanges, hasPendingTaskChanges, registerPendingTaskChangesApplier } from 'src/logic/PendingTaskChanges';
 import { createPersistedTaskChange, hasPersistedTaskChange, taskToPersistedTask } from 'src/logic/TaskComparison';
 import { auditTaskState, createTaskStateAuditMessage } from 'src/logic/TaskStateAudit';
@@ -10,9 +11,7 @@ import type { SpotTranslator } from 'src/i18n/Translations';
 import type { DomainLabels } from 'src/logic/DomainsLogic';
 import { getInitialTaskState, addTaskToTaskState, refreshVisibleTasksInTaskState, deleteTaskFromTaskState, changeFiltersInTaskState, loadTasksIntoTaskState, resetFiltersTaskState, updateTaskInTaskState, sortTasksByImportanceInTaskState, moveActiveTaskInTaskState, type TaskStateContainer } from 'src/logic/TaskStateLogic';
 import type { PersistedTaskChange, Task, TaskChange, TasksContainer } from 'src/types/TaskTypes';
-import type { SpotDiagnosticsApi } from 'src/types/DiagnosticsTypes';
 import type { TaskFilterChange } from 'src/types/FilterTypes';
-import type { TaskStateAuditReport } from 'src/types/TaskAuditTypes';
 import type { SpotStorageApi, StorageStatus, TaskStorageCommand } from 'src/types/TaskStorageTypes';
 
 export type TaskStartupState = {
@@ -76,27 +75,6 @@ const getErrorMessage = (error: unknown): string => {
 const tryReadTaskStorageStatus = async(spotStorage: SpotStorageApi): Promise<StorageStatus | undefined> => {
 	try {
 		return await spotStorage.getStorageStatus();
-	}
-	catch {
-		return undefined;
-	}
-};
-
-// The renderer can only reach a developer console, which an installed SPOT does not have and which nothing outlives the session in,
-// so a drift is handed to the main process: it writes what the audit found to the operational log and answers with the file it wrote
-// it to. A report that could not be handed over is one place less to read the details in, and never a failure of its own: the notice
-// is shown either way, and says only that the details are in the log file.
-const reportTaskStateDrift = async(report: TaskStateAuditReport): Promise<string | undefined> => {
-	const spotDiagnostics = window.spotDiagnostics as SpotDiagnosticsApi | undefined;
-
-	if(!spotDiagnostics) {
-		return undefined;
-	}
-
-	try {
-		const { logFilePath } = await spotDiagnostics.reportTaskStateDrift(report);
-
-		return logFilePath;
 	}
 	catch {
 		return undefined;

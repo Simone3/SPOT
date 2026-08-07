@@ -3,10 +3,10 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { IpcMain, IpcMainInvokeEvent } from 'electron';
 import { initializeSpotTestLogger } from '../testUtils';
-import { AUDIT_CONFIG, LOGGING_CONFIG } from 'src/config/AppConfig';
+import { AUDIT_CONFIG, DIAGNOSTICS_CONFIG, LOGGING_CONFIG } from 'src/config/AppConfig';
 import { resetAppLoggerForTests } from 'src/framework/main/logging/AppLogger';
 import { registerDiagnosticsIpcHandlers, SPOT_DIAGNOSTICS_IPC_CHANNELS } from 'src/main/ipc/DiagnosticsIpc';
-import type { TaskStateDriftReportResult } from 'src/types/DiagnosticsTypes';
+import type { DiagnosticsReportResult, RenderErrorReport } from 'src/types/DiagnosticsTypes';
 import type { TaskStateAuditDifference, TaskStateAuditReport } from 'src/types/TaskAuditTypes';
 
 type RegisteredIpcHandler = (event: IpcMainInvokeEvent, ...args: unknown[]) => unknown;
@@ -62,12 +62,15 @@ describe('DiagnosticsIpc', () => {
 		vi.restoreAllMocks();
 	});
 
-	test('registers the drift reporting channel', () => {
+	test('registers the reporting channels', () => {
 		const { handlers, ipcMain } = createMockIpcMain();
 
 		registerDiagnosticsIpcHandlers({ ipcMain });
 
-		expect([ ...handlers.keys() ]).toEqual([ SPOT_DIAGNOSTICS_IPC_CHANNELS.reportTaskStateDrift ]);
+		expect([ ...handlers.keys() ]).toEqual([
+			SPOT_DIAGNOSTICS_IPC_CHANNELS.reportTaskStateDrift,
+			SPOT_DIAGNOSTICS_IPC_CHANNELS.reportRenderError
+		]);
 	});
 
 	// The notice can only say how much drifted, so the tasks and the fields behind it have to survive the session in the log file
@@ -82,7 +85,7 @@ describe('DiagnosticsIpc', () => {
 			taskText: 'Drifted task',
 			reason: 'different-values',
 			fieldNames: [ 'text' ]
-		}])) as TaskStateDriftReportResult;
+		}])) as DiagnosticsReportResult;
 
 		expect(result.logFilePath).toBe(path.join(logDirectory, LOGGING_CONFIG.fileName));
 
@@ -126,6 +129,50 @@ describe('DiagnosticsIpc', () => {
 		expect(entry.differenceCount).toBe(AUDIT_CONFIG.maximumReportedTasks + 10);
 	});
 
+	// The window is showing the crash screen at that point, so the log file is the only trace of what put it there
+	test('writes the reported render error to the operational log', () => {
+		const { handlers, ipcMain } = createMockIpcMain();
+		initializeSpotTestLogger({ logDirectory });
+
+		registerDiagnosticsIpcHandlers({ ipcMain });
+
+		const result = handlers.get(SPOT_DIAGNOSTICS_IPC_CHANNELS.reportRenderError)!({} as IpcMainInvokeEvent, {
+			message: 'The task list could not be rendered',
+			stack: 'Error: The task list could not be rendered\n    at TasksList',
+			componentStack: '    at TasksList\n    at TasksPage'
+		} satisfies RenderErrorReport) as DiagnosticsReportResult;
+
+		expect(result.logFilePath).toBe(path.join(logDirectory, LOGGING_CONFIG.fileName));
+
+		const [ entry ] = readLogEntries(logDirectory);
+
+		expect(entry).toMatchObject({
+			level: 'error',
+			type: 'renderer.error',
+			error: 'The task list could not be rendered',
+			stack: 'Error: The task list could not be rendered\n    at TasksList',
+			componentStack: '    at TasksList\n    at TasksPage'
+		});
+	});
+
+	// A stack the renderer hands over as it is must not be able to grow one log line without limit
+	test('bounds the reported render error text', () => {
+		const { handlers, ipcMain } = createMockIpcMain();
+		initializeSpotTestLogger({ logDirectory });
+
+		registerDiagnosticsIpcHandlers({ ipcMain });
+
+		handlers.get(SPOT_DIAGNOSTICS_IPC_CHANNELS.reportRenderError)!({} as IpcMainInvokeEvent, {
+			message: 'Rendering failed',
+			stack: 'x'.repeat(DIAGNOSTICS_CONFIG.maximumReportedTextLength + 500)
+		} satisfies RenderErrorReport);
+
+		const [ entry ] = readLogEntries(logDirectory);
+
+		expect(entry.stack).toBe(`${'x'.repeat(DIAGNOSTICS_CONFIG.maximumReportedTextLength)}...`);
+		expect(entry.error).toBe('Rendering failed');
+	});
+
 	// A file the logger could not open would send the user to a file that is not there
 	test('names no file when logging is unavailable', () => {
 		const { handlers, ipcMain } = createMockIpcMain();
@@ -136,7 +183,7 @@ describe('DiagnosticsIpc', () => {
 			taskId: 'drifted-task',
 			taskText: 'Drifted task',
 			reason: 'missing-in-database'
-		}])) as TaskStateDriftReportResult;
+		}])) as DiagnosticsReportResult;
 
 		expect(result.logFilePath).toBeUndefined();
 	});

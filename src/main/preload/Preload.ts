@@ -18,6 +18,9 @@ const spotAppInfo: SpotAppInfoApi = {
 const spotDiagnostics: SpotDiagnosticsApi = {
 	reportTaskStateDrift: (report) => {
 		return ipcRenderer.invoke(SPOT_DIAGNOSTICS_IPC_CHANNELS.reportTaskStateDrift, report);
+	},
+	reportRenderError: (renderError) => {
+		return ipcRenderer.invoke(SPOT_DIAGNOSTICS_IPC_CHANNELS.reportRenderError, renderError);
 	}
 };
 

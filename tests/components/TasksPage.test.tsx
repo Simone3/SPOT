@@ -696,7 +696,12 @@ describe('TasksPage', () => {
 		const reportTaskStateDrift: Mock<SpotDiagnosticsApi['reportTaskStateDrift']> = vi.fn(async() => {
 			return { logFilePath: '/tmp/spot-logs/spot-logs.ndjson' };
 		});
-		setWindowSpotDiagnostics({ reportTaskStateDrift });
+		setWindowSpotDiagnostics({
+			reportTaskStateDrift,
+			reportRenderError: vi.fn(async() => {
+				return {};
+			})
+		});
 		const loadTasks: Mock<() => Promise<LoadTasksResult>> = vi.fn(async(): Promise<LoadTasksResult> => {
 			return {
 				ok: true,

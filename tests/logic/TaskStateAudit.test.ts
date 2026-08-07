@@ -61,11 +61,11 @@ describe('TaskStateAudit', () => {
 			.toContain('SPOT wrote which tasks and which fields to its log file, /logs/spot-logs.ndjson.');
 	});
 
-	// Logging that could not open its file would send the user to a file that is not there
-	test('names no log file when the main process could not name one', () => {
+	// A log file the main process could not name is a log file nothing was written to, so the notice says that instead of pointing anywhere
+	test('says the details could not be written when no log file was named', () => {
 		const message = createTaskStateAuditMessage(auditTaskState([ makeTask() ], []), translator);
 
-		expect(message).toContain('SPOT wrote which tasks and which fields to its log file.');
+		expect(message).toContain('SPOT could not write which tasks and which fields to its log file.');
 		expect(message).not.toContain('developer console');
 	});
 

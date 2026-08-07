@@ -88,6 +88,12 @@ export const AUDIT_CONFIG = {
 	maximumReportedTasks: 20
 } as const;
 
+export const DIAGNOSTICS_CONFIG = {
+	// A render error is reported with the stack and the component stack the renderer hands over as they are, so the log line is
+	// bounded here rather than trusting their length. Rotation bounds the file, but one entry still has to stay readable.
+	maximumReportedTextLength: 4000
+} as const;
+
 export const SHUTDOWN_CONFIG = {
 	// A write that failed can still be sitting on the retry delay when the flush handshake starts, and every retry that fails again schedules
 	// the next one, so the wait has to cover the whole retry budget of one command and not just a single delay: the renderer cannot ask for

@@ -52,6 +52,15 @@
 	line-height: 1.45;
 }
 
+/* The file path is the one thing on this screen meant to be read character by character, and it must not run out of the panel */
+.app-error-boundary-log-location {
+	margin: 0;
+	color: var(--colors-text-secondary);
+	font-size: 13px;
+	line-height: 1.45;
+	overflow-wrap: anywhere;
+}
+
 .app-error-boundary .button.app-error-boundary-reload {
 	padding: 8px 12px;
 	line-height: 1.2;

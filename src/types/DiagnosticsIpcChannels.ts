@@ -1,3 +1,4 @@
 export const SPOT_DIAGNOSTICS_IPC_CHANNELS = {
-	reportTaskStateDrift: 'spot-diagnostics:report-task-state-drift'
+	reportTaskStateDrift: 'spot-diagnostics:report-task-state-drift',
+	reportRenderError: 'spot-diagnostics:report-render-error'
 } as const;

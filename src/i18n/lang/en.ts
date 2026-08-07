@@ -43,6 +43,10 @@ export const EN_TRANSLATIONS = {
 		message: 'The page could not be shown. Your tasks are kept in the database, so reloading brings back everything that was saved.',
 		reload: 'Reload SPOT',
 
+		// Shown once the main process has answered, so that what put the window in this state can still be looked into afterwards
+		logLocation: 'The error was written to the SPOT log file, {logFilePath}.',
+		unknownLogLocation: 'The error could not be written to the SPOT log file.',
+
 		// Shown as a native error box, because a main process failure may leave no window to show anything in
 		mainProcessTitle: 'SPOT ran into an unexpected error',
 		mainProcessMessage: 'The error was written to the SPOT log file. Your tasks are kept in the database and were not changed by it.\n\nDetails: {message}'
@@ -136,7 +140,7 @@ export const EN_TRANSLATIONS = {
 
 		// The notice says how much drifted, so it points at the log file, which holds the tasks and the fields behind it
 		logLocation: 'SPOT wrote which tasks and which fields to its log file, {logFilePath}.',
-		unknownLogLocation: 'SPOT wrote which tasks and which fields to its log file.',
+		unknownLogLocation: 'SPOT could not write which tasks and which fields to its log file.',
 
 		// Used when there were more differences than the report lists, so they cannot be broken down by reason
 		cappedDetails: {
