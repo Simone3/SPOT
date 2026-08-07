@@ -1,0 +1,42 @@
+CLAUDE.md
+  s_9965bd39a99934::t_9970203ce414b0 61-62
+DOCUMENTATION.md
+  s_9965bd39a99934::t_89b1cb2240e022 138-139,267,281-311,590,594,943
+forge.config.js
+  s_9965bd39a99934::t_692eeb83921750 13-22,38-43,55-58,67-69
+package.json
+  s_9965bd39a99934::t_1d4652dfa3c44f 3
+src/i18n/lang/en.ts
+  s_9965bd39a99934::t_2b619f0ef96fae 18-24
+src/main/Main.ts
+  s_9965bd39a99934::t_bd1414a596557c 3,21-22,81-83,86,183-197,279,283
+src/main/window/AppMenu.ts
+  s_9965bd39a99934::t_3c27c1fa01fd17 1-91
+src/main/window/WindowLoadTarget.ts
+  s_9965bd39a99934::t_2b174a34c11ef1 30-40
+tests/main/AppMenu.test.ts
+  s_9965bd39a99934::t_6d5fb8b85f8032 1-118
+tests/main/WindowLoadTarget.test.ts
+  s_9965bd39a99934::t_a075f66e4b90f2 3,42-58
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "028bde9e413ffdc71e17f2a3c064fa11f2c5ea58",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_9965bd39a99934": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "164129aa-832e-4631-acf1-4855e3f0de91",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
