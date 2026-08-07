@@ -110,6 +110,22 @@ describe('BackupSettings', () => {
 		expect(screen.getByText(/it does not keep two computers in sync/)).toBeInTheDocument();
 	});
 
+	// Backups nobody knows how to use are not backups, and SPOT never reads one back on its own
+	test('says how to restore a backup copy', async() => {
+		setWindowApi('spotBackupLocation', createMockBackupLocationApi());
+		setWindowApi('spotStorage', createMockStorageApi(undefined));
+
+		renderWithTranslations(
+			<BackupLocationContextProvider>
+				<BackupSettings/>
+			</BackupLocationContextProvider>
+		);
+
+		expect(await screen.findByText('Restoring a backup')).toBeInTheDocument();
+		expect(screen.getByText(/Quit SPOT first/)).toBeInTheDocument();
+		expect(screen.getByText(/any task change made after that backup was written is gone/)).toBeInTheDocument();
+	});
+
 	test('reports a failed backup without claiming the tasks are lost', async() => {
 		setWindowApi('spotBackupLocation', createMockBackupLocationApi());
 		setWindowApi('spotStorage', createMockStorageApi({

@@ -27,6 +27,20 @@ export const EN_TRANSLATIONS = {
 		tagsWorkInProgress: 'Tags: work in progress'
 	},
 
+	// What a failure nothing else caught tells the user. It never promises more than the database holds: what the user was typing
+	// when it happened may not have been saved.
+	crash: {
+
+		// Shown in place of the whole application when a render error left nothing else to show
+		title: 'SPOT ran into an unexpected error',
+		message: 'The page could not be shown. Your tasks are kept in the database, so reloading brings back everything that was saved.',
+		reload: 'Reload SPOT',
+
+		// Shown as a native error box, because a main process failure may leave no window to show anything in
+		mainProcessTitle: 'SPOT ran into an unexpected error',
+		mainProcessMessage: 'The error was written to the SPOT log file. Your tasks are kept in the database and were not changed by it.\n\nDetails: {message}'
+	},
+
 	tasks: {
 		loading: 'Loading tasks...',
 		activeListTitle: 'Tasks',
@@ -136,10 +150,22 @@ export const EN_TRANSLATIONS = {
 		}
 	},
 
+	// Which build is running, so that two installed copies can be told apart
+	appInfo: {
+		title: 'About',
+		version: 'SPOT version {version}',
+		unknownVersion: 'The SPOT version is unknown.'
+	},
+
 	backup: {
 		databaseTitle: 'Task database',
 		databaseDescription: 'SPOT keeps all your tasks in a single spot.sqlite database inside its own application folder. This is always where your tasks are read from and written to, and it cannot be moved.',
 		unknownDatabasePath: 'Unknown.',
+
+		// Restoring is a manual step by design: SPOT never reads a backup copy back on its own, so the one way to use one has to be written down
+		restoreTitle: 'Restoring a backup',
+		restoreDescription: 'Quit SPOT first, so it is not writing to the database. Then copy a file out of the backup folder over the database file above, keeping that exact name, and start SPOT again. The copy replaces everything: any task change made after that backup was written is gone, so it is worth keeping the current database somewhere else before overwriting it.',
+
 		folderTitle: 'Backup folder',
 		folderDescription: 'A complete copy of the database is written here a couple of minutes after you stop making changes, and once more when SPOT closes. The {retainedBackupCount} most recent copies are kept and the older ones are removed.',
 		folderWarning: 'This folder is a backup destination, not a shared one. A folder synchronized by OneDrive, Google Drive, Dropbox or iCloud is safe to use, because each copy is written as one finished file. SPOT never reads these copies back though: it does not keep two computers in sync, and restoring a backup is a manual step.',

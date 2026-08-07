@@ -1,0 +1,59 @@
+
+.app-error-boundary {
+	width: 100%;
+	height: 100%;
+	padding: 20px;
+	box-sizing: border-box;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.app-error-boundary-panel {
+	width: min(480px, 100%);
+	border: 1px solid var(--colors-danger-border);
+	border-radius: 5px;
+	background-color: var(--colors-danger-background-muted);
+	padding: 24px;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	gap: 14px;
+}
+
+.app-error-boundary-icon {
+	width: 36px;
+	height: 36px;
+	min-width: 36px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border: 1px solid var(--colors-danger-border);
+	border-radius: 5px;
+	color: var(--colors-danger-text);
+}
+
+.app-error-boundary-warning-icon {
+	width: 20px;
+	height: 20px;
+}
+
+.app-error-boundary-title {
+	margin: 0;
+	font-size: 18px;
+	line-height: 1.25;
+	font-weight: 700;
+	color: var(--colors-danger-text);
+}
+
+.app-error-boundary-message {
+	margin: 0;
+	color: var(--colors-text-secondary);
+	line-height: 1.45;
+}
+
+.app-error-boundary .button.app-error-boundary-reload {
+	padding: 8px 12px;
+	line-height: 1.2;
+	margin-top: 4px;
+}

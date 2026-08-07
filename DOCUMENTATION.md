@@ -106,7 +106,7 @@ The renderer's strict Content-Security-Policy in `index.html` cannot be satisfie
 - `src/i18n/lang/en.ts` holds every word SPOT shows the user, in English. It is the source of truth for the translation key type.
 - `src/i18n/Translations.ts` lists the languages SPOT ships, resolves one, and creates its translator. It is imported by the Electron main process as well as the renderer, so it holds no React and no Electron.
 - `src/i18n/TranslationContext.tsx` is the renderer binding: the `TranslationProvider` mounted at the top of the tree and the `useTranslator` hook every component that shows text reads.
-- `src/main/Main.ts` resolves the runtime paths, initializes the process-wide logger, creates the task storage, registers IPC handlers, creates the backup scheduler, resolves the backup folder, and creates the Electron `BrowserWindow` that loads the built React renderer.
+- `src/main/Main.ts` handles the Windows installer's own launches, takes the single instance lock, installs the process crash handlers, resolves the runtime paths, initializes the process-wide logger, creates the task storage, registers IPC handlers, creates the backup scheduler, resolves the backup folder, and creates the Electron `BrowserWindow` that loads the built React renderer behind a navigation guard.
 - `src/main/preload/Preload.ts` exposes the narrow renderer APIs through Electron's context bridge.
 - `src/framework` contains the reusable application scaffolding described in the Framework Layer section below. It never imports SPOT code.
 - `src/framework/utils/ErrorUtils.ts` reads a message out of an unknown thrown value.
@@ -115,10 +115,12 @@ The renderer's strict Content-Security-Policy in `index.html` cannot be satisfie
 - `src/framework/i18n/Translator.ts` creates a translator over one translation bundle: dotted key lookup, `{name}` interpolation, `Intl.PluralRules` plural selection, locale number formatting, and `Intl.ListFormat` list joining.
 - `src/framework/i18n/LanguageResolution.ts` picks the language to run in out of the ones the application ships, falling a regional tag back to its base language.
 - `src/framework/renderer/TranslationContext.tsx` creates the React provider and hooks for one bundle, so the whole UI re-renders when the language changes.
+- `src/framework/renderer/ErrorBoundary.tsx` catches the render errors below it and asks the application what to show instead, so a component that throws does not leave an empty window.
 - `src/framework/types/TranslationTypes.ts` owns the translation bundle shape and derives the typed key union from it.
 - `src/framework/types/StorageTypes.ts` owns the storage result envelope: database and backup status, failure reasons, load and command results, and operational log entries.
 - `src/framework/types/BackupTypes.ts` owns the backup folder contract and the backup file naming shape.
 - `src/framework/main/logging/AppLogger.ts` configures `electron-log` behind a factory-created logger and exports the process-wide `appLogger` utility with `info`, `warn`, `error`, `debug`, and `flush` methods, newline-delimited JSON output, size-based rolling into a caller-chosen number of numbered archives, and writes whose outcome is deliberately not checked.
+- `src/framework/main/logging/ProcessCrashHandlers.ts` logs the exceptions and rejected promises nothing else catches, and hands each one to the application to decide what to do about it.
 - `src/framework/main/config/RuntimePaths.ts` lays out the application paths inside the Electron user-data folder from a caller-supplied set of folder and file names, and gives development runs their own root folder.
 - `src/framework/main/config/JsonConfigStore.ts` reads and writes a JSON configuration file whose shape is decided by a caller-supplied parser.
 - `src/framework/main/config/BackupLocationManager.ts` owns the backup folder: startup resolution, validation, the development override, the fallback to the default folder, and persistence through a caller-supplied directory store.
@@ -131,25 +133,28 @@ The renderer's strict Content-Security-Policy in `index.html` cannot be satisfie
 - `src/framework/main/ipc/StorageCommandIpc.ts` serializes every storage operation on one chain and owns the shutdown protocol: the `before-quit` handshake with the renderer, the hook that tells the application to stop collecting changes before the first command is refused, the drain of in-flight commands, the pre-close backup hook, and the exclusive-access helper.
 - `src/framework/main/ipc/BackupLocationIpc.ts` registers the backup folder IPC surface and opens the native folder dialog with caller-supplied channel names and wording.
 - `src/framework/main/window/WindowLoadTarget.ts` resolves the built renderer entry file from the application root.
+- `src/framework/main/window/WindowNavigationGuard.ts` keeps a window on the page it was loaded with: it denies every window the page tries to open and prevents every whole-page navigation somewhere else.
 - `src/framework/preload/IpcBridge.ts` subscribes the renderer to a main-process channel without exposing the Electron event object.
 - `src/framework/renderer/StorageQueue.ts` creates a renderer-side write queue: commands are written one at a time and in order, failed writes are retried a bounded number of times, changes that can never be written are reported, and callers can either wait for everything to be written or ask whether it already has been.
 - `src/main/config/SpotRuntimePaths.ts` names the SPOT folders and files and resolves them through the framework runtime paths.
 - `src/main/config/SpotConfigStore.ts` owns the SPOT configuration file shape and exposes the backup folder to the framework backup location manager.
 - `src/main/ipc/TaskStorageIpc.ts` names the SPOT storage IPC channels and hands the task operations to the framework storage command controller.
 - `src/main/ipc/BackupLocationIpc.ts` names the SPOT backup folder channels and the wording of the native folder dialog.
+- `src/main/ipc/AppInfoIpc.ts` answers the renderer's question of which build it is part of, with the version Electron reports for the running application.
 - `src/main/storage/TaskStorage.ts` binds the framework storage core to SPOT: the SPOT database, the task command executor, the task loader, and the SPOT backup file naming. It also defines the SPOT storage contract used by IPC and the renderer.
 - `src/main/storage/TaskCommandExecutor.ts` maps task storage commands to the task repository operations and keeps each command inside one transaction.
 - `src/main/storage/SpotDatabase.ts` owns the SPOT schema: the migration list that currently creates schema version `1`, and the `openSpotDatabase()` helper that opens `spot.sqlite` through the framework database.
 - `src/main/storage/TaskRowMapping.ts` maps between SQLite task rows and React `Task` objects and owns the shared task field to SQLite column mapping used by storage queries.
 - `src/main/storage/TaskRepository.ts` owns SQLite task queries and task repository helpers that can run against an existing database wrapper or a short scoped repository session.
 - `src/main/window/WindowLoadTarget.ts` resolves the built React `build/index.html` file from the Electron app root.
-- `src/types` contains shared TypeScript types and constants split into semantic files for tasks, task storage, task-storage IPC channels, backup location, backup-location IPC channels, domains, and filters. The storage and backup types re-export the framework contracts and add only what is specific to SPOT. Types that have one clear owner stay in the owning `.ts` or `.tsx` file instead.
-- `src/vite-env.d.ts` contains the Vite client TypeScript reference, which declares the CSS and asset imports, plus renderer-side declarations for `window.versions`, `window.spotStorage`, and `window.spotBackupLocation`.
-- `src/components/common` contains layout and shared UI primitives.
+- `src/types` contains shared TypeScript types and constants split into semantic files for tasks, task storage, task-storage IPC channels, backup location, backup-location IPC channels, application info, application-info IPC channels, domains, and filters. The storage and backup types re-export the framework contracts and add only what is specific to SPOT. Types that have one clear owner stay in the owning `.ts` or `.tsx` file instead.
+- `src/vite-env.d.ts` contains the Vite client TypeScript reference, which declares the CSS and asset imports, plus renderer-side declarations for `window.spotStorage`, `window.spotBackupLocation`, and `window.spotAppInfo`.
+- `src/types/ElectronSquirrelStartup.d.ts` declares the one boolean `electron-squirrel-startup` exports, because the package ships no types of its own and a dependency for a single boolean would be more to keep up to date than it is worth.
+- `src/components/common` contains layout and shared UI primitives, including `AppErrorBoundary.tsx`, which is what the user sees when a render error left nothing else to show.
 - `src/components/inputs` contains reusable inputs.
 - `src/components/tasks` contains the current task-management UI.
 - `src/components/notes` and `src/components/tags` contain placeholder route pages.
-- `src/components/settings` contains the Settings route page.
+- `src/components/settings` contains the Settings route page and the About section that names the running version.
 - `src/components/storage` contains the Settings section that explains where the database lives and lets the user choose the backup folder.
 - `src/contexts` contains app-level React contexts: the backup location and the task state.
 - `src/logic` contains state and domain logic, including `PendingTaskChanges.ts`, which holds the task edits the user has not saved yet, `TaskStorageQueue.ts`, which creates the single renderer write queue from the framework and exposes it to the task components, `TaskComparison.ts`, which owns what a stored task is and how two of them are compared, `TaskStateAudit.ts`, which compares the tasks React holds against the tasks read back from the database, and `PaneLayout.ts`, which holds the width the user gave each resizable pane and the rules that width has to obey.
@@ -187,9 +192,12 @@ SPOT binds to the framework in a thin layer of adapters, and those adapters are 
 | `main/ipc/StorageCommandIpc.ts` | `src/main/ipc/TaskStorageIpc.ts` |
 | `main/ipc/BackupLocationIpc.ts` | `src/main/ipc/BackupLocationIpc.ts` |
 | `main/window/WindowLoadTarget.ts` | `src/main/window/WindowLoadTarget.ts` |
+| `main/window/WindowNavigationGuard.ts` | installed on every window in `src/main/Main.ts` |
+| `main/logging/ProcessCrashHandlers.ts` | installed in `src/main/Main.ts`, which reports what they catch |
 | `renderer/StorageQueue.ts` | `src/logic/TaskStorageQueue.ts` |
 | `i18n/Translator.ts`, `i18n/LanguageResolution.ts` | `src/i18n/Translations.ts` |
 | `renderer/TranslationContext.tsx` | `src/i18n/TranslationContext.tsx` |
+| `renderer/ErrorBoundary.tsx` | `src/components/common/AppErrorBoundary.tsx` |
 
 Not everything reusable was moved. UI primitives under `src/components` stay in SPOT: they are worth copying into a second application, not sharing from one place.
 
@@ -220,6 +228,8 @@ Each group is declared `as const`, so consumers that pass a value to a widened p
 
 `src/index.tsx` renders:
 
+- `TranslationProvider`
+- `AppErrorBoundary`
 - `BackupLocationContextProvider`
 - `TasksContextProvider`
 - `HashRouter`
@@ -238,6 +248,8 @@ Every context provider is mounted above `HashRouter`, so route state is the only
 
 Nothing gates the app at startup: the database is always in the user-data folder, so the task page renders right away and the backup folder is only a Settings concern.
 
+`AppErrorBoundary` sits directly under `TranslationProvider` and above everything else, so a render error anywhere below it, including in a context provider above the router, shows a message and a reload button instead of the blank window React leaves behind when nothing catches a throw. It wraps the whole application rather than one page because the providers above the router are exactly where a failure would otherwise be unrecoverable. Reloading is the only recovery it offers: rendering the same tree again would usually throw the same error a second time, while a reload starts over from the tasks the database holds. It says so too, and promises nothing about what was being typed at that moment. The failure itself goes to the renderer console, which is developer-facing: the renderer has no route into the operational log.
+
 The page layout is a fixed-height flex app:
 
 - `#root` is a horizontal flex container.
@@ -250,13 +262,19 @@ The page layout is a fixed-height flex app:
 
 `package.json` points Electron at `dist/electron/main.js`, which is generated from `src/main/Main.ts` by `npm run build-electron`. The build script bundles `src/main/Main.ts` and `src/main/preload/Preload.ts` with `esbuild`, preserving external Electron and `electron-log` imports while resolving in-repository `src/...` imports at build time.
 
+Electron Forge copies the `dependencies` of `package.json` into the packaged application, and nothing else, so which section a package sits in decides whether it ships. Anything only the build or the tests need therefore belongs in `devDependencies`, including the Testing Library packages: they are imported by `tests` alone, and leaving them in `dependencies` puts a test framework inside every build that never runs it.
+
+One kind of launch is not the user's at all and is turned away before the lock is even considered. The Windows Squirrel installer runs SPOT itself to create and remove its shortcuts, naming the step on the command line. `electron-squirrel-startup` does that step at import time and reports that it did, and `Main.ts` then quits instead of opening a window in the middle of an install, an update or an uninstall. It comes before the lock because the installer can run those steps while SPOT is already open, and a launch that took the lock would have to be a second instance to do anything at all. The value is false on every other platform and on every ordinary launch, so nothing else changes.
+
 Only one SPOT process runs at a time. `Main.ts` takes Electron's single instance lock before anything else, and a launch that does not get it quits immediately, before `ready`, so it opens no database, writes no log file and schedules no backup. The instance holding the lock receives `second-instance` instead and reveals its own window: restored if minimized, shown and focused otherwise, unless it is already shutting down and has hidden that window on purpose.
 
 A second instance is prevented rather than supported because nothing in the persistence design accounts for one. Two processes would hold the same `spot.sqlite` open, and SQLite would keep the file consistent between them, but the two task states would not: each renderer reads the tasks once at startup and writes optimistically afterwards, so every change one process saves is invisible to the other, whose own writes then go on top of it. A task deleted in one instance makes the other's next write of it fail, because the repository requires each command to change exactly one row. The audit would report all of this as a drift for the rest of the session, which is exactly what it cannot tell apart from a real one. The two backup schedulers would also prune each other's backups and clear each other's `.part` files mid-copy, and the two loggers would rotate the same log file underneath each other.
 
 Operating systems disagree on how easily a second launch happens, which is why the lock is taken rather than left to them: macOS refuses a second launch of the same bundle from Finder or the Dock but not `open -n`, while Windows and Linux start as many processes as the user asks for. The lock is keyed on the Electron user-data folder, so a development run and an installed SPOT exclude each other even though they keep their files in separate roots.
 
-`src/main/Main.ts` is the composition root: it resolves the runtime paths with `resolveSpotRuntimePaths()` and initializes `appLogger` with the `LOGGING_CONFIG` settings as soon as Electron is ready. It then creates the task storage on the runtime database folder, registers a sample `ping` IPC handler, the storage IPC handlers from `src/main/ipc/TaskStorageIpc.ts`, which also attach the storage shutdown drain to Electron's `before-quit` event, the backup scheduler, and the backup location handlers from `src/main/ipc/BackupLocationIpc.ts`. It resolves the backup folder through `BackupLocationManager.initialize()` before creating the `BrowserWindow`. The window is created hidden and maximized to the screen work area on its `ready-to-show` event before being shown, so it starts at full screen size without engaging macOS's separate native fullscreen window state. It uses `resolveWindowLoadTarget()` from `src/main/window/WindowLoadTarget.ts` to decide what the window loads: the built React `build/index.html` file through `loadFile()`, or the development server through `loadURL()` when an unpackaged run was started with one, as the Development Loop section describes.
+`src/main/Main.ts` is the composition root. It installs the process crash handlers first, before anything can fail, then resolves the language, resolves the runtime paths with `resolveSpotRuntimePaths()`, and initializes `appLogger` with the `LOGGING_CONFIG` settings as soon as Electron is ready. It then creates the task storage on the runtime database folder and registers the storage IPC handlers from `src/main/ipc/TaskStorageIpc.ts`, which also attach the storage shutdown drain to Electron's `before-quit` event, the backup scheduler, and the backup location handlers from `src/main/ipc/BackupLocationIpc.ts`. It resolves the backup folder through `BackupLocationManager.initialize()` before creating the `BrowserWindow`. The window is created hidden and maximized to the screen work area on its `ready-to-show` event before being shown, so it starts at full screen size without engaging macOS's separate native fullscreen window state. It uses `resolveWindowLoadTarget()` from `src/main/window/WindowLoadTarget.ts` to decide what the window loads: the built React `build/index.html` file through `loadFile()`, or the development server through `loadURL()` when an unpackaged run was started with one, as the Development Loop section describes.
+
+Every window `Main.ts` creates gets the navigation guard from `src/framework/main/window/WindowNavigationGuard.ts` installed on its `webContents`, which keeps it on the page the main process loaded into it. The renderer's Content-Security-Policy says what the page may load, not where the page may go: a link, a script or an embedded editor could otherwise navigate the whole window somewhere else, and that page would sit behind the same preload bridge. The guard denies every window the page tries to open, since nothing in SPOT opens a second one, and prevents every whole-page navigation to anything but the page the window was loaded with. `HashRouter` is unaffected, because a route change moves through the fragment and stays on the same document, which never raises `will-navigate`. A development run is allowed anywhere on its server's origin, since the server reloads the renderer at paths of its own, while a built run is matched on the `file://` path of `build/index.html` alone. Everything refused is logged as `blocked-navigation`.
 
 Every window `Main.ts` creates also intercepts its own `close` event with `requestRendererFlushBeforeWindowClose()` from the storage IPC handlers: the close is prevented, the renderer flush handshake runs, and the window is destroyed only once the renderer reported or the handshake timed out. Without it the buffered task edits would be lost on the usual way of closing the application, because closing the window destroys the renderer before `before-quit` runs on Windows and Linux and without quitting at all on macOS.
 
@@ -264,11 +282,9 @@ Every window `Main.ts` creates also intercepts its own `close` event with `reque
 
 The scheduler and the storage IPC handlers need each other: the handlers return the serial storage chain the scheduler runs backups on, and the scheduler provides the callbacks the handlers use to restart the backup delay after an applied command and to run the shutdown backup. `Main.ts` resolves that by registering the handlers first with callbacks that read a scheduler variable assigned right afterwards.
 
-`src/main/preload/Preload.ts` exposes a `window.versions` API with Node, Chrome, Electron, and `ping` helpers. It also exposes the narrow `window.spotStorage` and `window.spotBackupLocation` APIs documented in the Persistence section. It does not expose raw `ipcRenderer`, filesystem, SQLite, or dialog objects. Shared IPC channel names live in `src/types/TaskStorageIpcChannels.ts` and `src/types/BackupLocationIpcChannels.ts` so preload and main-process handlers cannot drift.
+`src/main/preload/Preload.ts` exposes three narrow APIs and nothing else: `window.spotStorage` and `window.spotBackupLocation`, both documented in the Persistence section, and `window.spotAppInfo`, which answers with the version Electron reports for the running application. It does not expose raw `ipcRenderer`, filesystem, SQLite, or dialog objects. Shared IPC channel names live in `src/types/TaskStorageIpcChannels.ts`, `src/types/BackupLocationIpcChannels.ts` and `src/types/AppInfoIpcChannels.ts` so preload and main-process handlers cannot drift.
 
-Known Electron work still pending:
-
-- Add robust save, reload, and error handling polish.
+The version is asked of the main process rather than read from `package.json` at build time, because `app.getVersion()` is what the running application actually reports: a renderer bundle built separately could otherwise name a version the installed copy does not have. `src/main/ipc/AppInfoIpc.ts` registers the one handler, and it reads the version on every request instead of capturing it once.
 
 ## Application Icon
 
@@ -299,7 +315,7 @@ The live database always lives on the local user-data disk and is never placed i
 - Because the database is local, write-ahead logging is safe to use, and its `-wal` and `-shm` companion files never have to be understood by a synchronization client.
 - The backup folder only ever receives finished files. Each backup is built locally and published with an atomic rename, so a synchronization client watching that folder cannot observe a database that is still being written.
 
-The backup folder is therefore a write-only destination. SPOT never reads a backup back, never compares one against the live database, and does not keep two computers in sync. Restoring a backup is a manual step: copy the chosen file over `spot.sqlite` in the database folder while SPOT is closed.
+The backup folder is therefore a write-only destination. SPOT never reads a backup back, never compares one against the live database, and does not keep two computers in sync. Restoring a backup is a manual step: copy the chosen file over `spot.sqlite` in the database folder while SPOT is closed. The Settings page says so as well, next to the database path the copy has to go to, because a backup nobody knows how to use is not a backup. It also says what the copy costs: everything changed after that backup was written is gone, so the current database is worth keeping aside first.
 
 ### Storage Files
 
@@ -498,6 +514,12 @@ Operational-log failures are not renderer-facing. Startup log file open failures
 
 Backup failures are renderer-facing but never alarming. They are logged, reported through the pushed backup status, and shown as a notice in the task page and in Settings, always stating that the tasks themselves are saved. A backup failure must never be routed through the database error path.
 
+The failures none of those paths know about are caught by the process crash handlers `Main.ts` installs from `src/framework/main/logging/ProcessCrashHandlers.ts`, before anything can fail. An exception reaching the top of the main process, or a promise nobody handled, would otherwise take the window down or vanish without a word, and there would be nothing afterwards to tell those two apart. Both are logged as `uncaught-exception` or `unhandled-rejection` with their stack, and reported to the user in a native error box, because a main-process failure may leave no window to show anything in. Only the first one opens a box: a process that started failing usually keeps failing, and a stack of error boxes would bury the window instead of saying anything the first one did not.
+
+Startup is the case that needs this most, because it runs inside a promise: anything that throws while resolving the runtime paths, opening the database or resolving the backup folder happens before the window exists, so without this SPOT would simply never appear and leave nothing behind to explain it. That promise therefore has a `catch` of its own that logs the failure as `startup-failed`, reports it, and quits, rather than leaving a process running with nothing on screen. The language is resolved as the very first thing after Electron is ready, before any of that, so that every failure from there on has wording to report itself with. A failure earlier than that is a failure to start at all, with no logger and no translator yet, and can only be left to the platform.
+
+Installing an `uncaughtException` handler stops Node from exiting on one, and SPOT keeps it that way on purpose for failures after startup: the window is still up, its close handshake still saves the buffered edits, and killing the process would lose them. The framework only logs and reports; whether to quit is the application's decision at each site.
+
 `src/main/ipc/TaskStorageIpc.ts` registers a `before-quit` drain. The first quit request waits for in-flight task write commands, runs the last backup under its bounded timeout, calls `prepareForShutdown()` so the SQLite connection closes, flushes the process-wide logger, and then resumes quitting. New write commands after shutdown begins return a `shutdown` failure instead of being enqueued behind the quit drain.
 
 React buffers task edits for a few seconds, so the quit drain would close the database while the user's last keystrokes are still in the renderer. The first quit request therefore starts with a renderer flush handshake:
@@ -681,10 +703,11 @@ Active list actions:
 
 ## Settings
 
-`SettingsPage` renders `BackupSettings` from `src/components/storage`. The section is written to make the persistence model obvious to the user, because the two folders it names mean very different things:
+`SettingsPage` renders `BackupSettings` from `src/components/storage` and `AppInfoSettings` from `src/components/settings`. The backup section is written to make the persistence model obvious to the user, because the two folders it names mean very different things:
 
 - The task database section states that the tasks live in a single `spot.sqlite` file inside the SPOT application folder, that this is always where they are read from and written to, and that it cannot be moved. It shows the full database path.
 - The backup folder section states how often copies are written, how many are kept, and that a synchronized folder is safe to use but that SPOT never reads these copies back, does not keep two computers in sync, and leaves restoring to the user.
+- The restore section says how to do that restoring, since nothing in SPOT will: quit first, copy a file from the backup folder over the database file under that exact name, start again. It also says what is lost, because the copy replaces everything written after that backup, and suggests keeping the current database aside first.
 
 It also shows the current backup folder, a development-run notice when the run is not packaged, the reason a saved folder could not be used, the outcome of the last backup, and two actions:
 
@@ -692,6 +715,8 @@ It also shows the current backup folder, a development-run notice when the run i
 - Use default folder, which selects the default folder of the current run.
 
 Both actions open a `ConfirmModal` that names the current folder, the new folder, and states that the copies already written stay where they are and that the tasks are not moved. The change is applied only after confirmation, and its outcome is reported in place.
+
+`AppInfoSettings` closes the page with the version the running application reports, which is the only thing that tells two installed copies apart. It asks the main process once when it mounts, and says the version is unknown rather than showing an empty line when there is no answer, since a missing version is never worth a warning.
 
 ## Filtering
 
@@ -902,6 +927,9 @@ Current test coverage includes focused regression checks for:
 - the shutdown flush handshake: buffered renderer changes saved before the database is closed, commands refused only after the renderer reported, the application told to stop collecting changes before the first command is refused and before the drain starts, that same notice arriving right away when there is no renderer to ask, and a bounded wait when the renderer never reports
 - the window close flush handshake: buffered renderer changes saved while the database stays open, no wait when the window closes as part of a quit or its renderer is already gone, one single handshake shared by a window close and a quit, and a new handshake for a window closed later
 - the buffered task changes: save delays and their restart, immediate saves, forgetting a reverted value, the shorter state change delay, updater-form changes, dropping the buffer of a deleted task, a buffered value never starting a save of its own, a buffered value riding along with the save another change already scheduled, keeping changes when no applier is registered, keeping them buffered when the applier throws, saving the other tasks when one of them cannot be saved, per-task subscriber notification with stable snapshots, page hide saving, waiting for in-flight storage commands, retrying a failed write as soon as the flush is requested, reporting to the main process only once storage caught up, and reporting the task IDs whose values are still buffered when the flush rounds are used up
+- the window navigation guard: the page the window was loaded with allowed, another file on disk and a remote page prevented, any path of the development server's own origin allowed while another origin is not, a URL that cannot be parsed refused, every window the page tries to open denied, and each refusal reported
+- the process crash handlers: an exception that reached the top of the process and a promise nobody handled both logged with their stack, the failure described to the application, a thrown value that is not an error still reported, and a reporting handler that throws never becoming the next uncaught exception
+- the renderer error boundary: children rendered while nothing throws, the fallback shown instead of an empty page once a render throws, the failure and the component that threw handed to the application, the failure given to the fallback, and the children rendered again once the fallback resets it
 - runtime path resolution for packaged and development runs
 - backup folder resolution at startup, saved-folder reuse, the development folder override, the fallback to the default folder when the saved or chosen one cannot be used, configuration persistence, and running the change on the storage chain
 - backup location IPC registration, cancelled folder dialogs, and rejecting a chosen path that is not a usable folder
@@ -910,7 +938,9 @@ Current test coverage includes focused regression checks for:
 - a backup copy holding the stored tasks, and a failed backup that leaves the database healthy
 
 Tests that cover `src/framework` live in `tests/framework` and depend only on framework modules, so they move with the folder. Tests that cover how SPOT binds to it stay under `tests/main`, `tests/logic`, and `tests/components`.
-- smoke coverage for the Settings panel showing the fixed database location, reporting a failed backup without claiming the tasks are lost, and the confirmed backup folder change
+- smoke coverage for the Settings panel showing the fixed database location, saying how to restore a backup copy and what that costs, reporting a failed backup without claiming the tasks are lost, and the confirmed backup folder change
+- the About section: the version the main process reports shown, and the version reported as unknown rather than left blank both when the request fails and when there is no Electron bridge at all
+- the application info IPC: the one channel registered, the version Electron reports answered back, and the version read again on every request rather than captured once
 - Electron window load-target resolution: the built React file on disk, the development server when an unpackaged run was started with one, an empty server URL falling back to the built file, and a packaged run ignoring the development server variable altogether
 - React task-page startup loading, Electron preload API requirement, persisted Electron loading, and startup-error rendering
 - React task-page storage commands for create, update, delete, complete, restore, manual reorder, and importance sort, plus the empty tag of a tag input never reaching a storage command, the write-failure warning, storage-health feedback, and the task state being kept as it is after a rejected write

@@ -10,6 +10,7 @@ import { Sidebar } from 'src/components/common/Sidebar';
 import { MainContent } from 'src/components/common/MainContent';
 import { TagsPage } from 'src/components/tags/TagsPage';
 import { SettingsPage } from 'src/components/settings/SettingsPage';
+import { AppErrorBoundary } from 'src/components/common/AppErrorBoundary';
 import { BackupLocationContextProvider } from 'src/contexts/BackupLocationContext';
 import { TasksContextProvider } from 'src/contexts/TasksContext';
 import { TranslationProvider } from 'src/i18n/TranslationContext';
@@ -22,21 +23,23 @@ const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement)
 root.render(
 	<React.StrictMode>
 		<TranslationProvider>
-			<BackupLocationContextProvider>
-				<TasksContextProvider>
-					<HashRouter>
-						<Sidebar/>
-						<MainContent>
-							<Routes>
-								<Route path='/' element={<TasksPage/>}/>
-								<Route path='/notes' element={<NotesPage/>}/>
-								<Route path='/tags' element={<TagsPage/>}/>
-								<Route path='/settings' element={<SettingsPage/>}/>
-							</Routes>
-						</MainContent>
-					</HashRouter>
-				</TasksContextProvider>
-			</BackupLocationContextProvider>
+			<AppErrorBoundary>
+				<BackupLocationContextProvider>
+					<TasksContextProvider>
+						<HashRouter>
+							<Sidebar/>
+							<MainContent>
+								<Routes>
+									<Route path='/' element={<TasksPage/>}/>
+									<Route path='/notes' element={<NotesPage/>}/>
+									<Route path='/tags' element={<TagsPage/>}/>
+									<Route path='/settings' element={<SettingsPage/>}/>
+								</Routes>
+							</MainContent>
+						</HashRouter>
+					</TasksContextProvider>
+				</BackupLocationContextProvider>
+			</AppErrorBoundary>
 		</TranslationProvider>
 	</React.StrictMode>
 );
