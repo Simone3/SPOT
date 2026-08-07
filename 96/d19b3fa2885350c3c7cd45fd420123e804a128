@@ -1,0 +1,54 @@
+CLAUDE.md
+  s_f8b9f4db3b8e7c::t_fb0371384f6bfe 54,59
+DOCUMENTATION.md
+  s_f8b9f4db3b8e7c::t_1801437c018e9e 133,151,214,245-247,283,522,531,550-551,958
+src/components/common/AppErrorBoundary.css
+  s_f8b9f4db3b8e7c::t_b5fd8f6bf2e05b 55-63
+src/components/common/AppErrorBoundary.tsx
+  s_f8b9f4db3b8e7c::t_3551d5f56664db 2,6,9-14,20,25-29,40-44
+src/config/AppConfig.ts
+  s_f8b9f4db3b8e7c::t_953778c5e46678 91-96
+src/contexts/TasksContext.tsx
+  s_f8b9f4db3b8e7c::t_cabd074d7edd75 3
+src/i18n/lang/en.ts
+  s_f8b9f4db3b8e7c::t_2160e8fc5e79a4 46-49,143
+src/logic/Diagnostics.ts
+  s_f8b9f4db3b8e7c::t_794408a1260668 1-58
+src/main/ipc/DiagnosticsIpc.ts
+  s_f8b9f4db3b8e7c::t_1a84bc3de35d49 2,5,10,13-14,21-22,31-42,44,57-70
+src/main/preload/Preload.ts
+  s_f8b9f4db3b8e7c::t_0babec3bbbbf39 21-23
+src/types/DiagnosticsIpcChannels.ts
+  s_f8b9f4db3b8e7c::t_3280201ee881ae 2-3
+src/types/DiagnosticsTypes.ts
+  s_f8b9f4db3b8e7c::t_a253935ac48b58 3-5,9-16,20-21
+tests/components/AppErrorBoundary.test.tsx
+  s_f8b9f4db3b8e7c::t_9e634c255c9858 1-88
+tests/components/TasksPage.test.tsx
+  s_f8b9f4db3b8e7c::t_64012c1bf7055d 699-704
+tests/logic/TaskStateAudit.test.ts
+  s_f8b9f4db3b8e7c::t_7604a4ccd5ce91 64-65,68
+tests/main/DiagnosticsIpc.test.ts
+  s_f8b9f4db3b8e7c::t_88aadc9ac55dbd 6,9,65,70-73,88,132-175,186
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "96d19b3fa2885350c3c7cd45fd420123e804a128",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_f8b9f4db3b8e7c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8b9b725b-5b9e-4306-8c91-85c5dc1ecdd3",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
