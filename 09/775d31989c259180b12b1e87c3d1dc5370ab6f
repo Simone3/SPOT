@@ -1,0 +1,52 @@
+CLAUDE.md
+  s_f8b9f4db3b8e7c::t_95d8aaf91f02ea 54
+DOCUMENTATION.md
+  s_f8b9f4db3b8e7c::t_9cc4955a86b592 133,141-142,244,278-280,497,507-509,519-520,527,948
+src/contexts/TasksContext.tsx
+  s_f8b9f4db3b8e7c::t_93c4c5b28d6df2 13,15,85-105,328-335
+src/i18n/lang/en.ts
+  s_f8b9f4db3b8e7c::t_d5884bd8552bba 135-139
+src/logic/TaskStateAudit.ts
+  s_f8b9f4db3b8e7c::t_800bf8fd52787b 4,7-8,95,98,103-106
+src/main/Main.ts
+  s_f8b9f4db3b8e7c::t_d2f4d6efa1fc0b 19,216-218
+src/main/ipc/DiagnosticsIpc.ts
+  s_f8b9f4db3b8e7c::t_09f575ce82062d 1-47
+src/main/preload/Preload.ts
+  s_f8b9f4db3b8e7c::t_cb21bb3c03e5e0 7-8,18-23,63
+src/types/DiagnosticsIpcChannels.ts
+  s_f8b9f4db3b8e7c::t_dde89f9420fe01 1-3
+src/types/DiagnosticsTypes.ts
+  s_f8b9f4db3b8e7c::t_828555964d08e1 1-13
+src/types/TaskAuditTypes.ts
+  s_f8b9f4db3b8e7c::t_673e58f5a2e7c5 1-29
+src/vite-env.d.ts
+  s_f8b9f4db3b8e7c::t_c620d7c4212a4f 5,13
+tests/components/TasksPage.test.tsx
+  s_f8b9f4db3b8e7c::t_663f1881fff72a 11,157-166,259,696-699,727-738
+tests/logic/TaskStateAudit.test.ts
+  s_f8b9f4db3b8e7c::t_26c771fb09cff4 56-71
+tests/main/DiagnosticsIpc.test.ts
+  s_f8b9f4db3b8e7c::t_ce9c572a3a4c84 1-143
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "09775d31989c259180b12b1e87c3d1dc5370ab6f",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_f8b9f4db3b8e7c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "8b9b725b-5b9e-4306-8c91-85c5dc1ecdd3",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
