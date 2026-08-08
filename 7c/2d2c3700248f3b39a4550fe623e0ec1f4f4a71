@@ -1,0 +1,26 @@
+DOCUMENTATION.md
+  s_54eecdcb422d0d::t_5c9cbda93f7a48 347-349
+assets/icon.svg
+  s_54eecdcb422d0d::t_e268e6813ce2ea 4-5,9-11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "7c2d2c3700248f3b39a4550fe623e0ec1f4f4a71",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_54eecdcb422d0d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "b7a43ddd-e23c-4532-b3f5-351b9a0a3ba8",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
