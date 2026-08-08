@@ -1,0 +1,34 @@
+DOCUMENTATION.md
+  s_841f150250a01c::t_f9f93eedbb3ee4 130,281,550-551,559
+src/framework/main/config/BackupLocationManager.ts
+  s_841f150250a01c::t_368a3d38b70c81 109-119
+src/main/Main.ts
+  s_841f150250a01c::t_6fc3b8bc12eb90 17,328-343
+src/main/config/StartupConfigurationLog.ts
+  s_841f150250a01c::t_afac947e2410e1 1-96
+tests/framework/BackupLocationManager.test.ts
+  s_841f150250a01c::t_2a94e745791516 1,6,11-12,78-104,232-278
+tests/main/StartupConfigurationLog.test.ts
+  s_841f150250a01c::t_0d8c12ceabcbc5 1-150
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "8882eaf0648ea415cdddb463978e37e9e18b9338",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_841f150250a01c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a6033f34-27ec-4c2b-bfdb-8d33562ee070",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
