@@ -14,6 +14,7 @@ import { getErrorMessage } from 'src/framework/utils/ErrorUtils';
 import { createSpotTranslator, resolveSpotLanguage, type SpotTranslator } from 'src/i18n/Translations';
 import { createSpotBackupDirectoryStore, createSpotConfigStore } from 'src/main/config/SpotConfigStore';
 import { resolveSpotRuntimePaths } from 'src/main/config/SpotRuntimePaths';
+import { logStartupConfiguration } from 'src/main/config/StartupConfigurationLog';
 import { registerAppInfoIpcHandlers } from 'src/main/ipc/AppInfoIpc';
 import { registerAppMenuIpcHandlers } from 'src/main/ipc/AppMenuIpc';
 import { registerBackupLocationIpcHandlers } from 'src/main/ipc/BackupLocationIpc';
@@ -324,7 +325,22 @@ const startApplication = (): void => {
 			}
 		});
 
-		await backupLocationManager.initialize();
+		const backupLocation = await backupLocationManager.initialize();
+
+		// Written here rather than as soon as the logger exists, because the backup folder is the one part of the configuration that is
+		// resolved instead of read, and an entry naming the folder this run will actually back up to is what the log is read for
+		logStartupConfiguration({
+			appVersion: app.getVersion(),
+			locale: app.getLocale(),
+			language: translator.language,
+			platform: process.platform,
+			architecture: process.arch,
+			versions: process.versions,
+			runtimePaths,
+			backupLocation,
+			loadTarget,
+			drawsMenuBar
+		});
 
 		createWindow({ requestRendererFlushBeforeWindowClose, loadTarget, drawsMenuBar });
 

@@ -1,12 +1,14 @@
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createBackupLocationManager, type BackupDirectoryStore } from 'src/framework/main/config/BackupLocationManager';
 import type { RuntimePaths } from 'src/framework/main/config/RuntimePaths';
-import { resetAppLoggerForTests } from 'src/framework/main/logging/AppLogger';
+import { initializeAppLogger, resetAppLoggerForTests } from 'src/framework/main/logging/AppLogger';
 import type { BackupDirectoryMessages } from 'src/framework/main/storage/BackupDirectory';
 
 const DATABASE_FILE_NAME = 'app.sqlite';
+
+const LOG_FILE_NAME = 'app-logs.ndjson';
 
 interface FakeStorage {
 	selectedDirectories: string[];
@@ -71,6 +73,33 @@ const createFakeDirectoryStore = (savedDirectory?: string): {
 			return currentDirectory;
 		}
 	};
+};
+
+// Starts the process-wide logger on a folder of this test's own, so that what the manager wrote can be read back from the file it wrote it to
+const startLogger = (logDirectory: string): void => {
+	initializeAppLogger({
+		logDirectory,
+		fileName: LOG_FILE_NAME,
+		maximumFileSizeBytes: 1024 * 1024,
+		retainedArchiveCount: 1
+	});
+};
+
+const readLoggedMessages = (logDirectory: string): string[] => {
+	const logFilePath = path.join(logDirectory, LOG_FILE_NAME);
+
+	if(!existsSync(logFilePath)) {
+		return [];
+	}
+
+	return readFileSync(logFilePath, 'utf8')
+		.split('\n')
+		.filter((line) => {
+			return line.length > 0;
+		})
+		.map((line) => {
+			return (JSON.parse(line) as { message: string }).message;
+		});
 };
 
 const createFakeStorage = (): FakeStorage => {
@@ -198,6 +227,53 @@ describe('BackupLocationManager', () => {
 		expect(result.ok).toBe(false);
 		expect(manager.getLocation().directory).toBe(runtimePaths.defaultBackupDirectory);
 		expect(getSavedDirectory()).toBeUndefined();
+	});
+
+	// Every launch applies the folder it already had, and an entry saying so at every startup would push the ones that mean something out of the log
+	test('logs nothing when startup applies the folder it already had', async() => {
+		const rootDirectory = makeTempDirectory();
+		const savedDirectory = makeTempDirectory();
+		const logDirectory = makeTempDirectory();
+		startLogger(logDirectory);
+		const runtimePaths = createRuntimePaths(rootDirectory);
+		const { directoryStore } = createFakeDirectoryStore(savedDirectory);
+		const { storage } = createFakeStorage();
+		const manager = createBackupLocationManager({ runtimePaths, storage, directoryStore, directoryMessages });
+
+		await manager.initialize();
+
+		expect(readLoggedMessages(logDirectory)).toEqual([]);
+	});
+
+	test('logs the folder the user moved the backups to', async() => {
+		const rootDirectory = makeTempDirectory();
+		const chosenDirectory = makeTempDirectory();
+		const logDirectory = makeTempDirectory();
+		startLogger(logDirectory);
+		const runtimePaths = createRuntimePaths(rootDirectory);
+		const { directoryStore } = createFakeDirectoryStore();
+		const { storage } = createFakeStorage();
+		const manager = createBackupLocationManager({ runtimePaths, storage, directoryStore, directoryMessages });
+
+		await manager.initialize();
+		await manager.setBackupDirectory(chosenDirectory);
+
+		expect(readLoggedMessages(logDirectory)).toEqual([ 'Backup folder selected' ]);
+	});
+
+	test('logs nothing when the user picks the folder already in use', async() => {
+		const rootDirectory = makeTempDirectory();
+		const logDirectory = makeTempDirectory();
+		startLogger(logDirectory);
+		const runtimePaths = createRuntimePaths(rootDirectory);
+		const { directoryStore } = createFakeDirectoryStore();
+		const { storage } = createFakeStorage();
+		const manager = createBackupLocationManager({ runtimePaths, storage, directoryStore, directoryMessages });
+
+		await manager.initialize();
+		await manager.setBackupDirectory(runtimePaths.defaultBackupDirectory);
+
+		expect(readLoggedMessages(logDirectory)).toEqual([]);
 	});
 
 	test('runs the folder change on the storage chain', async() => {

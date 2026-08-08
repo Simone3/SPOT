@@ -106,12 +106,17 @@ export const createBackupLocationManager = ({
 			directoryStore.write(directory);
 		}
 
-		appLogger.info('Backup folder selected', {
-			type: 'config.backupDirectory',
-			previousDirectory,
-			directory,
-			isDevelopment: runtimePaths.isDevelopment
-		});
+		// Only a folder the user actually moved the backups to is worth an entry, and persisting the choice is what tells one apart
+		// from the folder startup applies again on every launch. An entry for the latter would say nothing that the configuration
+		// the application logs at startup does not already say, while pushing the entries that do out of the rolled log file.
+		if(persist && directory !== previousDirectory) {
+			appLogger.info('Backup folder selected', {
+				type: 'config.backupDirectory',
+				previousDirectory,
+				directory,
+				isDevelopment: runtimePaths.isDevelopment
+			});
+		}
 
 		// The new folder is empty until something is written to it, so the next backup is made to cover the change itself
 		onBackupDirectoryChanged?.();
