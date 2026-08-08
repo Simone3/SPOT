@@ -59,8 +59,19 @@ body {
 	font-family: var(--font-family);
 }
 
-/* React root */
+/* React root. It is a column, because the title bar SPOT draws on the platforms where it draws one is a row above everything else;
+   where it draws none, the column holds the application body alone and nothing about the layout changes. */
 #root {
 	display: flex;
+	flex-direction: column;
 	height: 100vh;
+}
+
+/* The application itself, under whatever title bar the window has: the sidebar beside the page, filling what is left of the window */
+#app-body {
+	display: flex;
+	flex-grow: 1;
+
+	/* A flex item refuses to shrink below its content, and the page inside this one scrolls rather than growing the window */
+	min-height: 0;
 }

@@ -1,6 +1,7 @@
 import type { Menu, MenuItemConstructorOptions } from 'electron';
 import { makeTranslator } from '../testUtils';
-import { buildSpotMenuTemplate, installSpotApplicationMenu, type ApplicationMenu } from 'src/main/window/AppMenu';
+import { buildSpotDrawnMenuBar, buildSpotMenuTemplate, drawsOwnMenuBar, installSpotApplicationMenu, type ApplicationMenu } from 'src/main/window/AppMenu';
+import { SPOT_MENU_COMMANDS, type SpotMenuCommand } from 'src/types/AppMenuTypes';
 
 const BUILT_MENU = {} as Menu;
 
@@ -81,6 +82,82 @@ describe('AppMenu', () => {
 				'zoomOut',
 				undefined,
 				'togglefullscreen'
+			]);
+		});
+	});
+
+	describe('drawsOwnMenuBar', () => {
+		// The native menu bar on Windows is grey, above a dark window, and nothing in Electron restyles it
+		test('draws the menu bar on Windows', () => {
+			expect(drawsOwnMenuBar({ platform: 'win32', isDevelopmentRun: false })).toBe(true);
+		});
+
+		// macOS keeps its menu in the system menu bar, where it belongs to the desktop, and Linux draws its own window decorations
+		test.each([ 'darwin', 'linux' ] as const)('leaves the menu bar to the operating system on %s', (platform) => {
+			expect(drawsOwnMenuBar({ platform, isDevelopmentRun: false })).toBe(false);
+		});
+
+		// A development run keeps the menu Electron installs by itself, developer entries and all, so it has a native menu bar to show
+		test('leaves the menu bar alone in a development run', () => {
+			expect(drawsOwnMenuBar({ platform: 'win32', isDevelopmentRun: true })).toBe(false);
+		});
+	});
+
+	describe('buildSpotDrawnMenuBar', () => {
+		test('offers the same submenus as the native menu', () => {
+			const menus = buildSpotDrawnMenuBar(translator).map((menu) => {
+				return menu.label;
+			});
+
+			expect(menus).toEqual([
+				translator.t('menu.file'),
+				translator.t('menu.edit'),
+				translator.t('menu.view'),
+				translator.t('menu.window')
+			]);
+		});
+
+		// A drawn entry has no Electron role behind it, so an entry whose command nothing implements is an entry that does nothing
+		test('stands every entry on a known command', () => {
+			const commands = new Set<SpotMenuCommand>(Object.values(SPOT_MENU_COMMANDS));
+
+			for(const menu of buildSpotDrawnMenuBar(translator)) {
+				for(const item of menu.items) {
+					if(item.type === 'entry') {
+						expect(commands).toContain(item.command);
+					}
+				}
+			}
+		});
+
+		// Every command the main process implements is reachable, since the drawn bar is the only place they are offered from
+		test('offers every command it implements', () => {
+			const offeredCommands = buildSpotDrawnMenuBar(translator).flatMap((menu) => {
+				return menu.items.flatMap((item) => {
+					return item.type === 'entry' ? [ item.command ] : [];
+				});
+			});
+
+			expect([ ...offeredCommands ].sort()).toEqual(Object.values(SPOT_MENU_COMMANDS).sort());
+		});
+
+		// The editing entries act on what the user was typing in, and they are the ones a menu bar cannot be shipped without
+		test('offers the editing entries', () => {
+			const editItems = buildSpotDrawnMenuBar(translator).find((menu) => {
+				return menu.id === 'edit';
+			})?.items ?? [];
+
+			expect(editItems.filter((item) => {
+				return item.type === 'entry';
+			}).map((item) => {
+				return item.label;
+			})).toEqual([
+				translator.t('menu.undo'),
+				translator.t('menu.redo'),
+				translator.t('menu.cut'),
+				translator.t('menu.copy'),
+				translator.t('menu.paste'),
+				translator.t('menu.selectAll')
 			]);
 		});
 	});

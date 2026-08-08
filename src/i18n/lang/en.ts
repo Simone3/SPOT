@@ -15,11 +15,31 @@ export const EN_TRANSLATIONS = {
 		settings: 'Settings'
 	},
 
-	// The native application menu. Every entry SPOT builds from an Electron role is worded and translated by Electron itself, in the
-	// language the operating system runs in, so these are only the two submenu titles that have no role to take a title from.
+	// The application menu. Every entry of the native menu is built from an Electron role, which is worded and translated by Electron
+	// itself in the language the operating system runs in, so only the two submenu titles that have no role to take a title from are
+	// needed for it. Everything else here is for the menu bar SPOT draws itself on Windows, where nothing is worded for it.
 	menu: {
 		file: 'File',
-		view: 'View'
+		edit: 'Edit',
+		view: 'View',
+		window: 'Window',
+
+		// Names the whole drawn menu bar for anything reading the window out, which sees a row of buttons and nothing saying what they are
+		bar: 'Application menu',
+
+		exit: 'Exit',
+		undo: 'Undo',
+		redo: 'Redo',
+		cut: 'Cut',
+		copy: 'Copy',
+		paste: 'Paste',
+		selectAll: 'Select All',
+		resetZoom: 'Actual Size',
+		zoomIn: 'Zoom In',
+		zoomOut: 'Zoom Out',
+		toggleFullScreen: 'Toggle Full Screen',
+		minimize: 'Minimize',
+		close: 'Close'
 	},
 
 	// Names for the days around today. The framework decides which day a date falls on, so these only name the ones SPOT calls out.

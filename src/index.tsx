@@ -8,6 +8,7 @@ import { TasksPage } from 'src/components/tasks/TasksPage';
 import { NotesPage } from 'src/components/notes/NotesPage';
 import { Sidebar } from 'src/components/common/Sidebar';
 import { MainContent } from 'src/components/common/MainContent';
+import { TitleBar } from 'src/components/common/TitleBar';
 import { TagsPage } from 'src/components/tags/TagsPage';
 import { SettingsPage } from 'src/components/settings/SettingsPage';
 import { AppErrorBoundary } from 'src/components/common/AppErrorBoundary';
@@ -26,16 +27,19 @@ root.render(
 			<AppErrorBoundary>
 				<BackupLocationContextProvider>
 					<TasksContextProvider>
+						<TitleBar/>
 						<HashRouter>
-							<Sidebar/>
-							<MainContent>
-								<Routes>
-									<Route path='/' element={<TasksPage/>}/>
-									<Route path='/notes' element={<NotesPage/>}/>
-									<Route path='/tags' element={<TagsPage/>}/>
-									<Route path='/settings' element={<SettingsPage/>}/>
-								</Routes>
-							</MainContent>
+							<div id='app-body'>
+								<Sidebar/>
+								<MainContent>
+									<Routes>
+										<Route path='/' element={<TasksPage/>}/>
+										<Route path='/notes' element={<NotesPage/>}/>
+										<Route path='/tags' element={<TagsPage/>}/>
+										<Route path='/settings' element={<SettingsPage/>}/>
+									</Routes>
+								</MainContent>
+							</div>
 						</HashRouter>
 					</TasksContextProvider>
 				</BackupLocationContextProvider>

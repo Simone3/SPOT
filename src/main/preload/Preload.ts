@@ -2,6 +2,8 @@ import { contextBridge, ipcRenderer } from 'electron';
 import { subscribeToChannel } from 'src/framework/preload/IpcBridge';
 import { SPOT_APP_INFO_IPC_CHANNELS } from 'src/types/AppInfoIpcChannels';
 import type { SpotAppInfoApi } from 'src/types/AppInfoTypes';
+import { SPOT_APP_MENU_IPC_CHANNELS } from 'src/types/AppMenuIpcChannels';
+import type { SpotAppMenuApi } from 'src/types/AppMenuTypes';
 import { SPOT_BACKUP_LOCATION_IPC_CHANNELS } from 'src/types/BackupLocationIpcChannels';
 import type { SpotBackupLocationApi } from 'src/types/BackupLocationTypes';
 import { SPOT_DIAGNOSTICS_IPC_CHANNELS } from 'src/types/DiagnosticsIpcChannels';
@@ -12,6 +14,15 @@ import type { BackupStatus, SpotStorageApi } from 'src/types/TaskStorageTypes';
 const spotAppInfo: SpotAppInfoApi = {
 	getAppInfo: () => {
 		return ipcRenderer.invoke(SPOT_APP_INFO_IPC_CHANNELS.getAppInfo);
+	}
+};
+
+const spotAppMenu: SpotAppMenuApi = {
+	getMenuBar: () => {
+		return ipcRenderer.invoke(SPOT_APP_MENU_IPC_CHANNELS.getMenuBar);
+	},
+	runMenuCommand: (command) => {
+		return ipcRenderer.invoke(SPOT_APP_MENU_IPC_CHANNELS.runMenuCommand, command);
 	}
 };
 
@@ -63,4 +74,5 @@ const spotStorage: SpotStorageApi = {
 contextBridge.exposeInMainWorld('spotStorage', spotStorage);
 contextBridge.exposeInMainWorld('spotBackupLocation', spotBackupLocation);
 contextBridge.exposeInMainWorld('spotAppInfo', spotAppInfo);
+contextBridge.exposeInMainWorld('spotAppMenu', spotAppMenu);
 contextBridge.exposeInMainWorld('spotDiagnostics', spotDiagnostics);

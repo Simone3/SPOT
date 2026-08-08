@@ -15,6 +15,29 @@ export const WINDOW_CONFIG = {
 	developmentServerUrlVariable: 'SPOT_DEVELOPMENT_SERVER_URL'
 } as const;
 
+export const TITLE_BAR_CONFIG = {
+
+	// How tall the title bar SPOT draws is, and therefore how tall the native window buttons Electron overlays on it are. The renderer
+	// reads the height back from the overlay instead of repeating this number, so this is the only place it is decided.
+	heightPixels: 32,
+
+	// The window buttons are drawn by the operating system, so their two colors are given to Electron rather than to CSS. They mirror
+	// "--colors-background-primary" and "--colors-text-primary" in "src/index.css" and have to be changed with them.
+	backgroundColor: '#212529',
+	symbolColor: '#FFFFFF'
+} as const;
+
+export const ZOOM_CONFIG = {
+
+	// One step of the zoom menu entries, in Chromium zoom levels: every level is 1.2 times the previous one
+	stepLevel: 0.5,
+
+	// How far the zoom entries go, which is roughly a third of the normal size and a little over twice it. Chromium clamps zoom itself,
+	// but only far past the point where the application is unusable.
+	minimumLevel: -5,
+	maximumLevel: 5
+} as const;
+
 export const I18N_CONFIG = {
 	// Used when the runtime asks for a language SPOT does not ship a bundle for. It must be one of the languages in "src/i18n/Translations.ts".
 	defaultLanguage: 'en'

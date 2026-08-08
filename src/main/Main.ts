@@ -1,8 +1,8 @@
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { app, BrowserWindow, dialog, ipcMain, Menu } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu, type BrowserWindowConstructorOptions } from 'electron';
 import squirrelStartup from 'electron-squirrel-startup';
-import { BACKUP_CONFIG, LOGGING_CONFIG, WINDOW_CONFIG } from 'src/config/AppConfig';
+import { BACKUP_CONFIG, LOGGING_CONFIG, TITLE_BAR_CONFIG, WINDOW_CONFIG } from 'src/config/AppConfig';
 import { createBackupLocationManager } from 'src/framework/main/config/BackupLocationManager';
 import { appLogger, initializeAppLogger } from 'src/framework/main/logging/AppLogger';
 import { installProcessCrashHandlers } from 'src/framework/main/logging/ProcessCrashHandlers';
@@ -15,11 +15,12 @@ import { createSpotTranslator, resolveSpotLanguage, type SpotTranslator } from '
 import { createSpotBackupDirectoryStore, createSpotConfigStore } from 'src/main/config/SpotConfigStore';
 import { resolveSpotRuntimePaths } from 'src/main/config/SpotRuntimePaths';
 import { registerAppInfoIpcHandlers } from 'src/main/ipc/AppInfoIpc';
+import { registerAppMenuIpcHandlers } from 'src/main/ipc/AppMenuIpc';
 import { registerBackupLocationIpcHandlers } from 'src/main/ipc/BackupLocationIpc';
 import { registerDiagnosticsIpcHandlers } from 'src/main/ipc/DiagnosticsIpc';
 import { registerTaskStorageIpcHandlers } from 'src/main/ipc/TaskStorageIpc';
 import { createTaskStorage } from 'src/main/storage/TaskStorage';
-import { installSpotApplicationMenu } from 'src/main/window/AppMenu';
+import { buildSpotDrawnMenuBar, drawsOwnMenuBar, installSpotApplicationMenu } from 'src/main/window/AppMenu';
 import { isDevelopmentRun, resolveWindowLoadTarget, type WindowLoadTarget } from 'src/main/window/WindowLoadTarget';
 import { SPOT_STORAGE_IPC_CHANNELS } from 'src/types/TaskStorageIpcChannels';
 
@@ -76,25 +77,50 @@ const getAllowedNavigationUrl = (loadTarget: WindowLoadTarget): string => {
 	return loadTarget.type === 'url' ? loadTarget.value : pathToFileURL(loadTarget.value).href;
 };
 
+// The window options that put the menu bar inside the page instead of above it. Hiding the operating system's title bar is what makes
+// room for it: what stays is the overlay Electron keeps drawing the minimize, maximize and close buttons in, told which two colors to
+// draw them in so that they belong to the same window as everything below.
+const buildDrawnTitleBarWindowOptions = (): Pick<BrowserWindowConstructorOptions, 'titleBarStyle' | 'titleBarOverlay'> => {
+	return {
+		titleBarStyle: 'hidden',
+		titleBarOverlay: {
+			color: TITLE_BAR_CONFIG.backgroundColor,
+			symbolColor: TITLE_BAR_CONFIG.symbolColor,
+			height: TITLE_BAR_CONFIG.heightPixels
+		}
+	};
+};
+
 // "requestRendererFlushBeforeWindowClose" saves the task changes the renderer still buffers, or returns undefined when the window can close right away
 interface CreateWindowOptions {
 	requestRendererFlushBeforeWindowClose: () => Promise<void> | undefined;
 
 	// What the window loads, resolved once at startup so that every window of this run loads the same page and the menu was decided from it
 	loadTarget: WindowLoadTarget;
+
+	// Whether the renderer draws the menu bar, which is also what decides whether this window keeps a native title bar
+	drawsMenuBar: boolean;
 }
 
-const createWindow = ({ requestRendererFlushBeforeWindowClose, loadTarget }: CreateWindowOptions): void => {
+const createWindow = ({ requestRendererFlushBeforeWindowClose, loadTarget, drawsMenuBar }: CreateWindowOptions): void => {
 	const win = new BrowserWindow({
 		width: WINDOW_CONFIG.widthPixels,
 		height: WINDOW_CONFIG.heightPixels,
 		show: false,
+		...drawsMenuBar ? buildDrawnTitleBarWindowOptions() : {},
 		webPreferences: {
 			contextIsolation: true,
 			nodeIntegration: false,
 			preload: path.join(__dirname, WINDOW_CONFIG.preloadScriptFileName)
 		}
 	});
+
+	// The native menu stays installed, because its roles are what answer the keyboard shortcuts, but a window that draws the menu itself
+	// must not have it above the page as well. Electron draws that bar inside the window once the title bar is hidden, so it is turned
+	// off here rather than left to look like a second menu nobody styled.
+	if(drawsMenuBar) {
+		win.setMenuBarVisibility(false);
+	}
 
 	// Maximizes to the screen work area on startup without engaging macOS native fullscreen (a distinct window state the user opts into separately)
 	win.once('ready-to-show', () => {
@@ -196,6 +222,13 @@ const startApplication = (): void => {
 			platform: process.platform
 		});
 
+		// On Windows that menu is installed but hidden, and the renderer draws one of its own in the colors of the application. The
+		// window has to know before it is created, because that is what hides the title bar the drawn one takes the place of.
+		const drawsMenuBar = drawsOwnMenuBar({
+			platform: process.platform,
+			isDevelopmentRun: isDevelopmentRun(loadTarget)
+		});
+
 		const runtimePaths = resolveSpotRuntimePaths(app);
 
 		initializeAppLogger({
@@ -212,6 +245,19 @@ const startApplication = (): void => {
 		});
 
 		registerAppInfoIpcHandlers({ ipcMain, app });
+
+		// The renderer is told what to draw and nothing at all when the platform keeps its native menu bar, so a SPOT that has one
+		// never draws a second
+		registerAppMenuIpcHandlers({
+			ipcMain,
+			menuBar: drawsMenuBar ? buildSpotDrawnMenuBar(translator) : [],
+			commandTarget: {
+				app,
+				getWindow: () => {
+					return mainWindow;
+				}
+			}
+		});
 
 		// Registered after the logger, which is the file it writes what the renderer reports to
 		registerDiagnosticsIpcHandlers({ ipcMain });
@@ -280,11 +326,11 @@ const startApplication = (): void => {
 
 		await backupLocationManager.initialize();
 
-		createWindow({ requestRendererFlushBeforeWindowClose, loadTarget });
+		createWindow({ requestRendererFlushBeforeWindowClose, loadTarget, drawsMenuBar });
 
 		app.on('activate', () => {
 			if(BrowserWindow.getAllWindows().length === 0) {
-				createWindow({ requestRendererFlushBeforeWindowClose, loadTarget });
+				createWindow({ requestRendererFlushBeforeWindowClose, loadTarget, drawsMenuBar });
 			}
 		});
 	});

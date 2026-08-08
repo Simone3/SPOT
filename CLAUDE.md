@@ -59,6 +59,8 @@ npm test -- tests/logic/SomeFile.test.ts
 - Failures that reach the top of the main process must leave a trace and, once the language is resolved, reach the user. A render error must not empty the window, and must reach the operational log through `spotDiagnostics`: the renderer console is developer-facing and an installed SPOT cannot open it. Neither path may be removed without replacing it: a silent failure in a released build is unreportable.
 - `productName` in `package.json` and `packagerConfig.appBundleId` in `forge.config.js` are fixed now that SPOT is installed: the user-data folder holding the live database is named after `productName`, and macOS keeps permissions and window state under the bundle identifier. The makers must keep naming the same executable.
 - The application menu must always offer the Edit submenu, because on macOS the standard editing shortcuts are its accelerators. An installed SPOT must offer no reload or developer tools entry; only a development run keeps the menu Electron installs by itself.
+- Where SPOT draws the menu bar itself, the native menu stays installed and only its bar is hidden: the accelerators belong to its Electron roles, and removing it takes every shortcut with it. The drawn bar therefore repeats the shortcut text and must keep saying what those roles actually listen for. Its entries never take the focus, because the editing ones act on the field the user was typing in.
+- Anything the renderer can ask the main process to do through the menu bridge is a name from `SPOT_MENU_COMMANDS` and nothing else. An unknown name is ignored, never guessed at.
 
 ## Testing
 
