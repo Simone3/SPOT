@@ -344,7 +344,9 @@ The renderer half is `TitleBar` and `MenuBar` under `src/components/common`, rea
 
 ## Application Icon
 
-`assets/icon.svg` is the only hand-edited icon file: a dark rounded tile carrying concentric accent rings, a solid centre dot, and a white checkmark inside that dot. It uses the same `#0099FF` accent and dark background as the renderer theme. Everything else is generated from it by `npm run build-icons`, which runs `scripts/build-icons.js` under Electron and rasterizes the master with Electron's own Chromium, so no image library or external converter is a dependency.
+`assets/icon.svg` is the only hand-edited icon file: a rounded tile in an accent gradient carrying one translucent white ring, a solid white centre disc, and an accent checkmark inside that disc. Everything else is generated from it by `npm run build-icons`, which runs `scripts/build-icons.js` under Electron and rasterizes the master with Electron's own Chromium, so no image library or external converter is a dependency.
+
+The artwork is drawn for the smallest size it will ever be shown at, not for the master canvas, and its earlier dark-tile form failed all four of these. A taskbar draws the icon at 16 pixels, so nothing may be thinner than roughly 8% of the 1024 canvas, which is the point below which a stroke averages into grey instead of resolving. Shapes are separated by colour rather than by opacity over the tile, because an accent laid on a dark tile at low alpha lands a fraction away from the tile itself and disappears. The ring, the gap and the disc are deliberately different widths, because evenly spaced concentric rings read as a moiré pattern rather than as a shape once they stop resolving. And the tile carries the accent while the mark is white, rather than the other way around, because a near-black tile has no silhouette at all against a dark Windows taskbar: it must supply its own edge, since the platform gives it none.
 
 The script produces two tiles from the same master, because the platforms disagree on framing:
 
