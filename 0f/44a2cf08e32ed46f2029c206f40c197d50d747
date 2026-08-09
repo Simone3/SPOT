@@ -1,0 +1,21 @@
+DOCUMENTATION.md
+  s_38d189e343a3b4::t_904271417ef9e4 84
+package.json
+  s_38d189e343a3b4::t_ebbba2e5162e7b 19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "0f44a2cf08e32ed46f2029c206f40c197d50d747",
+  "prompts": {},
+  "sessions": {
+    "s_38d189e343a3b4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7e7dfed7-bb47-4074-9515-a0de13ddb053",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
