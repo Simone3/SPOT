@@ -1,0 +1,25 @@
+.github/workflows/release.yml
+  s_38d189e343a3b4::t_8d3fa3663f67d0 1-110
+CLAUDE.md
+  s_38d189e343a3b4::t_1d69a3ff4f1a55 32,61
+DOCUMENTATION.md
+  s_38d189e343a3b4::t_22f814bad8431d 78-91,96-97
+README.md
+  s_38d189e343a3b4::t_4d9b1b380116de 2-68
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "6c6c98767c183c5db069cad4d843418cd1395519",
+  "prompts": {},
+  "sessions": {
+    "s_38d189e343a3b4": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "7e7dfed7-bb47-4074-9515-a0de13ddb053",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
