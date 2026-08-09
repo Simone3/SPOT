@@ -29,7 +29,7 @@ npm test -- tests/logic/SomeFile.test.ts
 ## Hard Rules
 
 - Work only in this repository and only on the current branch.
-- Do NOT edit `TODO.md` or `README.md`. `README.md` stays minimal.
+- Do NOT edit `TODO.md`. `README.md` is the landing page a user reads: what SPOT is and how to install it, and nothing else. Every technical detail belongs in `DOCUMENTATION.md`, which it links to.
 - Keep `CLAUDE.md` and `DOCUMENTATION.md` aligned and up to date. If either becomes stale or contradicts the project state, fix it as part of the task.
 - Do NOT introduce extra libraries unless you justify them briefly and they clearly reduce work or risk.
 - `package.json` dependencies must use exact versions. No `^` or `~`.
@@ -58,6 +58,7 @@ npm test -- tests/logic/SomeFile.test.ts
 - Only one SPOT process may run at a time. `Main.ts` turns away the Windows installer's own launches and then takes the single instance lock before anything else, and nothing may assume a second process could share the database.
 - Failures that reach the top of the main process must leave a trace and, once the language is resolved, reach the user. A render error must not empty the window, and must reach the operational log through `spotDiagnostics`: the renderer console is developer-facing and an installed SPOT cannot open it. Neither path may be removed without replacing it: a silent failure in a released build is unreportable.
 - `productName` in `package.json` and `packagerConfig.appBundleId` in `forge.config.js` are fixed now that SPOT is installed: the user-data folder holding the live database is named after `productName`, and macOS keeps permissions and window state under the bundle identifier. The makers must keep naming the same executable.
+- A release is a `v<version>` tag, and `.github/workflows/release.yml` is what builds its installers. The installers of the three platforms cannot be built on one machine, so nothing may assume a local `npm run make` produces a whole release. The `version` field of `package.json` is what the installers and the About section carry, so it is raised in the commit the tag is put on.
 - The application menu must always offer the Edit submenu, because on macOS the standard editing shortcuts are its accelerators. An installed SPOT must offer no reload or developer tools entry; only a development run keeps the menu Electron installs by itself.
 - Where SPOT draws the menu bar itself, the native menu stays installed and only its bar is hidden: the accelerators belong to its Electron roles, and removing it takes every shortcut with it. The drawn bar therefore repeats the shortcut text and must keep saying what those roles actually listen for. Its entries never take the focus, because the editing ones act on the field the user was typing in.
 - Anything the renderer can ask the main process to do through the menu bridge is a name from `SPOT_MENU_COMMANDS` and nothing else. An unknown name is ignored, never guessed at.

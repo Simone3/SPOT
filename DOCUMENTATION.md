@@ -75,11 +75,26 @@ Two consequences worth knowing:
 
 The renderer's strict Content-Security-Policy in `index.html` cannot be satisfied by a development server: React Fast Refresh installs its runtime through an inline module script, and the hot update channel is a WebSocket back to the server. The `spot-development-content-security-policy` plugin in `vite.config.mts` rewrites the two policy meta tags for the served page only, allowing inline scripts and a WebSocket connection to the local server, and it throws if it finds no policy to rewrite so the two files cannot drift apart unnoticed. The built `index.html` keeps the strict policy it is packaged with, which is also why a packaged run ignores the environment variable entirely: honouring it there would let anything that can set an environment variable put a page of its own choosing behind the preload bridge.
 
+## Releasing
+
+A release is one `v<version>` tag, and `.github/workflows/release.yml` is what turns it into downloadable installers.
+
+The installers cannot all be built on one machine. The Squirrel installer needs Windows, and the Debian and RPM packages need the packaging tools of a Linux distribution, so `npm run make` on a development machine only ever produces the installers of that machine's own platform. The workflow runs it once per operating system instead, on a `macos-latest`, a `windows-latest`, and an `ubuntu-latest` runner, which is what makes a release covering all three possible at all. The Linux runner installs `fakeroot` and `rpm` first, because its image carries neither and the two makers shell out to them.
+
+Every runner also runs `npm run lint`, `npm run typecheck`, and `npm test` before packaging, so a release is never built out of a tree that does not pass the checks. Only the files a user downloads are kept as artifacts: the `.zip`, the `.exe`, the `.deb`, and the `.rpm`. The Squirrel update files the maker writes next to the installer are of no use without an update server to serve them from.
+
+A last job downloads all of that and creates the GitHub release with `gh release create` and the runner's own `GITHUB_TOKEN`. The release is a draft, and publishing it is a manual step: the generated notes are worth reading before anybody can download anything. A run started by hand instead of by a tag builds and uploads the installers but creates no release, which is how the workflow is tested without cutting a tag first.
+
+The version the installers carry is the `version` field of `package.json`, and it is also what `AppInfoSettings` shows the user, so it has to be raised in the same commit the tag is put on. Nothing checks that the tag and the field agree.
+
+Nothing in the release is signed. SPOT carries no paid Apple or Microsoft certificate, so macOS quarantines the download and Windows SmartScreen reports an unknown publisher. `README.md` tells the user what to do about both. The macOS application is still ad-hoc signed by the packager, which is what lets it run on Apple Silicon at all; only the quarantine flag stands in the way there.
+
 ## Repository Map
 
 - `CLAUDE.md` contains contributor and coding-agent instructions. Keep it aligned with this document.
 - `.claude/` contains Claude Code configuration: shared tool permissions and repeatable slash commands.
-- `README.md` intentionally stays minimal.
+- `.github/workflows/release.yml` builds the installers of one release on all three operating systems and drafts the GitHub release, as described in the Releasing section.
+- `README.md` is the landing page a user reads: what SPOT is and how to install it, and nothing more. Every technical detail belongs here instead.
 - `DOCUMENTATION.md` is this detailed project reference.
 - `eslint.config.js` contains the flat ESLint configuration used by `npm run lint`.
 - `scripts/build-electron.js` bundles Electron main and preload TypeScript sources into ignored `dist/electron` runtime files.
