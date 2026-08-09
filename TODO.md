@@ -1,13 +1,7 @@
 
 # current
 
-re-review all files created/modified after "Add hover feedback" commit (jun 2)
-
-move ui components to framework? like AppErrorBaundary?
-
-complete full tests on real build, on windows too!
-
-release on github, merge main, update readme with minimal instructions
+merge main, update readme with minimal instructions (xattr), release on github
 
 
 
@@ -15,6 +9,13 @@ release on github, merge main, update readme with minimal instructions
 ------------------------------------------------------------------------------------------------------
 
 
+# bugs
+
+very long domains are not great in the filter chips, ellipsis?
+
+multiple newlines in text are lost at restart
+
+scrollbar is ugly, especially on windows
 
 
 # maybe in the future
@@ -42,8 +43,6 @@ responsive for half-screen format (e.g. move filters on top?)
 better accessibility (e.g. label + ID) for ButtonsSelect - maybe use the default <select> input styled as buttons?
 
 priority icons in the filters?
-
-scrollbar style?
 
 
 ## logic
