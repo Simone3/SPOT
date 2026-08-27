@@ -1,0 +1,64 @@
+docs/technical/02-repository-map.md
+  s_632fb21302e0f1::t_8d44c72f6a69a8 53,64-66,75,82-83
+docs/technical/04-framework.md
+  s_632fb21302e0f1::t_e92fd574c0ce0e 11-13,55
+docs/technical/13-testing.md
+  s_632fb21302e0f1::t_52af86865fd071 23
+src/framework/i18n/Translator.ts
+  s_632fb21302e0f1::t_d60c51837be6fc 17-21,36,88-89,91,97-98,129,145-152,163
+src/framework/main/config/JsonConfigStore.ts
+  s_632fb21302e0f1::t_72dc55addbc9a3 1,28-37,39-40,43-44,47-55
+src/framework/main/logging/AppLogger.ts
+  s_632fb21302e0f1::t_f08cf5f889c7ac 10-21,72-74,93-96,109-111,143-145,174-176,253-254,312,322-323,343-348,358-361,391-397
+src/framework/main/storage/FileBackupRotation.ts
+  s_632fb21302e0f1::t_77d9f888289674 1-83
+src/framework/main/storage/RetryingFileWriter.ts
+  s_632fb21302e0f1::t_9a69be7515ad5a 1-221
+src/framework/main/storage/WholeFileStorage.ts
+  s_632fb21302e0f1::t_f3614abbc27707 1-140
+src/framework/renderer/TranslationContext.tsx
+  s_632fb21302e0f1::t_c245b84c24e9b1 14-16,20-27,29,46,49-50,53,57
+src/framework/types/TranslationTypes.ts
+  s_632fb21302e0f1::t_11caad1da111c7 42-44
+src/framework/utils/DateUtils.ts
+  s_632fb21302e0f1::t_12aa2ed7fb106b 123,187-231
+src/framework/utils/Paging.ts
+  s_632fb21302e0f1::t_884d50363bc99c 1-50
+tests/framework/AppLogger.test.ts
+  s_632fb21302e0f1::t_26908892dd7010 401-481
+tests/framework/DateUtils.test.ts
+  s_632fb21302e0f1::t_5c32926d4ae28c 115-133
+tests/framework/FileBackupRotation.test.ts
+  s_632fb21302e0f1::t_29bb5b87a28fbc 1-110
+tests/framework/JsonConfigStore.test.ts
+  s_632fb21302e0f1::t_a8309e83b1f635 1-100
+tests/framework/Paging.test.ts
+  s_632fb21302e0f1::t_9705d4d587ab3b 1-51
+tests/framework/RetryingFileWriter.test.ts
+  s_632fb21302e0f1::t_bebe198c25c24f 1-221
+tests/framework/Translator.test.ts
+  s_632fb21302e0f1::t_74f78ef3835eb6 55-68,77-86
+tests/framework/WholeFileStorage.test.ts
+  s_632fb21302e0f1::t_157e8643454845 1-111
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "34a4db92324462c78966bb4613fb00fbe6b75253",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_632fb21302e0f1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "41e397fc-f81d-4895-b513-17a31147ae1f",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
