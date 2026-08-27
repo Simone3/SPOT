@@ -61,7 +61,7 @@ The backup folder is separate, and you choose it in Settings. SPOT writes copies
 
 ## Documentation
 
-[`DOCUMENTATION.md`](DOCUMENTATION.md) is the project reference: architecture, the persistence contract, the data model, the UI structure, and how to build and run SPOT from source.
+[`docs/technical/`](docs/technical/README.md) is the project reference: architecture, the persistence contract, the data model, the UI structure, and how to build and run SPOT from source. Start from its index.
 
 ## License
 

@@ -2,7 +2,7 @@
 
 Instructions for Claude Code when working in this repository.
 
-`DOCUMENTATION.md` is the detailed project reference: architecture, persistence contract, data model, UI structure, and testing scope. Read the relevant section of it before changing code in an area you have not touched yet in the current session. This file holds only the rules and commands; the reasoning behind them lives there.
+`docs/technical/` is the detailed project reference, split into numbered sections: architecture, repository map, build and run, the framework layer, configuration, persistence, the task write path, text and languages, tasks, the application menu, the interface, styling and testing. Start from [`docs/technical/README.md`](docs/technical/README.md) and read ONLY the sections relevant to the current task, before changing code in an area you have not touched yet in the current session. This file holds only the rules and commands; the reasoning behind them lives there.
 
 ## Project
 
@@ -29,13 +29,13 @@ npm test -- tests/logic/SomeFile.test.ts
 ## Hard Rules
 
 - Work only in this repository and only on the current branch.
-- Do NOT edit `TODO.md`. `README.md` is the landing page a user reads: what SPOT is and how to install it, and nothing else. Every technical detail belongs in `DOCUMENTATION.md`, which it links to.
-- Keep `CLAUDE.md` and `DOCUMENTATION.md` aligned and up to date. If either becomes stale or contradicts the project state, fix it as part of the task.
+- Do NOT edit `TODO.md`. `README.md` is the landing page a user reads: what SPOT is and how to install it, and nothing else. Every technical detail belongs in `docs/technical/`, which it links to.
+- Keep `CLAUDE.md` and `docs/technical/` aligned and up to date. If either becomes stale or contradicts the project state, fix it as part of the task. A new section takes the next number rather than renumbering the ones already written, and the index in `docs/technical/README.md` lists every file in the folder.
 - Do NOT introduce extra libraries unless you justify them briefly and they clearly reduce work or risk.
 - `package.json` dependencies must use exact versions. No `^` or `~`.
 - Build and test tooling may own the build: Vite bundles the renderer and Vitest runs the tests. Do NOT add an application framework such as Next.js, Remix or Astro: nothing may own routing, rendering or the component model. The application code stays plain React + TypeScript + CSS.
 - Leave ignored files and `.gitignore` patterns alone.
-- Do not add an external SQLite dependency. The implementation uses Electron's bundled `node:sqlite`; any exception must be documented in `DOCUMENTATION.md`.
+- Do not add an external SQLite dependency. The implementation uses Electron's bundled `node:sqlite`; any exception must be documented in `docs/technical/06-persistence.md`.
 - A packaged run always loads the renderer from the built `build/index.html` on disk. The development server URL is read from the environment, so it must never be honoured when `app.isPackaged`: anything able to set an environment variable would otherwise put a page of its own choosing behind the preload bridge. The strict Content-Security-Policy in `index.html` is relaxed for the development server's page only, never for the built one.
 - `src/framework` is reusable scaffolding meant to be lifted into another application as it is. It must NEVER import from `src/components`, `src/contexts`, `src/logic`, `src/main`, `src/types`, `src/utils`, or `src/config`. Anything it needs about SPOT is passed in through its options. ESLint enforces this.
 
@@ -77,10 +77,10 @@ npm run lint && npm run typecheck && npm test
 
 ## Workflow
 
-1. For a non-trivial change, read the relevant `DOCUMENTATION.md` section first.
+1. For a non-trivial change, read the relevant `docs/technical/` section first.
 2. Implement, following the conventions above.
 3. Run lint, typecheck, and tests. Fix what breaks.
-4. Update `DOCUMENTATION.md` if behavior, architecture, or repository structure changed.
+4. Update the relevant `docs/technical/` section if behavior, architecture, or repository structure changed.
 5. Commit. Every commit message starts with `Claude: ` followed by an imperative summary, e.g. `Claude: Drain storage commands on shutdown`.
 
 Commit when a task is complete. Do not amend or rewrite existing commits, and do not push unless asked.
