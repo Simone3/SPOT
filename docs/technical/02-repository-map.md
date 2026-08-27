@@ -50,7 +50,7 @@ The scaffolding that knows nothing about SPOT, described in [§4](04-framework.m
 
 | File | Purpose |
 | --- | --- |
-| `main/logging/AppLogger.ts` | `electron-log` behind a factory, plus the process-wide `appLogger`: newline-delimited JSON, size-based rolling into a caller-chosen number of archives, and writes whose outcome is deliberately not checked |
+| `main/logging/AppLogger.ts` | `electron-log` behind a factory, plus the process-wide `appLogger`: newline-delimited JSON, size-based rolling into a caller-chosen number of archives, a level that can be changed while the application runs, and writes whose outcome is deliberately not checked |
 | `main/logging/ProcessCrashHandlers.ts` | Logs the exceptions and rejected promises nothing else catches, and hands each one to the application to decide what to do about it |
 | `main/config/RuntimePaths.ts` | Lays out the application paths inside the Electron user-data folder from caller-supplied names, and gives development runs their own root |
 | `main/config/JsonConfigStore.ts` | Reads and writes a JSON configuration file whose shape is decided by a caller-supplied parser |
@@ -61,6 +61,9 @@ The scaffolding that knows nothing about SPOT, described in [§4](04-framework.m
 | `main/storage/BackupDirectory.ts` | Validates a backup folder and creates it when it is missing |
 | `main/storage/DatabaseBackup.ts` | Writes one rotated backup copy, as described in [§6.4](06-persistence.md#64-backups) |
 | `main/storage/BackupScheduler.ts` | Decides when a backup runs: after the changes have settled, once more at shutdown, and never twice at the same time |
+| `main/storage/WholeFileStorage.ts` | Reads a file whole and writes one whole and atomically, fingerprinting the bytes so a later write can tell whether anything else touched them. Unused by SPOT, which stores in SQLite |
+| `main/storage/RetryingFileWriter.ts` | One document file written whole with spaced retries, offering the bytes an external write displaced before they are overwritten. Unused by SPOT |
+| `main/storage/FileBackupRotation.ts` | A folder of whole-file copies kept to a count, oldest out first. Unused by SPOT, whose backups are `VACUUM INTO` copies |
 | `main/ipc/StorageCommandIpc.ts` | Serializes every storage operation on one chain and owns the shutdown protocol |
 | `main/ipc/BackupLocationIpc.ts` | Registers the backup folder IPC surface and opens the native folder dialog with caller-supplied channels and wording |
 | `main/window/WindowLoadTarget.ts` | Resolves the built renderer entry file from the application root |
@@ -69,14 +72,15 @@ The scaffolding that knows nothing about SPOT, described in [§4](04-framework.m
 | `renderer/StorageQueue.ts` | The renderer-side write queue: one command at a time and in order, bounded retries, and unwritable changes reported |
 | `renderer/TranslationContext.tsx` | The React provider and hooks for one bundle |
 | `renderer/ErrorBoundary.tsx` | Catches the render errors below it and asks the application what to show instead |
-| `i18n/Translator.ts` | A translator over one bundle: dotted keys, `{name}` interpolation, plural selection, number formatting and list joining |
+| `i18n/Translator.ts` | A translator over one bundle: dotted keys, `{name}` interpolation, plural and ordinal selection, number formatting the caller may take over, and list joining |
 | `i18n/LanguageResolution.ts` | Picks the language to run in out of the ones the application ships |
 | `types/TranslationTypes.ts` | The translation bundle shape and the typed key union derived from it |
 | `types/StorageTypes.ts` | The storage result envelope: statuses, failure reasons, load and command results, operational log entries |
 | `types/BackupTypes.ts` | The backup folder contract and the backup file naming shape |
 | `utils/ErrorUtils.ts` | Reads a message out of an unknown thrown value |
 | `utils/ManuallySortedList.ts` | Inserts, moves and renumbers items carrying a `sortPosition`, with the step supplied by the caller |
-| `utils/DateUtils.ts` | Day-granularity comparison and formatting, including the relative labels of [§9.6](09-tasks.md#96-dates) |
+| `utils/Paging.ts` | The arithmetic behind a paged table: page count, the rows one page holds, and which page a row sits on. Unused by SPOT |
+| `utils/DateUtils.ts` | Day-granularity comparison, arithmetic and formatting, including the relative labels of [§9.6](09-tasks.md#96-dates) |
 
 ## 2.4 `src` — the renderer and the shared code
 

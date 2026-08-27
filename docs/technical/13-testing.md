@@ -20,7 +20,7 @@ New logic in `src/logic`, `src/main/storage` and `src/framework` should come wit
 | `tests/components/` | Rendered React components | Anything, with the preload bridge stubbed on `window` |
 | `tests/testUtils/` | Shared factories, re-exported through `index.ts` | Anything |
 
-**The framework rule is the strict one.** A test under `tests/framework` that imports a SPOT module has broken the property the folder exists for: the framework and its tests are meant to be copied into another application together ([§4](04-framework.md)).
+**The framework rule is the strict one.** A test under `tests/framework` that imports a SPOT module has broken the property the folder exists for: the framework and its tests are meant to be copied into another application together, and `tests/framework` is byte-identical to Spiccioli's copy the same way `src/framework` is ([§4.1](04-framework.md#41-what-it-is)). Some of those tests therefore cover modules SPOT itself never calls, and they are run and kept passing all the same.
 
 ## 13.3 What is covered, and why
 

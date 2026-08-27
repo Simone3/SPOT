@@ -14,6 +14,11 @@ export interface CreateTranslatorOptions<TTranslations extends TranslationTree> 
 
 	// Called with any key no bundle could resolve, so an application can report it instead of failing silently
 	onMissingTranslation?: (key: string) => void;
+
+	// How a number interpolated into a sentence is written. Left undefined to write it the way the locale writes one, which is
+	// what an application with no formatting rules of its own wants; supplied by an application that fixes its own separators,
+	// so that a figure inside a sentence and the same figure beside it cannot disagree.
+	formatNumber?: (value: number) => string;
 }
 
 const PLACEHOLDER_PATTERN = /\{(\w+)\}/g;
@@ -28,6 +33,7 @@ const LIST_FORMAT: Intl.ListFormatOptions = {
 // Building an Intl object costs far more than using one, and these format once per rendered string, so they are memoized by locale.
 // Nothing can observe the difference, because every one of them is immutable and depends on the locale alone.
 const pluralRulesCache = new Map<string, Intl.PluralRules>();
+const ordinalRulesCache = new Map<string, Intl.PluralRules>();
 const listFormatCache = new Map<string, Intl.ListFormat>();
 const numberFormatCache = new Map<string, Intl.NumberFormat>();
 
@@ -79,13 +85,16 @@ export const createTranslator = <TTranslations extends TranslationTree>({
 	translations,
 	locale = language,
 	fallbackTranslations,
-	onMissingTranslation
+	onMissingTranslation,
+	formatNumber
 }: CreateTranslatorOptions<TTranslations>): Translator<TTranslations> => {
-	const formatNumber = (value: number): string => {
+	const formatNumberInLocale = (value: number): string => {
 		return getFromCache(numberFormatCache, locale, () => {
 			return new Intl.NumberFormat(locale);
 		}).format(value);
 	};
+
+	const writeNumber = formatNumber ?? formatNumberInLocale;
 
 	// A count of 1 is not "one" in every language, and no language has the same categories as the next, so the category is
 	// never guessed from the number: Intl is what knows which one a count falls into
@@ -117,7 +126,7 @@ export const createTranslator = <TTranslations extends TranslationTree>({
 				return placeholder;
 			}
 
-			return typeof value === 'number' ? formatNumber(value) : value;
+			return typeof value === 'number' ? writeNumber(value) : value;
 		});
 	};
 
@@ -133,6 +142,14 @@ export const createTranslator = <TTranslations extends TranslationTree>({
 		return interpolate(typeof leaf === 'string' ? leaf : selectPluralForm(leaf, parameters), parameters);
 	};
 
+	// Which suffix a position takes is not which form a count takes — English writes "one item" but "1st", "2nd" and "21st" — so
+	// a bundle spells the suffixes out and this is what picks between them
+	const selectOrdinal = (position: number): Intl.LDMLPluralRule => {
+		return getFromCache(ordinalRulesCache, locale, () => {
+			return new Intl.PluralRules(locale, { type: 'ordinal' });
+		}).select(position);
+	};
+
 	const formatList = (values: string[]): string => {
 		return getFromCache(listFormatCache, locale, () => {
 			return new Intl.ListFormat(locale, LIST_FORMAT);
@@ -143,6 +160,7 @@ export const createTranslator = <TTranslations extends TranslationTree>({
 		language,
 		locale,
 		t,
+		selectOrdinal,
 		formatList
 	};
 };

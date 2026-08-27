@@ -52,12 +52,36 @@ describe('Translator', () => {
 		expect(italian.t('group.withParameters', { directory: 'd', count: 1234 })).toContain('1234');
 	});
 
+	// An application that fixes its own separators writes them everywhere or nowhere: a sentence that fell back to the locale
+	// would state a figure one way and the column beside it another
+	test('writes an interpolated number the way the application asks, when it says how', () => {
+		const translator = createTranslator({
+			language: 'en',
+			translations: TRANSLATIONS,
+			formatNumber: (value) => {
+				return `<${value}>`;
+			}
+		});
+
+		expect(translator.t('group.withParameters', { directory: 'd', count: 12345 })).toBe('Folder "d" holds <12345> copies');
+	});
+
 	test('picks the plural category from the count', () => {
 		const translator = createEnglishTranslator();
 
 		expect(translator.t('tasks', { count: 1 })).toBe('1 task');
 		expect(translator.t('tasks', { count: 0 })).toBe('0 tasks');
 		expect(translator.t('tasks', { count: 7 })).toBe('7 tasks');
+	});
+
+	// "1st" and "21st" but "2nd", which is not how the same numbers behave as counts: one is the ordinal rule and the other the
+	// cardinal one, and only the first is what a position is written by
+	test('picks the ordinal category of a position, which is not its category as a count', () => {
+		const translator = createEnglishTranslator();
+
+		expect([ 1, 2, 3, 4, 11, 21, 2857 ].map((position) => {
+			return translator.selectOrdinal(position);
+		})).toEqual([ 'one', 'two', 'few', 'other', 'other', 'one', 'other' ]);
 	});
 
 	// A count of 1 is "one" in English and a count of 2 is not "few", so a hand-written rule would get this wrong for both

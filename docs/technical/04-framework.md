@@ -8,7 +8,9 @@
 
 `src/framework` holds the reusable scaffolding an Electron + React + SQLite desktop application needs regardless of what it stores: logging, crash handling, the database wrapper and its migrations, the storage core, rotated backups and their scheduling, the backup folder feature, the storage IPC chain and shutdown protocol, the renderer write queue, window safety, the translation machinery, a configuration store, and a few utilities. [§2.3](02-repository-map.md#23-srcframework--the-reusable-layer) lists every file in it.
 
-It is kept here, inside SPOT, rather than as a package: the intent is to lift the folder into a second application as it is, and only turn it into a library once the same code has actually served two applications. It has been lifted once already, into Spiccioli, and the two copies are meant to stay in step — a change that belongs in the framework is made in the framework, in both places, and never as a local edit that quietly makes one copy the application's.
+It is kept here, inside SPOT, rather than as a package: the intent is to lift the folder into a second application as it is, and only turn it into a library once the same code has actually served two applications. It has been lifted once already, into Spiccioli, and **the two copies are byte-identical** — that is the standard, not an aspiration. A change that belongs in the framework is made in the framework and then carried to the other copy, never as a local edit that quietly makes one copy the application's. Nothing in the folder names either application, which is what lets the two stay the same bytes.
+
+**Byte-identical means SPOT carries modules it does not use**, and that is the price rather than a mistake: `main/storage/WholeFileStorage.ts`, `main/storage/RetryingFileWriter.ts`, `main/storage/FileBackupRotation.ts` and `utils/Paging.ts` are there because Spiccioli stores its ledger as one JSON document, and Spiccioli in turn carries the SQLite modules SPOT stores tasks with. A module is dropped from the framework when neither application wants it, never because only one does. The same holds for capability inside a shared module: the log level `AppLogger` can be changed at runtime and the number formatting `i18n/Translator.ts` lets an application take over are Spiccioli's, and SPOT leaves both at their defaults.
 
 ## 4.2 The rule that keeps it liftable
 
@@ -50,7 +52,7 @@ SPOT binds to the framework in a thin layer of adapters, and those adapters are 
 The framework holds no module-level state. Everything is created by a factory, so a second application, or a test, can create its own instance.
 
 - **`appLogger`** is the deliberate exception: a process-wide handle the application initializes once at startup, which avoids threading a logger through every call.
-- **The memoization caches are the other**: `DateUtils` memoizes the start of the current day and the `Intl` formatters it builds, and `i18n/Translator.ts` memoizes the `Intl.PluralRules`, `Intl.NumberFormat` and `Intl.ListFormat` objects it builds, keyed by locale. Those caches are pure, so two applications sharing them could not observe each other through them, and the day cache invalidates itself when the day changes.
+- **The memoization caches are the other**: `DateUtils` memoizes the start of the current day and the `Intl` formatters it builds, and `i18n/Translator.ts` memoizes the `Intl.PluralRules` (cardinal and ordinal), `Intl.NumberFormat` and `Intl.ListFormat` objects it builds, keyed by locale. Those caches are pure, so two applications sharing them could not observe each other through them, and the day cache invalidates itself when the day changes.
 
 ## 4.5 Adding to it
 
