@@ -29,8 +29,10 @@ npm test -- tests/logic/SomeFile.test.ts
 ## Hard Rules
 
 - Work only in this repository and only on the current branch.
-- Do NOT edit `TODO.md`. `README.md` is the landing page a user reads: what SPOT is and how to install it, and nothing else. Every technical detail belongs in `docs/technical/`, which it links to.
-- Keep `CLAUDE.md` and `docs/technical/` aligned and up to date. If either becomes stale or contradicts the project state, fix it as part of the task. A new section takes the next number rather than renumbering the ones already written, and the index in `docs/technical/README.md` lists every file in the folder.
+- Do NOT edit `TODO.md`.
+- `README.md` is the landing page a user reads: what SPOT is and how to install it, and nothing else. Every technical detail belongs in `docs/technical/`, which it links to.
+- Keep `CLAUDE.md` and `docs/technical/` from going stale: fix either one when it contradicts the state of the project. A new section takes the next number rather than renumbering the ones already written, and the index in `docs/technical/README.md` lists every file in the folder.
+- `docs/technical/` is where a decision is recorded, and settling one does not earn a `CLAUDE.md` entry — add a rule here only when it would change what gets written *before* the relevant `docs/technical/` section would be read. Anything scoped to a single area belongs in that section alone.
 - Do NOT introduce extra libraries unless you justify them briefly and they clearly reduce work or risk.
 - `package.json` dependencies must use exact versions. No `^` or `~`.
 - Build and test tooling may own the build: Vite bundles the renderer and Vitest runs the tests. Do NOT add an application framework such as Next.js, Remix or Astro: nothing may own routing, rendering or the component model. The application code stays plain React + TypeScript + CSS.
@@ -38,6 +40,7 @@ npm test -- tests/logic/SomeFile.test.ts
 - Do not add an external SQLite dependency. The implementation uses Electron's bundled `node:sqlite`; any exception must be documented in `docs/technical/06-persistence.md`.
 - A packaged run always loads the renderer from the built `build/index.html` on disk. The development server URL is read from the environment, so it must never be honoured when `app.isPackaged`: anything able to set an environment variable would otherwise put a page of its own choosing behind the preload bridge. The strict Content-Security-Policy in `index.html` is relaxed for the development server's page only, never for the built one.
 - `src/framework` is reusable scaffolding meant to be lifted into another application as it is. It must NEVER import from `src/components`, `src/contexts`, `src/logic`, `src/main`, `src/types`, `src/utils`, or `src/config`. Anything it needs about SPOT is passed in through its options. ESLint enforces this.
+- `src/framework` has been lifted once already, into Spiccioli, and **the two copies are byte-identical**. A change that belongs in the framework is made in the framework and carried to the other copy in the same breath, never as a local edit. Nothing in the folder names either application, and each copy therefore carries modules only the other one uses: that is the price of the rule and not a mistake to tidy up ([§4.1](docs/technical/04-framework.md#41-what-it-is)).
 
 ## Code Conventions
 
@@ -48,20 +51,12 @@ npm test -- tests/logic/SomeFile.test.ts
 - Anything the user can click is a real control and not a clickable `div`, so the keyboard reaches it and activates it. Every focusable control shows the one focus ring `src/index.css` applies to `:focus-visible`, and never a focus style of its own: a control that has to draw its own must override that rule and say why. Give the ring room where something would clip it instead of dropping it.
 - Every string the user can read belongs in the translation bundle at `src/i18n/lang/en.ts`, never inline in a component. Components reach it through `useTranslator()`; pure logic and the Electron main process take a translator, or just the labels they need, as a parameter. Developer-facing strings (log messages, `console` output, errors only a bug can raise) stay in the module that owns them and stay in English.
 - Use a plural translation entry rather than comparing a count against 1, and interpolate values through `{name}` placeholders rather than string concatenation, so number formatting and plural rules follow the language.
+- SPOT ships English only and offers no language selector. The translation layer is what keeps a second language from being a rewrite, so it stays even though it resolves to one bundle today.
 - `src/framework` takes SPOT's configuration values and its user-facing wording as parameters instead of reading `AppConfig` or owning text, the way `DateUtils` takes its date labels and `BackupDirectory` takes its refusal messages. It holds no module-level state, so everything is created by a factory; the process-wide `appLogger` and the pure `Intl` memoization caches are the only exceptions. Put new code there only when it would be just as useful to a different application, and in SPOT otherwise: moving it later is easy, untangling it is not.
 - Match the existing code style exactly, including spacing and newline conventions. Read a neighboring file before writing a new one.
-- Preserve the storage command names: `task.create`, `task.update`, `task.delete`, `tasks.updateMany`.
-- The task state audit only reads. It reports what the task state and the database disagree on and never writes either one over the other. It must also never run while the pending-changes buffer or the write queue still holds something. What it finds has to reach the operational log through `spotDiagnostics` and the notice has to name that file: an installed SPOT has no developer console, and a drift nobody can look into afterwards is not reported at all. `src/logic/Diagnostics.ts` is the only renderer module that touches that bridge, and the main process, not the renderer, decides what each entry says and how large it may get.
-- Database failures are user-facing: surface task-save feedback on write failure and reconcile state. Operational-log failures are best-effort and ignored by React when SQLite succeeds. Backup failures are user-facing too, but as a soft notice, and must never be routed through the database error path: the tasks are already saved locally.
-- The live `spot.sqlite` database always lives in the Electron user-data folder and never moves. Configuration and log files stay there too, and development runs keep their own root folder there. The user-selected folder only receives rotated write-only backup copies.
-- Never place the live database in a folder a synchronization client controls, and never copy it with a plain file copy: build backups with `VACUUM INTO` locally, then publish them with an atomic rename.
-- Only one SPOT process may run at a time. `Main.ts` turns away the Windows installer's own launches and then takes the single instance lock before anything else, and nothing may assume a second process could share the database.
 - Failures that reach the top of the main process must leave a trace and, once the language is resolved, reach the user. A render error must not empty the window, and must reach the operational log through `spotDiagnostics`: the renderer console is developer-facing and an installed SPOT cannot open it. Neither path may be removed without replacing it: a silent failure in a released build is unreportable.
 - `productName` in `package.json` and `packagerConfig.appBundleId` in `forge.config.js` are fixed now that SPOT is installed: the user-data folder holding the live database is named after `productName`, and macOS keeps permissions and window state under the bundle identifier. The makers must keep naming the same executable.
 - A release is a `v<version>` tag, and `.github/workflows/release.yml` is what builds its installers. The installers of the three platforms cannot be built on one machine, so nothing may assume a local `npm run make` produces a whole release. The `version` field of `package.json` is what the installers and the About section carry, so it is raised in the commit the tag is put on.
-- The application menu must always offer the Edit submenu, because on macOS the standard editing shortcuts are its accelerators. An installed SPOT must offer no reload or developer tools entry; only a development run keeps the menu Electron installs by itself.
-- Where SPOT draws the menu bar itself, the native menu stays installed and only its bar is hidden: the accelerators belong to its Electron roles, and removing it takes every shortcut with it. The drawn bar therefore repeats the shortcut text and must keep saying what those roles actually listen for. Its entries never take the focus, because the editing ones act on the field the user was typing in.
-- Anything the renderer can ask the main process to do through the menu bridge is a name from `SPOT_MENU_COMMANDS` and nothing else. An unknown name is ignored, never guessed at.
 
 ## Testing
 
@@ -81,6 +76,6 @@ npm run lint && npm run typecheck && npm test
 2. Implement, following the conventions above.
 3. Run lint, typecheck, and tests. Fix what breaks.
 4. Update the relevant `docs/technical/` section if behavior, architecture, or repository structure changed.
-5. Commit. Every commit message starts with `Claude: ` followed by an imperative summary, e.g. `Claude: Drain storage commands on shutdown`.
+5. Commit, with an imperative summary as the first line, e.g. `Drain storage commands on shutdown`.
 
 Commit when a task is complete. Do not amend or rewrite existing commits, and do not push unless asked.
