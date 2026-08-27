@@ -1,0 +1,26 @@
+CLAUDE.md
+  s_632fb21302e0f1::t_65a23dfd23a0f4 32-35,43,54,79
+docs/technical/07-task-write-path.md
+  s_632fb21302e0f1::t_bbddb49ac8b825 61
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "74ebd84693d73cce1f3bd44883787c7175165b60",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_632fb21302e0f1": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "41e397fc-f81d-4895-b513-17a31147ae1f",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
