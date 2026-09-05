@@ -1,0 +1,50 @@
+docs/technical/08-text-and-languages.md
+  s_8e4434d2f20cba::t_4ea160fb070b4d 33-34,50
+docs/technical/09-tasks.md
+  s_8e4434d2f20cba::t_da42328a72618e 87,94-95,102-104
+docs/technical/13-testing.md
+  s_8e4434d2f20cba::t_1a989929bf65a1 45
+src/components/tasks/DomainOptions.ts
+  s_8e4434d2f20cba::t_d83787cfbf1e64 1-64
+src/components/tasks/TaskChips.tsx
+  s_8e4434d2f20cba::t_e85bf28e799ee0 9,61-62,70-73,95,105,156,176
+src/components/tasks/TaskFilters.tsx
+  s_8e4434d2f20cba::t_90684d6d6ba193 10,70,80,90-92,102
+src/contexts/TasksContext.tsx
+  s_8e4434d2f20cba::t_5dac0e66df817b 96,177,377,395,418
+src/logic/DomainsLogic.ts
+  s_8e4434d2f20cba::t_af859a339cf625 20,23-28,36-37,45-57,61,68,70,74,78,85-87,92,95-96,99,101,105,112,114,118,131,140-141,264-265,267,273-277,280-281,312-315,326,328,369,373,383,398,400,408,412,416,421,430-431,440-441,452-453,462,464,468
+src/logic/TaskStateLogic.ts
+  s_8e4434d2f20cba::t_b1cd2d51192c40 7,32,35,40,42,48,60,62,66,74,89,91,95,104,124,126,130,139,151,153
+src/types/DomainTypes.ts
+  s_8e4434d2f20cba::t_1e59538a9cee1d 1-6,10
+tests/components/DomainOptions.test.ts
+  s_8e4434d2f20cba::t_78268d88a4f153 1-60
+tests/components/TaskFilters.test.tsx
+  s_8e4434d2f20cba::t_dffc8151730bd1 16,26,36,46,58
+tests/logic/DomainsLogic.test.ts
+  s_8e4434d2f20cba::t_c1baa3434e3544 1,46,48,84,89,93,112,114,125,153,157,162-164,179,194,206-207,226,231,233,235,240,243,245,252,257,260,265,272,281-282
+tests/testUtils/TaskTestFactory.ts
+  s_8e4434d2f20cba::t_c03ccb79e1149b 1,35,42,46,62
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "3cff823c23c5a65e0030ecc8555c76de4869de93",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_8e4434d2f20cba": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cb43349a-ab3e-4b9d-a9be-c8b99284bc5f",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
