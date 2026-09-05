@@ -84,12 +84,14 @@ The state helpers clone top-level containers and lists before updating them. **T
 {
 	key,
 	value,
-	label,
+	labelKind,
 	color,
 	persistent,
 	count
 }
 ```
+
+`labelKind` is how the entry is worded, not the wording itself: `VALUE` for an entry named after the task value it was built from, and `PRIORITY`, `NO_OWNER`, `NO_DUE_DATE` or `NO_TAGS` for the ones the tasks never spell out. **`DomainsLogic` therefore holds no text and takes no translator**, and `src/components/tasks/DomainOptions.ts` turns entries into the `{ key, value, label, color }` options the select inputs take, wording each kind from the bundle. `TaskFilters` passes it a formatter as well, because a due date is stored as `2026-05-10` and read as `Today` ([§8.3](08-text-and-languages.md#83-reaching-the-translator)).
 
 **The two sections answer two different questions, which is why an entry can be in one and not the other.**
 
@@ -97,7 +99,9 @@ The state helpers clone top-level containers and lists before updating them. **T
 
 **A form entry is offered whether or not a task uses it**, because it is what the user picks from while editing: all four priorities, and the `Me` owner. Those are the `persistent` entries, never removed however far their count falls. The rest of the form lists are the owners and tags found across active and completed tasks alike.
 
-**The entries the tasks do not name themselves** are the priorities, `Me`, `None` and `Untagged`. Their labels are translated while their values are not: the priorities are stored as `URGENT`, `HIGH`, `NORMAL` and `LOW`, and the other three are the empty string, the "no value" convention the whole filter path uses ([§9.3](#93-filtering)). Because a filter entry is built the moment a task calls for one and thrown away when the last such task stops calling for it, that wording cannot be read once at startup: every function that updates the domains takes a `DomainLabels` argument, and `TasksContext` builds it from the translator. The domain logic itself stays pure and free of translation. Every other entry is named after the task value it was built from, so it is never translated.
+**The entries the tasks do not name themselves** are the priorities, `Me`, `None` and `Untagged`. They are worded by their kind while their values are not: the priorities are stored as `URGENT`, `HIGH`, `NORMAL` and `LOW`, and the other three are the empty string, the "no value" convention the whole filter path uses ([§9.3](#93-filtering)).
+
+**Whether an empty value is an entry at all is a section rule, and it is passed as one.** `updateDomainsForTaskInSection()` takes `offersEmptyValueDomains`: true for the filter section, where a task with nothing there is a task the user filters for, and false for the form section, whose lists are the values to type into an input. It only decides whether such an entry is created — the form owners always offer `Me`, and that entry is counted whatever the flag says.
 
 A tag the user has started typing but not finished is an empty value that stands for nothing, so both the domains and the filter read past it: it is not a tag of its own, and it does not stop a task from counting as untagged.
 

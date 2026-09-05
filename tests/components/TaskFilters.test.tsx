@@ -13,7 +13,7 @@ const domains: FilterDomains = {
 		{
 			key: 'high',
 			value: 'HIGH',
-			label: 'High',
+			labelKind: 'PRIORITY',
 			color: 'var(--colors-priority-high)',
 			persistent: true,
 			count: 1
@@ -23,7 +23,7 @@ const domains: FilterDomains = {
 		{
 			key: 'alice',
 			value: 'Alice',
-			label: 'Alice',
+			labelKind: 'VALUE',
 			color: undefined,
 			persistent: false,
 			count: 1
@@ -33,7 +33,7 @@ const domains: FilterDomains = {
 		{
 			key: 'today',
 			value: todayValue,
-			label: todayValue,
+			labelKind: 'VALUE',
 			color: undefined,
 			persistent: false,
 			count: 1
@@ -43,7 +43,7 @@ const domains: FilterDomains = {
 		{
 			key: 'work',
 			value: 'work',
-			label: 'work',
+			labelKind: 'VALUE',
 			color: undefined,
 			persistent: false,
 			count: 1
@@ -55,7 +55,7 @@ const domains: FilterDomains = {
 const untaggedDomain: DomainEntry = {
 	key: 'no-tags',
 	value: '',
-	label: 'Untagged',
+	labelKind: 'NO_TAGS',
 	color: undefined,
 	persistent: false,
 	count: 1

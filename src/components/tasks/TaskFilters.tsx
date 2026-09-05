@@ -7,6 +7,7 @@ import { Header } from 'src/components/common/Header';
 import { TASKS_CONFIG } from 'src/config/AppConfig';
 import { ResetIcon } from 'src/components/icons/ResetIcon';
 import { DateUtils, type SmartDateOptions } from 'src/framework/utils/DateUtils';
+import { toDomainOptions } from 'src/components/tasks/DomainOptions';
 import { useTranslator } from 'src/i18n/TranslationContext';
 import type { SpotTranslator } from 'src/i18n/Translations';
 import type { FilterDomains } from 'src/types/DomainTypes';
@@ -66,7 +67,7 @@ const TaskFilters = ({ domains, filters, onFilterChange, onResetDefaultFilters }
 						onChange={(value) => {
 							return onFilterChange({ priorities: value as TaskPriorityValue[] });
 						}}
-						options={domains.priorities}/>
+						options={toDomainOptions(domains.priorities, translator)}/>
 				}
 				{domains.owners.length > 0 &&
 					<ButtonsSelect
@@ -76,7 +77,7 @@ const TaskFilters = ({ domains, filters, onFilterChange, onResetDefaultFilters }
 						onChange={(value) => {
 							return onFilterChange({ owners: value as string[] });
 						}}
-						options={domains.owners}/>
+						options={toDomainOptions(domains.owners, translator)}/>
 				}
 				{domains.dueDates.length > 0 &&
 					<ButtonsSelect
@@ -86,10 +87,9 @@ const TaskFilters = ({ domains, filters, onFilterChange, onResetDefaultFilters }
 						onChange={(value) => {
 							return onFilterChange({ dueDates: value as string[] });
 						}}
-						options={domains.dueDates.map((dueDateDomain) => {
-							return { ...dueDateDomain, label: !dueDateDomain.value ? dueDateDomain.label : DateUtils.toSmartString(DateUtils.fromStandardYearMonthDay(dueDateDomain.value), dueDateLabelOptions) };
-						})
-						}/>
+						options={toDomainOptions(domains.dueDates, translator, (dueDate) => {
+							return DateUtils.toSmartString(DateUtils.fromStandardYearMonthDay(dueDate), dueDateLabelOptions);
+						})}/>
 				}
 				{domains.tags.length > 0 &&
 					<ButtonsSelect
@@ -99,7 +99,7 @@ const TaskFilters = ({ domains, filters, onFilterChange, onResetDefaultFilters }
 						onChange={(value) => {
 							return onFilterChange({ tags: value as string[] });
 						}}
-						options={domains.tags}/>
+						options={toDomainOptions(domains.tags, translator)}/>
 				}
 				<Checkbox
 					label={t('filters.showCompleted')}

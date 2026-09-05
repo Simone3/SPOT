@@ -7,8 +7,6 @@ import { auditTaskState, createTaskStateAuditMessage } from 'src/logic/TaskState
 import { getTaskStorageQueueState, isTaskStorageQueueIdle, sendTaskStorageCommand, setTaskStorageQueueTranslator, subscribeToTaskStorageQueue } from 'src/logic/TaskStorageQueue';
 import { findTaskById } from 'src/logic/TasksLogic';
 import { useTranslator } from 'src/i18n/TranslationContext';
-import type { SpotTranslator } from 'src/i18n/Translations';
-import type { DomainLabels } from 'src/logic/DomainsLogic';
 import { getInitialTaskState, addTaskToTaskState, refreshVisibleTasksInTaskState, deleteTaskFromTaskState, changeFiltersInTaskState, loadTasksIntoTaskState, resetFiltersTaskState, updateTaskInTaskState, sortTasksByImportanceInTaskState, moveActiveTaskInTaskState, type TaskStateContainer } from 'src/logic/TaskStateLogic';
 import type { PersistedTaskChange, Task, TaskChange, TasksContainer } from 'src/types/TaskTypes';
 import type { TaskFilterChange } from 'src/types/FilterTypes';
@@ -46,19 +44,6 @@ export const TasksContext = createContext<TasksContextValue | undefined>(undefin
 
 type TasksContextProviderProps = {
 	children: ReactNode;
-};
-
-// The domain entries that are always there are worded once per language, then handed to the pure state logic, which stays free of translation itself
-const createDomainLabels = (translator: SpotTranslator): DomainLabels => {
-	return {
-		urgent: translator.t('tasks.priorities.urgent'),
-		high: translator.t('tasks.priorities.high'),
-		normal: translator.t('tasks.priorities.normal'),
-		low: translator.t('tasks.priorities.low'),
-		noOwner: translator.t('tasks.domains.noOwner'),
-		noDueDate: translator.t('tasks.domains.noDueDate'),
-		noTags: translator.t('tasks.domains.noTags')
-	};
 };
 
 const getErrorMessage = (error: unknown): string => {
@@ -108,9 +93,7 @@ const createSortPositionUpdates = (
 
 export const TasksContextProvider = ({ children }: TasksContextProviderProps): ReactElement => {
 	const translator = useTranslator();
-	const [ taskState, setTaskState ] = useState(() => {
-		return getInitialTaskState(createDomainLabels(translator));
-	});
+	const [ taskState, setTaskState ] = useState(getInitialTaskState);
 	const [ taskStartupState, setTaskStartupState ] = useState<TaskStartupState>({ state: 'loading' });
 	const [ taskStorageWarning, setTaskStorageWarning ] = useState<string | undefined>();
 	const [ taskStorageStatus, setTaskStorageStatus ] = useState<StorageStatus | undefined>();
@@ -191,7 +174,7 @@ export const TasksContextProvider = ({ children }: TasksContextProviderProps): R
 				}
 
 				if(loadTasksResult.ok) {
-					commitTaskState(loadTasksIntoTaskState(taskStateRef.current, loadTasksResult.tasks, createDomainLabels(translatorRef.current)));
+					commitTaskState(loadTasksIntoTaskState(taskStateRef.current, loadTasksResult.tasks));
 					setTaskStartupState({ state: 'loaded' });
 					setTaskStorageStatus(loadTasksResult.status);
 				}
@@ -391,7 +374,7 @@ export const TasksContextProvider = ({ children }: TasksContextProviderProps): R
 
 	const onAddNewTask = useCallback((): void => {
 		applyOptimisticTaskCommand((currentTaskState) => {
-			const result = addTaskToTaskState(currentTaskState, createDomainLabels(translatorRef.current));
+			const result = addTaskToTaskState(currentTaskState);
 
 			return {
 				taskState: result.taskState,
@@ -409,7 +392,7 @@ export const TasksContextProvider = ({ children }: TasksContextProviderProps): R
 		clearPendingTaskChanges(task.id);
 		applyOptimisticTaskCommand((currentTaskState) => {
 			return {
-				taskState: deleteTaskFromTaskState(currentTaskState, task, createDomainLabels(translatorRef.current)),
+				taskState: deleteTaskFromTaskState(currentTaskState, task),
 				command: {
 					command: 'task.delete',
 					payload: {
@@ -432,7 +415,7 @@ export const TasksContextProvider = ({ children }: TasksContextProviderProps): R
 				};
 			}
 
-			const result = updateTaskInTaskState(currentTaskState, oldTask, changedValues, createDomainLabels(translatorRef.current));
+			const result = updateTaskInTaskState(currentTaskState, oldTask, changedValues);
 			const change = createPersistedTaskChange(oldTask, result.task);
 
 			return {

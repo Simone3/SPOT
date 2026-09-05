@@ -1,4 +1,4 @@
-import type { DomainEntry, FormDomains } from 'src/types/DomainTypes';
+import type { DomainEntry, DomainLabelKind, FormDomains } from 'src/types/DomainTypes';
 import type { Task, TaskPriorityValue } from 'src/types/TaskTypes';
 
 let nextTaskId = 1;
@@ -32,18 +32,18 @@ const makePriorityDomain = (priority: TaskPriorityValue): DomainEntry => {
 	return {
 		key: priority.toLowerCase(),
 		value: priority,
-		label: priority[0] + priority.slice(1).toLowerCase(),
+		labelKind: 'PRIORITY',
 		color: `var(--colors-priority-${priority.toLowerCase()})`,
 		persistent: true,
 		count: 0
 	};
 };
 
-const makeDomain = (value: string, label = value): DomainEntry => {
+const makeDomain = (value: string, labelKind: DomainLabelKind = 'VALUE'): DomainEntry => {
 	return {
 		key: value || 'empty',
 		value,
-		label,
+		labelKind,
 		color: undefined,
 		persistent: value === '',
 		count: 0
@@ -59,7 +59,7 @@ export const makeFormDomains = (): FormDomains => {
 			makePriorityDomain('LOW')
 		],
 		owners: [
-			makeDomain('', 'Me'),
+			makeDomain('', 'NO_OWNER'),
 			makeDomain('Alice'),
 			makeDomain('Bob')
 		],

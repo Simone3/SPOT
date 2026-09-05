@@ -2,7 +2,6 @@ import { render, type RenderOptions, type RenderResult } from '@testing-library/
 import type { ReactElement } from 'react';
 import { TranslationProvider } from 'src/i18n/TranslationContext';
 import { createSpotTranslator, type SpotTranslator } from 'src/i18n/Translations';
-import type { DomainLabels } from 'src/logic/DomainsLogic';
 
 /**
  * A translator in the language the assertions are written in.
@@ -11,24 +10,6 @@ import type { DomainLabels } from 'src/logic/DomainsLogic';
  */
 export const makeTranslator = (): SpotTranslator => {
 	return createSpotTranslator('en');
-};
-
-/**
- * The labels the pure domain logic needs, in English.
- * @returns Domain labels for the entries the tasks themselves do not name.
- */
-export const makeDomainLabels = (): DomainLabels => {
-	const translator = makeTranslator();
-
-	return {
-		urgent: translator.t('tasks.priorities.urgent'),
-		high: translator.t('tasks.priorities.high'),
-		normal: translator.t('tasks.priorities.normal'),
-		low: translator.t('tasks.priorities.low'),
-		noOwner: translator.t('tasks.domains.noOwner'),
-		noDueDate: translator.t('tasks.domains.noDueDate'),
-		noTags: translator.t('tasks.domains.noTags')
-	};
 };
 
 /**

@@ -1,4 +1,4 @@
-import { makeDomainLabels, makeTask } from '../testUtils';
+import { makeTask } from '../testUtils';
 import { addDomainsForTasks, getInitialDomains, removeDomainsForTask, updateDomainsForTask, updateFiltersOnDomainsChange } from 'src/logic/DomainsLogic';
 import { getInitialFilters } from 'src/logic/FiltersLogic';
 import type { DomainEntry } from 'src/types/DomainTypes';
@@ -43,9 +43,9 @@ describe('DomainsLogic', () => {
 			active: [ activeAlice, activeNoDueDate ],
 			completed: [ completedBob ]
 		};
-		const domainsContainer = getInitialDomains(makeDomainLabels());
+		const domainsContainer = getInitialDomains();
 
-		addDomainsForTasks(domainsContainer, tasksContainer, makeDomainLabels());
+		addDomainsForTasks(domainsContainer, tasksContainer);
 
 		expect(domainByValue(domainsContainer.filters.owners, 'Alice')?.count).toBe(2);
 		expect(domainByValue(domainsContainer.filters.owners, 'Bob')).toBeUndefined();
@@ -81,16 +81,16 @@ describe('DomainsLogic', () => {
 			owner: 'Bob',
 			tags: [ 'personal' ]
 		};
-		const domainsContainer = getInitialDomains(makeDomainLabels());
+		const domainsContainer = getInitialDomains();
 
 		addDomainsForTasks(domainsContainer, {
 			active: [ oldTask, otherAliceTask ],
 			completed: [ completedBobTask ]
-		}, makeDomainLabels());
+		});
 		updateDomainsForTask(domainsContainer, oldTask, newTask, {
 			owner: 'Bob',
 			tags: [ 'personal' ]
-		}, makeDomainLabels());
+		});
 
 		expect(domainByValue(domainsContainer.filters.owners, 'Alice')?.count).toBe(1);
 		expect(domainByValue(domainsContainer.filters.owners, 'Bob')?.count).toBe(1);
@@ -109,9 +109,9 @@ describe('DomainsLogic', () => {
 			],
 			completed: []
 		};
-		const domainsContainer = getInitialDomains(makeDomainLabels());
+		const domainsContainer = getInitialDomains();
 
-		addDomainsForTasks(domainsContainer, tasksContainer, makeDomainLabels());
+		addDomainsForTasks(domainsContainer, tasksContainer);
 
 		expect(domainValues(domainsContainer.filters.owners)).toEqual([ '', 'Alice', 'Zoe' ]);
 		expect(domainValues(domainsContainer.filters.tags)).toEqual([ 'errands', 'home', 'work' ]);
@@ -122,7 +122,7 @@ describe('DomainsLogic', () => {
 	});
 
 	test('offers a filter entry only while an active task matches it', () => {
-		const domainsContainer = getInitialDomains(makeDomainLabels());
+		const domainsContainer = getInitialDomains();
 
 		// Nothing is offered before a task calls for it, whatever the entry would have been worded from
 		expect(domainsContainer.filters.priorities).toEqual([]);
@@ -150,18 +150,18 @@ describe('DomainsLogic', () => {
 		addDomainsForTasks(domainsContainer, {
 			active: [ highTask, barePriorityTask ],
 			completed: []
-		}, makeDomainLabels());
+		});
 
 		// Only the two priorities in use are offered, in the order they mean rather than the one their values sort in
 		expect(domainValues(domainsContainer.filters.priorities)).toEqual([ 'URGENT', 'HIGH' ]);
-		expect(domainByValue(domainsContainer.filters.priorities, 'HIGH')?.label).toBe('High');
+		expect(domainByValue(domainsContainer.filters.priorities, 'HIGH')?.labelKind).toBe('PRIORITY');
 		expect(domainByValue(domainsContainer.filters.priorities, 'HIGH')?.color).toBe('var(--colors-priority-high)');
 
 		// The entries standing for "no value" are worded, counted and first, exactly like the untagged one
 		expect(domainValues(domainsContainer.filters.owners)).toEqual([ '', 'Alice' ]);
-		expect(domainByValue(domainsContainer.filters.owners, '')?.label).toBe('Me');
-		expect(domainByValue(domainsContainer.filters.dueDates, '')?.label).toBe('None');
-		expect(domainByValue(domainsContainer.filters.tags, '')?.label).toBe('Untagged');
+		expect(domainByValue(domainsContainer.filters.owners, '')?.labelKind).toBe('NO_OWNER');
+		expect(domainByValue(domainsContainer.filters.dueDates, '')?.labelKind).toBe('NO_DUE_DATE');
+		expect(domainByValue(domainsContainer.filters.tags, '')?.labelKind).toBe('NO_TAGS');
 
 		// Giving the bare task everything the other one has takes all four entries away with it
 		const filledTask = {
@@ -176,7 +176,7 @@ describe('DomainsLogic', () => {
 			owner: 'Alice',
 			dueDate: '2026-05-10',
 			tags: [ 'work' ]
-		}, makeDomainLabels());
+		});
 
 		expect(domainValues(domainsContainer.filters.priorities)).toEqual([ 'HIGH' ]);
 		expect(domainValues(domainsContainer.filters.owners)).toEqual([ 'Alice' ]);
@@ -191,7 +191,7 @@ describe('DomainsLogic', () => {
 			dueDate: '2026-05-10',
 			tags: [ 'work' ]
 		});
-		const domainsContainer = getInitialDomains(makeDomainLabels());
+		const domainsContainer = getInitialDomains();
 		const filters: TaskFilters = {
 			...getInitialFilters(),
 			owners: [ 'Alice', 'Missing' ],
@@ -203,8 +203,8 @@ describe('DomainsLogic', () => {
 		addDomainsForTasks(domainsContainer, {
 			active: [ task ],
 			completed: []
-		}, makeDomainLabels());
-		removeDomainsForTask(domainsContainer, task, makeDomainLabels());
+		});
+		removeDomainsForTask(domainsContainer, task);
 		updateFiltersOnDomainsChange(domainsContainer.filters, filters);
 
 		expect(filters.owners).toEqual([]);
@@ -223,53 +223,53 @@ describe('DomainsLogic', () => {
 			tags: [],
 			completionDate: new Date('2026-01-01')
 		});
-		const domainsContainer = getInitialDomains(makeDomainLabels());
+		const domainsContainer = getInitialDomains();
 
 		addDomainsForTasks(domainsContainer, {
 			active: [ untaggedTask, taggedTask ],
 			completed: [ untaggedCompletedTask ]
-		}, makeDomainLabels());
+		});
 
-		// The untagged entry stands first, is worded rather than named after a task value, and never reaches the tags the form suggests
+		// The untagged entry stands first, is worded by its kind rather than by a task value, and never reaches the tags the form suggests
 		expect(domainValues(domainsContainer.filters.tags)).toEqual([ '', 'work' ]);
-		expect(domainByValue(domainsContainer.filters.tags, '')?.label).toBe('Untagged');
+		expect(domainByValue(domainsContainer.filters.tags, '')?.labelKind).toBe('NO_TAGS');
 		expect(domainByValue(domainsContainer.filters.tags, '')?.count).toBe(1);
 		expect(domainByValue(domainsContainer.form.tags, '')).toBeUndefined();
 
 		// Tagging the last untagged active task takes the entry away, and untagging a task brings it back
-		updateDomainsForTask(domainsContainer, untaggedTask, { ...untaggedTask, tags: [ 'home' ] }, { tags: [ 'home' ] }, makeDomainLabels());
+		updateDomainsForTask(domainsContainer, untaggedTask, { ...untaggedTask, tags: [ 'home' ] }, { tags: [ 'home' ] });
 		expect(domainByValue(domainsContainer.filters.tags, '')).toBeUndefined();
 
-		updateDomainsForTask(domainsContainer, taggedTask, { ...taggedTask, tags: [] }, { tags: [] }, makeDomainLabels());
+		updateDomainsForTask(domainsContainer, taggedTask, { ...taggedTask, tags: [] }, { tags: [] });
 		expect(domainValues(domainsContainer.filters.tags)).toEqual([ '', 'home' ]);
-		expect(domainByValue(domainsContainer.filters.tags, '')?.label).toBe('Untagged');
+		expect(domainByValue(domainsContainer.filters.tags, '')?.labelKind).toBe('NO_TAGS');
 	});
 
 	test('leaves the untagged entry alone for the empty tag a user is still typing', () => {
 		const untaggedTask = makeTask({ tags: [] });
 		const taggedTask = makeTask({ tags: [ 'work' ] });
 		const typingTask = { ...taggedTask, tags: [ 'work', '' ] };
-		const domainsContainer = getInitialDomains(makeDomainLabels());
+		const domainsContainer = getInitialDomains();
 
 		addDomainsForTasks(domainsContainer, {
 			active: [ untaggedTask, taggedTask ],
 			completed: []
-		}, makeDomainLabels());
+		});
 
 		// The half-typed tag is neither a tag of its own nor a reason to count the task as untagged
-		updateDomainsForTask(domainsContainer, taggedTask, typingTask, { tags: [ 'work', '' ] }, makeDomainLabels());
+		updateDomainsForTask(domainsContainer, taggedTask, typingTask, { tags: [ 'work', '' ] });
 		expect(domainValues(domainsContainer.filters.tags)).toEqual([ '', 'work' ]);
 		expect(domainByValue(domainsContainer.filters.tags, '')?.count).toBe(1);
 
 		// Dropping it again leaves the untagged entry standing for the task that really has no tag
-		updateDomainsForTask(domainsContainer, typingTask, taggedTask, { tags: [ 'work' ] }, makeDomainLabels());
+		updateDomainsForTask(domainsContainer, typingTask, taggedTask, { tags: [ 'work' ] });
 		expect(domainValues(domainsContainer.filters.tags)).toEqual([ '', 'work' ]);
 		expect(domainByValue(domainsContainer.filters.tags, '')?.count).toBe(1);
 	});
 
 	test('cleans the selected untagged filter when the last untagged active task is tagged', () => {
 		const untaggedTask = makeTask({ tags: [] });
-		const domainsContainer = getInitialDomains(makeDomainLabels());
+		const domainsContainer = getInitialDomains();
 		const filters: TaskFilters = {
 			...getInitialFilters(),
 			tags: [ '' ]
@@ -278,8 +278,8 @@ describe('DomainsLogic', () => {
 		addDomainsForTasks(domainsContainer, {
 			active: [ untaggedTask ],
 			completed: []
-		}, makeDomainLabels());
-		updateDomainsForTask(domainsContainer, untaggedTask, { ...untaggedTask, tags: [ 'work' ] }, { tags: [ 'work' ] }, makeDomainLabels());
+		});
+		updateDomainsForTask(domainsContainer, untaggedTask, { ...untaggedTask, tags: [ 'work' ] }, { tags: [ 'work' ] });
 		updateFiltersOnDomainsChange(domainsContainer.filters, filters);
 
 		expect(filters.tags).toEqual([]);

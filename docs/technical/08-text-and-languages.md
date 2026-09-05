@@ -30,7 +30,8 @@ Every word SPOT shows the user lives in a translation bundle under `src/i18n/lan
 ## 8.3 Reaching the translator
 
 - **Components** call `useTranslator()`. `TranslationProvider` is mounted at the very top of `src/index.tsx`, above the two state contexts, because both of them word messages too.
-- **Pure logic** takes what it needs as a parameter, the same way `DateUtils` takes its date labels. `createTaskStateAuditMessage()` takes the translator; `getInitialDomains()` takes only the six labels it needs, as a `DomainLabels` object, so the domain logic stays free of translation itself.
+- **Pure logic** takes what it needs as a parameter, the same way `DateUtils` takes its date labels: `createTaskStateAuditMessage()` takes the translator.
+- **Logic that does not produce a message says which wording applies and lets the components read it.** `src/logic/DomainsLogic.ts` builds entries the user reads — the priorities, and the ones standing for no owner, no due date or no tag at all — but it never holds their text: each entry carries a `labelKind`, and `src/components/tasks/DomainOptions.ts` turns that into the label a select input shows ([§9.4](09-tasks.md#94-domains)). Passing the wording in would have worked too, but a domain entry is built and thrown away as tasks change, so the logic would have had to be handed a bundle on every task edit to word an entry it does not read itself.
 - **The renderer write queue** is created before anything mounts and words its failures whenever one happens, so it is told the language instead of asking for it: `setTaskStorageQueueTranslator()` is called from `TasksContext` when the translator changes.
 - **The Electron main process** creates its own translator in `src/main/Main.ts` from `app.getLocale()`, resolved through the same `resolveSpotLanguage()` the renderer uses on `navigator.languages`. It words the native folder dialog, the message a command gets once shutdown started refusing them, the message a command gets after the database is closed, the reasons a backup folder cannot be used, and the two application menu titles that have no Electron role to take a title from. **This is why `src/i18n/Translations.ts` and the bundles must stay free of React and Electron**, exactly like `AppConfig`.
 
@@ -46,7 +47,7 @@ Every word SPOT shows the user lives in a translation bundle under `src/i18n/lan
 
 `TranslationProvider` holds the language in state and rebuilds the translator when it changes, so everything below it re-renders in the new language. `useLanguage()` exposes the current language and the setter a picker would use. **Nothing calls the setter yet.**
 
-Two things are deliberately not re-worded when the language changes: messages already produced by the write queue, which describe something that happened at the time, and the labels of domain entries that came from what the user typed, which were never translated to begin with.
+One thing is deliberately not re-worded when the language changes: messages already produced by the write queue, which describe something that happened at the time. Everything else follows the new language on the next render, domain entries included, because they carry the kind of wording they need rather than the wording itself.
 
 ---
 

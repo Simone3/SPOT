@@ -6,6 +6,7 @@ import { TagsIcon } from 'src/components/icons/TagsIcon';
 import { CalendarIcon } from 'src/components/icons/CalendarIcon';
 import { OwnerIcon } from 'src/components/icons/OwnerIcon';
 import { FreeSelectInput } from 'src/components/inputs/FreeSelectInput';
+import { toDomainOptions } from 'src/components/tasks/DomainOptions';
 import { DatePicker } from 'src/components/inputs/DatePicker';
 import { WarningIcon } from 'src/components/icons/WarningIcon';
 import type { TaskChangeFlushMode } from 'src/logic/PendingTaskChanges';
@@ -57,13 +58,18 @@ const getTagsWithTrailingInput = (tags: string[]): string[] => {
 };
 
 const TaskChips = ({ inputDomains, task, setOwner, setDueDate, setTags, flushTaskChanges, disabled }: TaskChipsProps): ReactElement => {
-	const { t } = useTranslator();
+	const translator = useTranslator();
+	const { t } = translator;
 	const {
 		state,
 		owner,
 		dueDate,
 		tags
 	} = task;
+
+	// The inputs suggest what the other tasks already use. The domain logic knows no language, so its entries are worded here.
+	const ownerOptions = toDomainOptions(inputDomains.owners, translator);
+	const tagOptions = toDomainOptions(inputDomains.tags, translator);
 
 	// Each chip gives its input an id of its own, so that the chip icon can label the input and clicking the icon focuses it
 	const inputIdPrefix = useId();
@@ -86,7 +92,7 @@ const TaskChips = ({ inputDomains, task, setOwner, setDueDate, setTags, flushTas
 				}}
 				onFinishEditing={(value) => {
 					let changedValue = value ? value.trim() : value;
-					changedValue = checkOptionCapitalization(changedValue, inputDomains.owners);
+					changedValue = checkOptionCapitalization(changedValue, ownerOptions);
 					if(changedValue !== value) {
 						// Update value for trimming/capitalization and then flush
 						setOwner(changedValue, 'immediate');
@@ -96,7 +102,7 @@ const TaskChips = ({ inputDomains, task, setOwner, setDueDate, setTags, flushTas
 						flushTaskChanges();
 					}
 				}}
-				options={inputDomains.owners}
+				options={ownerOptions}
 				disabled={disabled}
 			/>
 		</Chip>
@@ -147,7 +153,7 @@ const TaskChips = ({ inputDomains, task, setOwner, setDueDate, setTags, flushTas
 					onFinishEditing={(value) => {
 						const changedValue = value ? value.trim() : value;
 						if(changedValue) {
-							const normalizedValue = checkOptionCapitalization(changedValue, inputDomains.tags);
+							const normalizedValue = checkOptionCapitalization(changedValue, tagOptions);
 							if(normalizedValue !== value) {
 								// Update value for trimming/capitalization and then flush
 								setTags((prevTags) => {
@@ -167,7 +173,7 @@ const TaskChips = ({ inputDomains, task, setOwner, setDueDate, setTags, flushTas
 							}, 'immediate');
 						}
 					}}
-					options={inputDomains.tags}
+					options={tagOptions}
 					disabled={disabled}
 				/>
 			</Chip>
