@@ -1,0 +1,34 @@
+src/components/storage/BackupSettings.css
+  h_08e8a5184a38af 22
+src/i18n/lang/en.ts
+  h_08e8a5184a38af 199,228,230-231
+docs/technical/06-persistence.md
+  s_e557eb738324a7::t_59837911280bb0 21
+docs/technical/11-interface.md
+  s_e557eb738324a7::t_eb9040b1c7fde8 62-63
+src/components/storage/BackupSettings.tsx
+  s_e557eb738324a7::t_c37beea919bfff 69,72,266
+tests/components/BackupSettings.test.tsx
+  s_e557eb738324a7::t_f4c0a84c8e60b0 124,134,136,213,229
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "3c9a18c17ea9bec477db94bde9c4912da0f4737e",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_e557eb738324a7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "12af7c0a-f1ba-47b5-9fbb-6e53c424fc21",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
