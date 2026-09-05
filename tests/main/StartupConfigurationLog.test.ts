@@ -50,7 +50,8 @@ const createOptions = (overrides: Partial<LogStartupConfigurationOptions> = {}):
 			defaultDirectory: runtimePaths.defaultBackupDirectory,
 			databaseDirectory: runtimePaths.databaseDirectory,
 			databasePath: runtimePaths.databasePath,
-			isDevelopment: runtimePaths.isDevelopment
+			isDevelopment: runtimePaths.isDevelopment,
+			retainedBackupCount: 10
 		},
 		loadTarget: {
 			type: 'file',
@@ -123,7 +124,11 @@ describe('StartupConfigurationLog', () => {
 		expect(readLogEntries(logDirectory)[0]).toMatchObject({
 			settings: {
 				backupDelayAfterChangeMs: BACKUP_CONFIG.delayAfterChangeMs,
-				retainedBackupCount: BACKUP_CONFIG.retainedBackupCount,
+				backupArchiveIntervalMs: BACKUP_CONFIG.archiveIntervalMs,
+
+				// The one backup setting the user chooses, so the entry reports what this run resolved rather than the default
+				retainedBackupCount: 10,
+
 				logMaximumFileSizeBytes: LOGGING_CONFIG.maximumFileSizeBytes,
 				logRetainedArchiveCount: LOGGING_CONFIG.retainedArchiveCount,
 				auditEnabled: AUDIT_CONFIG.enabled,

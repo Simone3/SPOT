@@ -7,7 +7,7 @@ import { makeTranslator } from '../testUtils';
 import type { BackupLocationManager } from 'src/framework/main/config/BackupLocationManager';
 import { validateBackupDirectory } from 'src/framework/main/storage/BackupDirectory';
 import { registerBackupLocationIpcHandlers, SPOT_BACKUP_LOCATION_IPC_CHANNELS } from 'src/main/ipc/BackupLocationIpc';
-import type { BackupLocation, ChooseBackupDirectoryResult, SetBackupDirectoryResult } from 'src/types/BackupLocationTypes';
+import type { BackupLocation, BackupSettingsResult, ChooseBackupDirectoryResult } from 'src/types/BackupLocationTypes';
 
 type RegisteredIpcHandler = (event: IpcMainInvokeEvent, ...args: unknown[]) => unknown;
 
@@ -26,7 +26,8 @@ const createLocation = (directory: string): BackupLocation => {
 		defaultDirectory: '/tmp/spot-user-data/backups',
 		databaseDirectory: '/tmp/spot-user-data/storage',
 		databasePath: '/tmp/spot-user-data/storage/spot.sqlite',
-		isDevelopment: false
+		isDevelopment: false,
+		retainedBackupCount: 10
 	};
 };
 
@@ -48,7 +49,7 @@ const createMockIpcMain = (): {
 };
 
 const createMockManager = (location: BackupLocation): BackupLocationManager => {
-	const setResult: SetBackupDirectoryResult = {
+	const setResult: BackupSettingsResult = {
 		ok: true,
 		location
 	};
@@ -60,10 +61,16 @@ const createMockManager = (location: BackupLocation): BackupLocationManager => {
 		getLocation: vi.fn(() => {
 			return location;
 		}),
+		getRetainedBackupCount: vi.fn(() => {
+			return location.retainedBackupCount;
+		}),
 		setBackupDirectory: vi.fn(async() => {
 			return setResult;
 		}),
 		setDefaultBackupDirectory: vi.fn(async() => {
+			return setResult;
+		}),
+		setRetainedBackupCount: vi.fn(async() => {
 			return setResult;
 		}),
 
@@ -119,13 +126,17 @@ describe('BackupLocationIpc', () => {
 			SPOT_BACKUP_LOCATION_IPC_CHANNELS.getBackupLocation,
 			SPOT_BACKUP_LOCATION_IPC_CHANNELS.chooseBackupDirectory,
 			SPOT_BACKUP_LOCATION_IPC_CHANNELS.setBackupDirectory,
-			SPOT_BACKUP_LOCATION_IPC_CHANNELS.setDefaultBackupDirectory
+			SPOT_BACKUP_LOCATION_IPC_CHANNELS.setDefaultBackupDirectory,
+			SPOT_BACKUP_LOCATION_IPC_CHANNELS.setRetainedBackupCount
 		]);
 		expect(handlers.get(SPOT_BACKUP_LOCATION_IPC_CHANNELS.getBackupLocation)!(event)).toBe(location);
 		await handlers.get(SPOT_BACKUP_LOCATION_IPC_CHANNELS.setBackupDirectory)!(event, '/tmp/other-folder');
 		await handlers.get(SPOT_BACKUP_LOCATION_IPC_CHANNELS.setDefaultBackupDirectory)!(event);
+		await handlers.get(SPOT_BACKUP_LOCATION_IPC_CHANNELS.setRetainedBackupCount)!(event, 4);
+
 		expect(backupLocationManager.setBackupDirectory).toHaveBeenCalledWith('/tmp/other-folder');
 		expect(backupLocationManager.setDefaultBackupDirectory).toHaveBeenCalledTimes(1);
+		expect(backupLocationManager.setRetainedBackupCount).toHaveBeenCalledWith(4);
 	});
 
 	test('reports a cancelled folder dialog without changing anything', async() => {

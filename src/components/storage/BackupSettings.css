@@ -64,3 +64,14 @@
 	background-color: var(--colors-danger-background-muted);
 	color: var(--colors-danger-text);
 }
+
+.backup-settings-count {
+	display: flex;
+	align-items: flex-end;
+	gap: 16px;
+	margin-top: 12px;
+}
+
+.backup-settings-count .backup-settings-description {
+	padding-bottom: 7px;
+}

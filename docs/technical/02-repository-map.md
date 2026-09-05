@@ -28,7 +28,7 @@ Every non-generated file group in the repository and what it is for. Generated f
 | `Main.ts` | The composition root, described step by step in [§1.4](01-architecture.md#14-what-the-main-process-does-at-startup) |
 | `preload/Preload.ts` | Exposes the five narrow renderer APIs through Electron's context bridge, and nothing else |
 | `config/SpotRuntimePaths.ts` | Names the SPOT folders and files and resolves them through the framework runtime paths |
-| `config/SpotConfigStore.ts` | Owns the SPOT configuration file shape and exposes the backup folder to the framework backup location manager |
+| `config/SpotConfigStore.ts` | Owns the SPOT configuration file shape and exposes the backup folder and the number of copies kept to the framework backup location manager, merging them onto what the file already holds |
 | `config/StartupConfigurationLog.ts` | Writes the one entry describing the run the rest of the operational log belongs to: version, runtime, language, folders, and the settings that decide how the run behaves |
 | `ipc/TaskStorageIpc.ts` | Names the SPOT storage IPC channels and hands the task operations to the framework storage command controller |
 | `ipc/BackupLocationIpc.ts` | Names the SPOT backup folder channels and the wording of the native folder dialog |
@@ -54,13 +54,13 @@ The scaffolding that knows nothing about SPOT, described in [§4](04-framework.m
 | `main/logging/ProcessCrashHandlers.ts` | Logs the exceptions and rejected promises nothing else catches, and hands each one to the application to decide what to do about it |
 | `main/config/RuntimePaths.ts` | Lays out the application paths inside the Electron user-data folder from caller-supplied names, and gives development runs their own root |
 | `main/config/JsonConfigStore.ts` | Reads and writes a JSON configuration file whose shape is decided by a caller-supplied parser |
-| `main/config/BackupLocationManager.ts` | Owns the backup folder: startup resolution, validation, the development override, the fallback to the default folder, and persistence |
+| `main/config/BackupLocationManager.ts` | Owns the backup folder and how many copies it keeps: startup resolution, validation, the development override, the fallback to the default folder, holding a count to its range, and persistence |
 | `main/storage/AppDatabase.ts` | Opens a SQLite database in write-ahead logging mode, applies caller-supplied migrations, refuses a newer schema, and wraps queries including the backup `VACUUM INTO` |
 | `main/storage/DatabaseStorage.ts` | The generic storage core: one lazy connection, record loading, command execution with error classification, operational log writing, backups and shutdown preparation |
 | `main/storage/InvalidChangeError.ts` | Marks and recognizes a change the database will never accept, so it is reported as refused instead of retried |
 | `main/storage/BackupDirectory.ts` | Validates a backup folder and creates it when it is missing |
-| `main/storage/DatabaseBackup.ts` | Writes one rotated backup copy, as described in [§6.4](06-persistence.md#64-backups) |
-| `main/storage/BackupScheduler.ts` | Decides when a backup runs: after the changes have settled, once more at shutdown, and never twice at the same time |
+| `main/storage/DatabaseBackup.ts` | Writes the copy kept up to date and the dated copies taken from it, as described in [§6.4](06-persistence.md#64-backups) |
+| `main/storage/BackupScheduler.ts` | Decides when each kind of copy is written: the up-to-date one after the changes have settled, a dated one once the folder is old enough for another, once more at shutdown, and never twice at the same time |
 | `main/storage/WholeFileStorage.ts` | Reads a file whole and writes one whole and atomically, fingerprinting the bytes so a later write can tell whether anything else touched them. Unused by SPOT, which stores in SQLite |
 | `main/storage/RetryingFileWriter.ts` | One document file written whole with spaced retries, offering the bytes an external write displaced before they are overwritten. Unused by SPOT |
 | `main/storage/FileBackupRotation.ts` | A folder of whole-file copies kept to a count, oldest out first. Unused by SPOT, whose backups are `VACUUM INTO` copies |
@@ -76,7 +76,7 @@ The scaffolding that knows nothing about SPOT, described in [§4](04-framework.m
 | `i18n/LanguageResolution.ts` | Picks the language to run in out of the ones the application ships |
 | `types/TranslationTypes.ts` | The translation bundle shape and the typed key union derived from it |
 | `types/StorageTypes.ts` | The storage result envelope: statuses, failure reasons, load and command results, operational log entries |
-| `types/BackupTypes.ts` | The backup folder contract and the backup file naming shape |
+| `types/BackupTypes.ts` | The backup folder and retention contract, and the backup file naming shape |
 | `utils/ErrorUtils.ts` | Reads a message out of an unknown thrown value |
 | `utils/ManuallySortedList.ts` | Inserts, moves and renumbers items carrying a `sortPosition`, with the step supplied by the caller |
 | `utils/Paging.ts` | The arithmetic behind a paged table: page count, the rows one page holds, and which page a row sits on. Unused by SPOT |
@@ -97,7 +97,7 @@ The scaffolding that knows nothing about SPOT, described in [§4](04-framework.m
 | `components/icons` | Local React icon components |
 | `components/tasks` | The task-management UI ([§11.2](11-interface.md#112-the-task-page)) |
 | `components/settings` | The Settings route page and the About section that names the running version |
-| `components/storage` | The Settings section that explains where the database lives and lets the user choose the backup folder |
+| `components/storage` | The Settings section that explains where the database lives and lets the user choose the backup folder and how many copies it keeps |
 | `components/notes`, `components/tags` | Placeholder route pages |
 | `contexts` | The app-level React contexts: the backup location and the task state |
 | `logic` | State and domain logic — see below |

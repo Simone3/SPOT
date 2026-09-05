@@ -13,7 +13,8 @@ const backupLocation: BackupLocation = {
 	defaultDirectory: '/tmp/spot-user-data/backups',
 	databaseDirectory: '/tmp/spot-user-data/storage',
 	databasePath: '/tmp/spot-user-data/storage/spot.sqlite',
-	isDevelopment: false
+	isDevelopment: false,
+	retainedBackupCount: 10
 };
 
 const setWindowApi = (name: 'spotBackupLocation' | 'spotStorage', value: unknown): void => {
@@ -52,6 +53,15 @@ const createMockBackupLocationApi = (
 				location: {
 					...backupLocation,
 					directory: backupLocation.defaultDirectory
+				}
+			};
+		}),
+		setRetainedBackupCount: vi.fn(async(retainedBackupCount: number) => {
+			return {
+				ok: true as const,
+				location: {
+					...backupLocation,
+					retainedBackupCount
 				}
 			};
 		}),
@@ -96,7 +106,7 @@ describe('BackupSettings', () => {
 		setWindowApi('spotStorage', createMockStorageApi({
 			state: 'ok',
 			directory: backupLocation.directory,
-			lastBackupAt: '2026-06-06T10:00:00.000Z'
+			latestCopyAt: '2026-06-06T10:00:00.000Z'
 		}));
 
 		renderWithTranslations(
@@ -123,7 +133,7 @@ describe('BackupSettings', () => {
 
 		const notice = await screen.findByText(/it does not keep two computers in sync/);
 
-		expect(notice).toHaveTextContent('close SPOT and copy one of these files over the database above');
+		expect(notice).toHaveTextContent('close SPOT and copy the copy you want over the database above');
 		expect(notice).toHaveTextContent('replaces every change made after that copy was written');
 	});
 
@@ -168,5 +178,86 @@ describe('BackupSettings', () => {
 		expect(backupLocationApi.setBackupDirectory).toHaveBeenCalledWith('/tmp/spot-new-backups');
 		expect(await screen.findByText('Backup copies are now written to "/tmp/spot-new-backups".')).toBeInTheDocument();
 		expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+	});
+
+	// The two kinds of copy answer two different questions, so a folder that is up to date but has not reached back in days says so
+	test('reports the up-to-date copy and the newest dated one separately', async() => {
+		setWindowApi('spotBackupLocation', createMockBackupLocationApi());
+		setWindowApi('spotStorage', createMockStorageApi({
+			state: 'ok',
+			directory: backupLocation.directory,
+			latestCopyAt: '2026-06-06T10:00:00.000Z',
+			lastArchiveAt: '2026-06-04T08:00:00.000Z'
+		}));
+
+		renderWithTranslations(
+			<BackupLocationContextProvider>
+				<BackupSettings/>
+			</BackupLocationContextProvider>
+		);
+
+		expect(await screen.findByText(/The up-to-date copy was written on/)).toBeInTheDocument();
+		expect(screen.getByText(/The most recent dated copy was written on/)).toBeInTheDocument();
+	});
+
+	// A bare number says nothing about what it gets the user, and the two kinds of copy are what it is actually spent on
+	test('says what the chosen number of copies means', async() => {
+		setWindowApi('spotBackupLocation', createMockBackupLocationApi());
+		setWindowApi('spotStorage', createMockStorageApi(undefined));
+
+		renderWithTranslations(
+			<BackupLocationContextProvider>
+				<BackupSettings/>
+			</BackupLocationContextProvider>
+		);
+
+		expect(await screen.findByText(/the 9 most recent dated copies are kept beside it/)).toBeInTheDocument();
+		expect(screen.getByLabelText('Number of copies')).toHaveValue(10);
+	});
+
+	test('changes how many copies are kept', async() => {
+		const backupLocationApi = createMockBackupLocationApi();
+		setWindowApi('spotBackupLocation', backupLocationApi);
+		setWindowApi('spotStorage', createMockStorageApi(undefined));
+
+		renderWithTranslations(
+			<BackupLocationContextProvider>
+				<BackupSettings/>
+			</BackupLocationContextProvider>
+		);
+
+		// The field is only usable once the settings have arrived from the main process
+		await screen.findByText(/the 9 most recent dated copies are kept beside it/);
+
+		const countField = screen.getByLabelText('Number of copies');
+
+		await act(async() => {
+			fireEvent.change(countField, { target: { value: '4' } });
+			fireEvent.blur(countField);
+		});
+
+		expect(backupLocationApi.setRetainedBackupCount).toHaveBeenCalledWith(4);
+		expect(await screen.findByText('SPOT now keeps 4 backup copies.')).toBeInTheDocument();
+	});
+
+	// Keeping none is a real choice, and the panel has to say that the tasks themselves are not the thing being given up
+	test('says that no copies at all are written when none are kept', async() => {
+		setWindowApi('spotBackupLocation', createMockBackupLocationApi({
+			getBackupLocation: vi.fn(async() => {
+				return {
+					...backupLocation,
+					retainedBackupCount: 0
+				};
+			})
+		}));
+		setWindowApi('spotStorage', createMockStorageApi(undefined));
+
+		renderWithTranslations(
+			<BackupLocationContextProvider>
+				<BackupSettings/>
+			</BackupLocationContextProvider>
+		);
+
+		expect(await screen.findByText(/No backup copies are written at all/)).toBeInTheDocument();
 	});
 });

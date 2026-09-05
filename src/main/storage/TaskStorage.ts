@@ -37,7 +37,10 @@ export interface TaskStorage {
 	getDatabaseDirectory: () => string;
 	getBackupDirectory: () => string;
 	setBackupDirectory: (backupDirectory: string) => void;
-	createBackup: () => Promise<BackupResult>;
+	setRetainedBackupCount: (retainedBackupCount: number) => void;
+	syncLatestBackup: () => Promise<BackupResult>;
+	archiveLatestBackup: () => Promise<BackupResult>;
+	getLastArchiveTime: () => Promise<Date | undefined>;
 	prepareForShutdown: () => Promise<void>;
 }
 
@@ -57,7 +60,7 @@ export const createTaskStorage = ({ databaseDirectory, backupDirectory, translat
 		databaseFileName: STORAGE_CONFIG.databaseFileName,
 		backupDirectory,
 		backupNaming: BACKUP_CONFIG,
-		retainedBackupCount: BACKUP_CONFIG.retainedBackupCount,
+		retainedBackupCount: BACKUP_CONFIG.defaultRetainedBackupCount,
 		openDatabase: () => {
 			return openSpotDatabase({
 				storageDirectory: databaseDirectory,
@@ -101,7 +104,10 @@ export const createTaskStorage = ({ databaseDirectory, backupDirectory, translat
 		getDatabaseDirectory: storage.getDatabaseDirectory,
 		getBackupDirectory: storage.getBackupDirectory,
 		setBackupDirectory: storage.setBackupDirectory,
-		createBackup: storage.createBackup,
+		setRetainedBackupCount: storage.setRetainedBackupCount,
+		syncLatestBackup: storage.syncLatestBackup,
+		archiveLatestBackup: storage.archiveLatestBackup,
+		getLastArchiveTime: storage.getLastArchiveTime,
 		prepareForShutdown: storage.prepareForShutdown
 	};
 };

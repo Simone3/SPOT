@@ -47,6 +47,9 @@ const spotBackupLocation: SpotBackupLocationApi = {
 	},
 	setDefaultBackupDirectory: () => {
 		return ipcRenderer.invoke(SPOT_BACKUP_LOCATION_IPC_CHANNELS.setDefaultBackupDirectory);
+	},
+	setRetainedBackupCount: (retainedBackupCount) => {
+		return ipcRenderer.invoke(SPOT_BACKUP_LOCATION_IPC_CHANNELS.setRetainedBackupCount, retainedBackupCount);
 	}
 };
 

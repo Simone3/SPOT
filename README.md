@@ -2,7 +2,7 @@
 
 **S**imple **P**lanner & **O**rganizer **T**ool: a small desktop task manager for macOS, Windows, and Linux, meant to manage tasks in a simple and direct way.
 
-No account, no server, no synchronization service. Your tasks live in one local database on your own machine, and SPOT keeps rotated backup copies in a folder you choose.
+No account, no server, no synchronization service. Your tasks live in one local database on your own machine, and SPOT keeps backup copies in a folder you choose.
 
 ## Features
 
@@ -11,7 +11,7 @@ No account, no server, no synchronization service. Your tasks live in one local 
 - Filters on text, priority, owner, due date, and tags, in a pane you can give as much or as little of the window as you want.
 - Completed tasks kept out of the way, and shown again on request.
 - Every edit saved as you make it, with a few seconds to change your mind about completing a task.
-- Automatic backups, written on a rotation to a folder you pick. That folder is safe to point at a synchronized one.
+- Automatic backups, written to a folder you pick: one copy kept up to date, plus dated ones to go back to. That folder is safe to point at a synchronized one.
 
 ## Install
 
@@ -57,7 +57,7 @@ sudo dnf install ./spot-*.x86_64.rpm
 
 Tasks are stored in a single SQLite database inside SPOT's own application folder, and they are always read from and written to that one file. The Settings page shows you its full path.
 
-The backup folder is separate, and you choose it in Settings. SPOT writes copies of the database there on a rotation and never reads them back, so pointing it at a cloud-synchronized folder is a safe way to keep your tasks off the machine as well. Restoring one is a manual step, and Settings tells you how.
+The backup folder is separate, and you choose it in Settings, along with how many copies to keep. SPOT keeps one copy there up to date with your latest changes and adds a dated one every so often, so you can go back to how things were days ago as well as minutes ago. It never reads these copies back, so pointing the folder at a cloud-synchronized one is a safe way to keep your tasks off the machine too. Restoring one is a manual step, and Settings tells you how.
 
 ## Documentation
 

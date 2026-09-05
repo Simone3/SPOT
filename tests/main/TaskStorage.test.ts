@@ -4,7 +4,7 @@ import path from 'node:path';
 import { initializeSpotTestLogger, makeTranslator } from '../testUtils';
 import { BACKUP_CONFIG, LOGGING_CONFIG, STORAGE_CONFIG } from 'src/config/AppConfig';
 import { appLogger, resetAppLoggerForTests, type CreateAppLoggerBackend, type CreateAppLoggerOptions } from 'src/framework/main/logging/AppLogger';
-import { isBackupFileName } from 'src/framework/main/storage/DatabaseBackup';
+import { isArchiveBackupFileName, latestBackupExists } from 'src/framework/main/storage/DatabaseBackup';
 import { openSpotDatabase } from 'src/main/storage/SpotDatabase';
 import { TASK_INSERT_COLUMN_NAMES, TASK_SELECT_COLUMN_NAMES, createImmutableTaskFieldChangeMessage, createMissingRequiredTaskFieldMessage, taskRowToColumnValues, taskToTaskRow, type TaskRow } from 'src/main/storage/TaskRowMapping';
 import { createTaskStorage, type CreateTaskStorageOptions, type OperationalLogEntry, type TaskStorage, type TaskStorageCommand } from 'src/main/storage/TaskStorage';
@@ -232,7 +232,7 @@ describe('TaskStorage', () => {
 			}
 		});
 
-		const result = await taskStorage.createBackup();
+		const result = await taskStorage.syncLatestBackup();
 
 		expect(result).toMatchObject({
 			ok: true,
@@ -241,9 +241,12 @@ describe('TaskStorage', () => {
 				directory: backupDirectory
 			}
 		});
+		expect(await latestBackupExists(BACKUP_CONFIG, backupDirectory)).toBe(true);
+
+		// Only the copy that is kept up to date is written until a dated one is due
 		expect(readdirSync(backupDirectory).filter((fileName) => {
-			return isBackupFileName(BACKUP_CONFIG, fileName);
-		})).toHaveLength(1);
+			return isArchiveBackupFileName(BACKUP_CONFIG, fileName);
+		})).toHaveLength(0);
 
 		// The backup has to be a database SPOT could open again, not just a file with the right name
 		const restoredDirectory = makeTrackedStorageDirectory();
@@ -266,7 +269,7 @@ describe('TaskStorage', () => {
 		rmSync(backupDirectory, { recursive: true, force: true });
 		writeFileSync(backupDirectory, 'not a folder', 'utf8');
 
-		const result = await taskStorage.createBackup();
+		const result = await taskStorage.syncLatestBackup();
 
 		expect(result.ok).toBe(false);
 		expect(result.status.state).toBe('failed');

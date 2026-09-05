@@ -61,9 +61,33 @@ export const BACKUP_CONFIG = {
 	fileExtension: '.sqlite',
 	partialFileExtension: '.part',
 	temporaryFileName: 'spot-backup.tmp.sqlite',
+
+	// The one copy that is kept up to date, overwritten in place. It carries the prefix and the extension of a dated copy but not a
+	// timestamp, which is what keeps the rotation of the dated copies from ever counting it as one of them.
+	latestFileName: 'spot-backup-latest.sqlite',
+
+	// How long the changes have to have been quiet before the up-to-date copy is written again
 	delayAfterChangeMs: 120000,
-	retainedBackupCount: 5,
-	shutdownTimeoutMs: 5000
+
+	// How much older than the newest dated copy the folder has to be before another one is taken. It is measured against the copies
+	// in the folder rather than against the moment the application started, so a session that is opened and closed all day cannot
+	// spend the whole rotation on one day of work.
+	archiveIntervalMs: 12 * 60 * 60 * 1000,
+
+	// How often that is checked. A single twelve-hour timer would be the obvious way to do it and the wrong one: a machine that
+	// slept through the deadline fires it late and at an hour nothing chose, while a short check simply notices on the next tick.
+	archiveCheckIntervalMs: 15 * 60 * 1000,
+
+	// How many copies the folder keeps, counting the up-to-date one: 0 writes nothing at all, 1 writes only the up-to-date copy,
+	// and anything more adds that many dated copies less one. The user chooses this in Settings, so these are the default and the
+	// range the choice is held to rather than the value itself.
+	defaultRetainedBackupCount: 10,
+	minimumRetainedBackupCount: 0,
+	maximumRetainedBackupCount: 50,
+
+	// The quit runs the copies that are due, which is a snapshot, a publish and possibly a second copy and a prune, so the budget
+	// covers all of them on a slow destination. A folder that stopped answering costs the quit this much and nothing more.
+	shutdownTimeoutMs: 15000
 } as const;
 
 export const APP_CONFIG_FILE = {

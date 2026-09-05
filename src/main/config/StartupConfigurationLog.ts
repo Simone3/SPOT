@@ -25,7 +25,8 @@ export interface LogStartupConfigurationOptions {
 	versions: StartupRuntimeVersions;
 	runtimePaths: SpotRuntimePaths;
 
-	// The folder this run will actually back up to, which is only known once the location manager resolved it
+	// The folder this run will actually back up to and how many copies it will keep, which are only known once the backup settings
+	// manager resolved them
 	backupLocation: BackupLocation;
 
 	loadTarget: WindowLoadTarget;
@@ -84,7 +85,12 @@ export const logStartupConfiguration = ({
 			maximumWriteAttempts: STORAGE_CONFIG.maximumWriteAttempts,
 			taskFlushDelayMs: TASKS_CONFIG.flushDelayMs,
 			backupDelayAfterChangeMs: BACKUP_CONFIG.delayAfterChangeMs,
-			retainedBackupCount: BACKUP_CONFIG.retainedBackupCount,
+			backupArchiveIntervalMs: BACKUP_CONFIG.archiveIntervalMs,
+			backupArchiveCheckIntervalMs: BACKUP_CONFIG.archiveCheckIntervalMs,
+
+			// The one setting here the user chooses, so it is read from what was resolved rather than from the defaults
+			retainedBackupCount: backupLocation.retainedBackupCount,
+
 			backupShutdownTimeoutMs: BACKUP_CONFIG.shutdownTimeoutMs,
 			logMaximumFileSizeBytes: LOGGING_CONFIG.maximumFileSizeBytes,
 			logRetainedArchiveCount: LOGGING_CONFIG.retainedArchiveCount,

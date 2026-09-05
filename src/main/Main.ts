@@ -3,7 +3,7 @@ import { pathToFileURL } from 'node:url';
 import { app, BrowserWindow, dialog, ipcMain, Menu, type BrowserWindowConstructorOptions } from 'electron';
 import squirrelStartup from 'electron-squirrel-startup';
 import { BACKUP_CONFIG, LOGGING_CONFIG, TITLE_BAR_CONFIG, WINDOW_CONFIG } from 'src/config/AppConfig';
-import { createBackupLocationManager } from 'src/framework/main/config/BackupLocationManager';
+import { createBackupLocationManager, type BackupLocationManager } from 'src/framework/main/config/BackupLocationManager';
 import { appLogger, initializeAppLogger } from 'src/framework/main/logging/AppLogger';
 import { installProcessCrashHandlers } from 'src/framework/main/logging/ProcessCrashHandlers';
 import { createBackupScheduler, type BackupScheduler } from 'src/framework/main/storage/BackupScheduler';
@@ -12,7 +12,7 @@ import type { BackupStatus } from 'src/framework/types/StorageTypes';
 import { installWindowNavigationGuard } from 'src/framework/main/window/WindowNavigationGuard';
 import { getErrorMessage } from 'src/framework/utils/ErrorUtils';
 import { createSpotTranslator, resolveSpotLanguage, type SpotTranslator } from 'src/i18n/Translations';
-import { createSpotBackupDirectoryStore, createSpotConfigStore } from 'src/main/config/SpotConfigStore';
+import { createSpotBackupSettingsStore, createSpotConfigStore } from 'src/main/config/SpotConfigStore';
 import { resolveSpotRuntimePaths } from 'src/main/config/SpotRuntimePaths';
 import { logStartupConfiguration } from 'src/main/config/StartupConfigurationLog';
 import { registerAppInfoIpcHandlers } from 'src/main/ipc/AppInfoIpc';
@@ -292,10 +292,19 @@ const startApplication = (): void => {
 			}
 		});
 
+		// The scheduler is told how many copies to keep by the manager created right after it, so it reads the count through a callback
+		// rather than holding one that a change in Settings would leave behind
+		let backupLocationManager: BackupLocationManager | undefined;
+
 		backupScheduler = createBackupScheduler({
 			storage: taskStorage,
 			delayAfterChangeMs: BACKUP_CONFIG.delayAfterChangeMs,
+			archiveIntervalMs: BACKUP_CONFIG.archiveIntervalMs,
+			archiveCheckIntervalMs: BACKUP_CONFIG.archiveCheckIntervalMs,
 			shutdownTimeoutMs: BACKUP_CONFIG.shutdownTimeoutMs,
+			getRetainedBackupCount: () => {
+				return backupLocationManager?.getRetainedBackupCount() ?? BACKUP_CONFIG.defaultRetainedBackupCount;
+			},
 			runExclusively,
 			onBackupStatusChanged: (status: BackupStatus) => {
 				if(mainWindow && !mainWindow.isDestroyed()) {
@@ -304,13 +313,16 @@ const startApplication = (): void => {
 			}
 		});
 
-		const backupLocationManager = createBackupLocationManager({
+		backupLocationManager = createBackupLocationManager({
 			runtimePaths,
 			storage: taskStorage,
-			directoryStore: createSpotBackupDirectoryStore(createSpotConfigStore(runtimePaths.configFilePath)),
+			settingsStore: createSpotBackupSettingsStore(createSpotConfigStore(runtimePaths.configFilePath)),
 			directoryMessages: createSpotBackupDirectoryMessages(translator),
+			defaultRetainedBackupCount: BACKUP_CONFIG.defaultRetainedBackupCount,
+			minimumRetainedBackupCount: BACKUP_CONFIG.minimumRetainedBackupCount,
+			maximumRetainedBackupCount: BACKUP_CONFIG.maximumRetainedBackupCount,
 			runExclusively,
-			onBackupDirectoryChanged: () => {
+			onBackupSettingsChanged: () => {
 				backupScheduler?.notifyDataChanged();
 			}
 		});
@@ -326,6 +338,10 @@ const startApplication = (): void => {
 		});
 
 		const backupLocation = await backupLocationManager.initialize();
+
+		// Started once the folder and the count are resolved, so the first check of whether a dated copy is due reads the folder the
+		// run will actually write to
+		backupScheduler.start();
 
 		// Written here rather than as soon as the logger exists, because the backup folder is the one part of the configuration that is
 		// resolved instead of read, and an entry naming the folder this run will actually back up to is what the log is read for

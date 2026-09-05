@@ -1,8 +1,8 @@
 import { createContext, useCallback, useEffect, useMemo, useState, type ReactElement, type ReactNode } from 'react';
 import { useTranslator } from 'src/i18n/TranslationContext';
-import type { BackupLocation, ChooseBackupDirectoryResult, SetBackupDirectoryResult, SpotBackupLocationApi } from 'src/types/BackupLocationTypes';
+import type { BackupLocation, BackupSettingsResult, ChooseBackupDirectoryResult, SpotBackupLocationApi } from 'src/types/BackupLocationTypes';
 
-export interface ApplyBackupDirectoryOutcome {
+export interface ApplyBackupSettingsOutcome {
 	ok: boolean;
 	message?: string;
 }
@@ -12,8 +12,9 @@ export interface BackupLocationContextValue {
 	isLoading: boolean;
 	loadErrorMessage: string | undefined;
 	chooseBackupDirectory: () => Promise<ChooseBackupDirectoryResult>;
-	applyBackupDirectory: (directory: string) => Promise<ApplyBackupDirectoryOutcome>;
-	applyDefaultBackupDirectory: () => Promise<ApplyBackupDirectoryOutcome>;
+	applyBackupDirectory: (directory: string) => Promise<ApplyBackupSettingsOutcome>;
+	applyDefaultBackupDirectory: () => Promise<ApplyBackupSettingsOutcome>;
+	applyRetainedBackupCount: (retainedBackupCount: number) => Promise<ApplyBackupSettingsOutcome>;
 }
 
 export const BackupLocationContext = createContext<BackupLocationContextValue | undefined>(undefined);
@@ -34,7 +35,7 @@ const getBackupLocationApi = (): SpotBackupLocationApi | undefined => {
 	return window.spotBackupLocation;
 };
 
-// Changing the backup folder never touches the database, so nothing has to be flushed or reloaded when it changes
+// Changing the backup folder or how many copies it keeps never touches the database, so nothing has to be flushed or reloaded when either changes
 export const BackupLocationContextProvider = ({ children }: BackupLocationContextProviderProps): ReactElement => {
 	const { t } = useTranslator();
 	const [ location, setLocation ] = useState<BackupLocation | undefined>();
@@ -90,9 +91,9 @@ export const BackupLocationContextProvider = ({ children }: BackupLocationContex
 		return backupLocationApi.chooseBackupDirectory();
 	}, [ t ]);
 
-	const runBackupDirectoryChange = useCallback(async(
-		change: (backupLocationApi: SpotBackupLocationApi) => Promise<SetBackupDirectoryResult>
-	): Promise<ApplyBackupDirectoryOutcome> => {
+	const runBackupSettingsChange = useCallback(async(
+		change: (backupLocationApi: SpotBackupLocationApi) => Promise<BackupSettingsResult>
+	): Promise<ApplyBackupSettingsOutcome> => {
 		const backupLocationApi = getBackupLocationApi();
 
 		if(!backupLocationApi) {
@@ -121,17 +122,23 @@ export const BackupLocationContextProvider = ({ children }: BackupLocationContex
 		}
 	}, [ t ]);
 
-	const applyBackupDirectory = useCallback((directory: string): Promise<ApplyBackupDirectoryOutcome> => {
-		return runBackupDirectoryChange((backupLocationApi) => {
+	const applyBackupDirectory = useCallback((directory: string): Promise<ApplyBackupSettingsOutcome> => {
+		return runBackupSettingsChange((backupLocationApi) => {
 			return backupLocationApi.setBackupDirectory(directory);
 		});
-	}, [ runBackupDirectoryChange ]);
+	}, [ runBackupSettingsChange ]);
 
-	const applyDefaultBackupDirectory = useCallback((): Promise<ApplyBackupDirectoryOutcome> => {
-		return runBackupDirectoryChange((backupLocationApi) => {
+	const applyDefaultBackupDirectory = useCallback((): Promise<ApplyBackupSettingsOutcome> => {
+		return runBackupSettingsChange((backupLocationApi) => {
 			return backupLocationApi.setDefaultBackupDirectory();
 		});
-	}, [ runBackupDirectoryChange ]);
+	}, [ runBackupSettingsChange ]);
+
+	const applyRetainedBackupCount = useCallback((retainedBackupCount: number): Promise<ApplyBackupSettingsOutcome> => {
+		return runBackupSettingsChange((backupLocationApi) => {
+			return backupLocationApi.setRetainedBackupCount(retainedBackupCount);
+		});
+	}, [ runBackupSettingsChange ]);
 
 	const contextValue = useMemo((): BackupLocationContextValue => {
 		return {
@@ -140,9 +147,10 @@ export const BackupLocationContextProvider = ({ children }: BackupLocationContex
 			loadErrorMessage,
 			chooseBackupDirectory,
 			applyBackupDirectory,
-			applyDefaultBackupDirectory
+			applyDefaultBackupDirectory,
+			applyRetainedBackupCount
 		};
-	}, [ location, isLoading, loadErrorMessage, chooseBackupDirectory, applyBackupDirectory, applyDefaultBackupDirectory ]);
+	}, [ location, isLoading, loadErrorMessage, chooseBackupDirectory, applyBackupDirectory, applyDefaultBackupDirectory, applyRetainedBackupCount ]);
 
 	return (
 		<BackupLocationContext.Provider value={contextValue}>

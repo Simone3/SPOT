@@ -6,7 +6,7 @@
 
 ## 4.1 What it is
 
-`src/framework` holds the reusable scaffolding an Electron + React + SQLite desktop application needs regardless of what it stores: logging, crash handling, the database wrapper and its migrations, the storage core, rotated backups and their scheduling, the backup folder feature, the storage IPC chain and shutdown protocol, the renderer write queue, window safety, the translation machinery, a configuration store, and a few utilities. [§2.3](02-repository-map.md#23-srcframework--the-reusable-layer) lists every file in it.
+`src/framework` holds the reusable scaffolding an Electron + React + SQLite desktop application needs regardless of what it stores: logging, crash handling, the database wrapper and its migrations, the storage core, database backups and their scheduling, the backup settings feature, the storage IPC chain and shutdown protocol, the renderer write queue, window safety, the translation machinery, a configuration store, and a few utilities. [§2.3](02-repository-map.md#23-srcframework--the-reusable-layer) lists every file in it.
 
 It is kept here, inside SPOT, rather than as a package: the intent is to lift the folder into a second application as it is, and only turn it into a library once the same code has actually served two applications. It has been lifted once already, into Spiccioli, and **the two copies are byte-identical** — that is the standard, not an aspiration. A change that belongs in the framework is made in the framework and then carried to the other copy, never as a local edit that quietly makes one copy the application's. Nothing in the folder names either application, which is what lets the two stay the same bytes.
 
@@ -32,7 +32,7 @@ SPOT binds to the framework in a thin layer of adapters, and those adapters are 
 | `main/logging/ProcessCrashHandlers.ts` | installed in `src/main/Main.ts`, which reports what they catch |
 | `main/config/RuntimePaths.ts` | `src/main/config/SpotRuntimePaths.ts` |
 | `main/config/JsonConfigStore.ts` | `src/main/config/SpotConfigStore.ts` |
-| `main/config/BackupLocationManager.ts` | composed in `src/main/Main.ts` with the SPOT directory store |
+| `main/config/BackupLocationManager.ts` | composed in `src/main/Main.ts` with the SPOT settings store and the counts from `BACKUP_CONFIG` |
 | `main/storage/AppDatabase.ts` | `src/main/storage/SpotDatabase.ts`, which owns the SPOT migration list |
 | `main/storage/DatabaseStorage.ts` | `src/main/storage/TaskStorage.ts` |
 | `main/storage/BackupScheduler.ts` | composed in `src/main/Main.ts` from `BACKUP_CONFIG` |

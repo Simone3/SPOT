@@ -1,0 +1,25 @@
+.number-input-label {
+	font-size: 0.8em;
+	margin-bottom: 5px;
+	display: block;
+	font-weight: bolder;
+	color: var(--colors-text-secondary);
+}
+
+.number-input {
+	font: inherit;
+	box-sizing: border-box;
+	background-color: var(--colors-background-secondary);
+	border: 1px solid var(--colors-background-secondary);
+	border-radius: 5px;
+	color: var(--colors-text-primary);
+	padding: 6px;
+
+	/* A count is a couple of digits, so the field is sized to what it holds rather than to the width of whatever it sits in */
+	width: 6em;
+	transition: box-shadow 120ms ease;
+}
+
+.number-input:disabled {
+	color: var(--colors-text-secondary);
+}

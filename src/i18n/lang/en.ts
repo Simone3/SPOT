@@ -196,8 +196,8 @@ export const EN_TRANSLATIONS = {
 		databaseDescription: 'SPOT keeps all your tasks in a single spot.sqlite database inside its own application folder. This is always where your tasks are read from and written to, and it cannot be moved.',
 		unknownDatabasePath: 'Unknown.',
 		folderTitle: 'Backup folder',
-		folderDescription: 'A complete copy of the database is written here a couple of minutes after you stop making changes, and once more when SPOT closes. The {retainedBackupCount} most recent copies are kept and the older ones are removed.',
-		folderWarning: 'This folder is a backup destination, not a shared one. A folder synchronized by OneDrive, Google Drive, Dropbox or iCloud is safe to use, because each copy is written as one finished file. SPOT never reads these copies back though: it does not keep two computers in sync, and restoring is a manual step. To restore, close SPOT and copy one of these files over the database above under that exact name, which replaces every change made after that copy was written.',
+		folderDescription: 'SPOT writes complete copies of the database here. "{latestFileName}" is rewritten a couple of minutes after you stop making changes, so it always holds what you have just done. Dated copies are added beside it every twelve hours of work, so that you can also go back to how things were a few days ago.',
+		folderWarning: 'This folder is a backup destination, not a shared one. A folder synchronized by OneDrive, Google Drive, Dropbox or iCloud is safe to use, because each copy is written as one finished file. SPOT never reads these copies back though: it does not keep two computers in sync, and restoring is a manual step. To restore, close SPOT and copy the copy you want over the database above under that exact name, which replaces every change made after that copy was written.',
 		noFolderSelected: 'No folder is selected.',
 		developmentNotice: 'Development run: the backup folder can be changed to test the app, but the next development startup goes back to the development folder.',
 
@@ -220,11 +220,34 @@ export const EN_TRANSLATIONS = {
 			cancel: 'Cancel'
 		},
 
+		countTitle: 'Copies to keep',
+		countLabel: 'Number of copies',
+
+		// What the chosen number actually means, which is one of three things: nothing at all, the up-to-date copy alone, or that
+		// copy and however many dated ones are left over. The plural counts the dated copies and so is never reached with none.
+		countNone: 'No backup copies are written at all. Your tasks are still saved in the database above.',
+		countLatestOnly: 'Only "{latestFileName}" is written, always holding your latest changes.',
+		countHelp: {
+			one: '"{latestFileName}" always holds your latest changes, and one dated copy is kept beside it.',
+			other: '"{latestFileName}" always holds your latest changes, and the {count} most recent dated copies are kept beside it.'
+		},
+
+		countKeepsExisting: 'Copies already in the folder are never deleted when you lower this number: the folder comes down to it as new dated copies replace the oldest ones.',
+		countChanged: {
+			one: 'SPOT now keeps one backup copy.',
+			other: 'SPOT now keeps {count} backup copies.'
+		},
+		countChangedToNone: 'SPOT no longer writes backup copies.',
+		countChangeFailed: 'The number of backup copies could not be changed.',
+		changingCount: 'Changing the number of backup copies...',
+
 		status: {
 			failed: 'The last backup could not be written. Your tasks are still saved.',
 			failedWithMessage: 'The last backup could not be written. Your tasks are still saved. {message}',
 			idle: 'No backup copy has been written yet. The next one follows your next task change.',
-			lastWritten: 'Last backup copy written on {timestamp}.'
+			latestCopy: 'The up-to-date copy was written on {timestamp}.',
+			lastArchive: 'The most recent dated copy was written on {timestamp}.',
+			noArchiveYet: 'No dated copy has been written yet.'
 		},
 
 		// Why a folder the user picked, or one saved from a previous run, cannot be used

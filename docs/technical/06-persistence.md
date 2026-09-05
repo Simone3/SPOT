@@ -16,9 +16,9 @@ What the renderer does with all of this is [§7](07-task-write-path.md).
 
 - A synchronization client replaces files behind the process holding them open. When it does so through the usual unlink-and-rename, the SQLite connection keeps reading and writing an unlinked inode: every write reports success and the whole session is lost on quit. Keeping the database local removes that failure entirely.
 - Because the database is local, write-ahead logging is safe to use, and its `-wal` and `-shm` companion files never have to be understood by a synchronization client.
-- The backup folder only ever receives finished files. Each backup is built locally and published with an atomic rename, so a synchronization client watching that folder cannot observe a database that is still being written.
+- The backup folder only ever receives finished files. Each copy is built locally and published with an atomic rename, including the one that is overwritten on every refresh, so a synchronization client watching that folder cannot observe a database that is still being written.
 
-**The backup folder is therefore a write-only destination.** SPOT never reads a backup back, never compares one against the live database, and does not keep two computers in sync. Restoring a backup is a manual step: with SPOT closed, copy the chosen file over `spot.sqlite` in the database folder. The Settings notice about the backup folder says this too, because a backup nobody knows how to use is not a backup, and it says what the copy costs: every change made after that copy was written is replaced ([§11.3](11-interface.md#113-settings)).
+**The backup folder is therefore a write-only destination.** SPOT never reads a backup back, never compares one against the live database, and does not keep two computers in sync. Restoring a backup is a manual step: with SPOT closed, copy the chosen copy over `spot.sqlite` in the database folder. The Settings notice about the backup folder says this too, because a backup nobody knows how to use is not a backup, and it says what the copy costs: every change made after that copy was written is replaced ([§11.3](11-interface.md#113-settings)).
 
 ## 6.2 What is in each folder
 
@@ -28,7 +28,7 @@ The paths themselves, and the separate root a development run gets, are in [§1.
 
 **The log directory** contains `spot-logs.ndjson`, the newline-delimited operational log entries, and `spot-logs.old.1.ndjson` up to `spot-logs.old.<LOGGING_CONFIG.retainedArchiveCount>.ndjson`, the rolled archives numbered from the newest.
 
-**The backup folder** contains up to `BACKUP_CONFIG.retainedBackupCount` files named `spot-backup-<timestamp>.sqlite`. The timestamp is the ISO instant with colons and dots replaced, so the files sort chronologically by name. Anything else the user keeps in that folder is left alone.
+**The backup folder** contains `spot-backup-latest.sqlite`, the copy that is kept up to date, and up to `retainedBackupCount - 1` dated copies named `spot-backup-<timestamp>.sqlite`. The timestamp is the ISO instant with colons and dots replaced, so the files sort chronologically by name. Anything else the user keeps in that folder is left alone, and so is the up-to-date copy: **a dated copy is recognized by that timestamp pattern**, which `latest` cannot match, and the rotation therefore has no way of removing the one file that always holds the newest state.
 
 ## 6.3 The SQLite schema
 
@@ -60,34 +60,47 @@ The paths themselves, and the separate root a development run gets, are in [§1.
 
 ## 6.4 Backups
 
-`src/framework/main/storage/DatabaseBackup.ts` writes one backup, using the file naming and retention count SPOT passes from `BACKUP_CONFIG`:
+**The folder receives two kinds of copy, and they answer two different questions.** `spot-backup-latest.sqlite` is refreshed once the changes have been quiet and overwritten every time, so it answers *how much would I lose*; it never grows and never reaches back. The dated copies are added on a slow cadence and answer *how far back can I go*. Keeping the second question's copies on the first question's cadence is what makes a folder of backups useless: a handful of copies rotated on every change only ever holds the last handful of edits.
+
+`src/framework/main/storage/DatabaseBackup.ts` writes both, using the file naming SPOT passes from `BACKUP_CONFIG`.
+
+`writeLatestBackup()` refreshes the up-to-date copy, and it is the only backup operation that reads the database:
 
 1. **`VACUUM INTO` a temporary file** in the local database folder. This is the only step that touches the database, it runs in its own read transaction, and it produces a complete self-contained database with no journal and no write-ahead log. **A plain file copy is not used**: it would capture a database mid-transaction, and under write-ahead logging it would silently miss everything still in `spot.sqlite-wal`.
 2. **Copy that inert file into the backup folder under a `.part` name.** Nothing is writing to the source, so this copy is safe however slow the destination is.
-3. **Rename the `.part` file to its final name.** The rename is atomic within the folder.
-4. **Prune the folder** down to the retained backup count, oldest first.
+3. **Rename the `.part` file onto `spot-backup-latest.sqlite`.** The rename is atomic within the folder and replaces whatever was there. **The copy is never written over in place**, because the whole point of the folder is that a synchronization client watching it can only ever see complete files, and truncating the one file it watches would break exactly that.
 
-A `.part` file left behind by an interrupted backup is cleared at the start of the next run. Steps 2 to 4 are asynchronous on purpose, so the shutdown timeout can actually abandon a backup whose destination has become slow or unreachable.
+`writeArchiveBackup()` adds a dated copy, and **it is taken from the up-to-date copy rather than from the database**: the two are then provably the same file, and a dated copy costs no snapshot and no read transaction at all. It copies `spot-backup-latest.sqlite` under a `.part` name, renames it to its dated name, and prunes the dated copies to `retainedBackupCount - 1`, oldest first.
 
-`src/framework/main/storage/BackupScheduler.ts` decides when that runs, using the delays SPOT passes from `BACKUP_CONFIG`:
+A `.part` file left behind by an interrupted copy is cleared at the start of the next one. Everything after the `VACUUM INTO` is asynchronous on purpose, so the shutdown timeout can actually abandon a copy whose destination has become slow or unreachable.
 
-- Every applied task command restarts a `BACKUP_CONFIG.delayAfterChangeMs` timer, so a burst of edits produces one backup once the user has stopped, not one per edit.
-- Backups run through `runExclusively()` on the serial storage chain, so a snapshot is never taken while a write transaction is open, and two backups never overlap.
-- A backup only runs when something changed since the last one. A failed backup leaves the changes marked as pending so the next run retries them, and a change made while a backup runs schedules the next one instead.
-- Shutdown runs one last backup after the in-flight commands are drained and before the database is closed, bounded by `BACKUP_CONFIG.shutdownTimeoutMs`. A backup folder that stopped answering delays the quit by at most that timeout and then loses only that backup: the database is the source of truth and is already saved.
+`src/framework/main/storage/BackupScheduler.ts` decides when those run, using the delays SPOT passes from `BACKUP_CONFIG` and the count the user chose:
 
-## 6.5 Choosing the backup folder
+- Every applied task command restarts a `BACKUP_CONFIG.delayAfterChangeMs` timer, so a burst of edits refreshes the up-to-date copy once the user has stopped, not once per edit.
+- A dated copy is taken when the newest one in the folder is at least `BACKUP_CONFIG.archiveIntervalMs` old and something changed since it. **That cadence is measured against the folder, not against the run**: `getLastArchiveTime()` reads the instant back out of the newest dated file name, which survives a restart. A session that is opened and closed five times a day therefore cannot spend the whole rotation in an afternoon, and a folder that was just selected is immediately due for its first one.
+- Whether a dated copy is due is checked every `BACKUP_CONFIG.archiveCheckIntervalMs` rather than counted down by one long timer, because a machine that slept through the deadline fires a long timer late and at an hour nothing chose. The check costs nothing until a copy is actually due: a run with no unarchived change never reaches the folder.
+- The up-to-date copy is always refreshed first when it is behind, since the dated one is taken from it. A refresh that failed therefore stops the cycle: there is nothing to take a dated copy of.
+- Backups run through `runExclusively()` on the serial storage chain, so a snapshot is never taken while a write transaction is open, and two cycles never overlap.
+- A copy that could not be written leaves its changes marked as pending so the next run retries them, and a change made while a cycle runs schedules the next one instead.
+- Shutdown runs one last cycle after the in-flight commands are drained and before the database is closed, bounded by `BACKUP_CONFIG.shutdownTimeoutMs`. **It is one more moment the same rules are checked, not a guarantee of its own**: a dated copy on every quit is what would burn the rotation. A backup folder that stopped answering delays the quit by at most that timeout and then loses only that copy: the database is the source of truth and is already saved.
 
-`src/framework/main/config/BackupLocationManager.ts` owns the backup folder and reports it as a `BackupLocation` with `directory`, `defaultDirectory`, `databaseDirectory`, `databasePath`, `isDevelopment` and an optional `message`.
+**How many copies the folder keeps is a user setting, and it counts the up-to-date one.** `0` writes nothing at all and never touches the folder, `1` keeps only `spot-backup-latest.sqlite`, and anything above that adds that many dated copies less one. **Lowering it deletes nothing**: pruning only ever runs when a dated copy is written, so the folder comes down to the new number as the next ones rotate the oldest out, and a count of `0`, which stops the copies altogether, therefore removes nothing at all.
+
+## 6.5 Choosing the backup folder and the number of copies
+
+`src/framework/main/config/BackupLocationManager.ts` owns both settings the user can change and reports them as a `BackupLocation` with `directory`, `defaultDirectory`, `databaseDirectory`, `databasePath`, `isDevelopment`, `retainedBackupCount` and an optional `message`.
 
 Startup resolution:
 
 - A packaged run reads `backupDirectory` from the configuration file, creates it when missing, and validates it.
 - A packaged run with no saved folder uses the default `<userData>/backups`.
 - **A saved folder that cannot be used does not stop anything**: SPOT falls back to the default folder and explains the failure in `message`. Backups are not the source of truth, so an unreachable folder is a notice, not a blocker.
-- **A development run always restarts on `<userData>/dev/backups`**, ignoring the folder saved during a previous development session. Changing the folder from Settings still works for testing, and it is written to the development configuration file only.
+- **A development run always restarts on `<userData>/dev/backups`**, ignoring the folder saved during a previous development session. Changing the folder from Settings still works for testing, and it is written to the development configuration file only. The saved number of copies *is* reused, because a development run already reads and writes its own configuration file.
+- `retainedBackupCount` comes from the configuration file or, failing that, from `BACKUP_CONFIG.defaultRetainedBackupCount`. **A count is never refused**: one that is out of range or not a whole number is rounded and held to `BACKUP_CONFIG.minimumRetainedBackupCount`..`maximumRetainedBackupCount`, because it reaches the manager both from a field the user typed in and from a file anything could have written.
 
-Changing the folder from Settings validates and creates it, puts the change on the serial storage chain through `runExclusively()` so a backup already being written to the old folder finishes first, saves it in the configuration file, and asks the scheduler for a backup covering the change. Copies already written to the previous folder are left where they are. **Nothing about the database moves**, so React neither flushes nor reloads anything.
+Changing either setting from Settings puts the change on the serial storage chain through `runExclusively()` so a backup already being written finishes first, saves it in the configuration file, and asks the scheduler for a backup covering the change — the new folder is empty until something is written to it, and a count raised from zero leaves a folder with nothing in it. **Only a change the user made asks for that**: startup applies the settings it already had, and counting that as a change would have every launch write copies of a database nobody has touched. Changing the folder also validates and creates it. Copies already written to the previous folder are left where they are. **Nothing about the database moves**, so React neither flushes nor reloads anything.
+
+**Both settings are written to the configuration file together.** `createSpotBackupSettingsStore()` merges them onto what the file already holds, because `JsonConfigStore` writes the file whole: saving one of them must never be what loses the other.
 
 The renderer uses the narrow `window.spotBackupLocation` API:
 
@@ -95,6 +108,7 @@ The renderer uses the narrow `window.spotBackupLocation` API:
 - `chooseBackupDirectory()` opens the native folder dialog and returns the chosen folder, or a cancelled or invalid result.
 - `setBackupDirectory(directory)` applies and saves a folder.
 - `setDefaultBackupDirectory()` creates the default folder if needed, then applies and saves it.
+- `setRetainedBackupCount(count)` applies and saves how many copies the folder keeps, and answers with the count actually applied.
 
 ## 6.6 The storage contract
 
@@ -119,7 +133,7 @@ Fields marked immutable in `TASK_FIELD_COLUMN_MAPPINGS`, currently `id`, cannot 
 
 Task durability is immediate and does not rely on delayed batching.
 
-**`StorageStatus` reports the database state as `healthy` or `unavailable`**, plus `storageDirectory`, `databasePath` and a `backup` status. Database health is hard: `unavailable` means the tasks may not be saved and React says so prominently. Backup health is soft and separate: `idle`, `ok` or `failed`, with the backup `directory`, the `lastBackupAt` and `lastBackupPath` of the last successful one, and a failure `message`. **A failed backup never makes the database unhealthy**, because the tasks are already saved in the local database either way.
+**`StorageStatus` reports the database state as `healthy` or `unavailable`**, plus `storageDirectory`, `databasePath` and a `backup` status. Database health is hard: `unavailable` means the tasks may not be saved and React says so prominently. Backup health is soft and separate: `idle`, `ok` or `failed`, with the backup `directory`, a failure `message`, and **the two kinds of copy reported separately** — `latestCopyAt` and `latestCopyPath`, and `lastArchiveAt` and `lastArchivePath` — because a folder that is up to date but has not reached back in days is a different thing to know than one that is neither. **A failed backup never makes the database unhealthy**, because the tasks are already saved in the local database either way.
 
 `StorageStatus` also keeps the `not-configured` database state and the `not-implemented` failure reason, which the main process never produces. They are used only by the renderer, to describe a React build opened without the Electron preload API. The remaining storage failures are `database-error`, `invalid-command` and `shutdown`.
 
@@ -127,7 +141,7 @@ Task durability is immediate and does not rely on delayed batching.
 
 `src/framework/main/logging/AppLogger.ts` uses `electron-log` to write newline-delimited JSON entries to the log file of the current run, which for SPOT is `spot-logs.ndjson`. The dependency is wrapped by `createAppLogger()`, while `initializeAppLogger()` installs the concrete logger behind the process-wide `appLogger`. Main-process code can call `appLogger.info`, `appLogger.warn`, `appLogger.error`, `appLogger.debug` and `appLogger.flush` without depending on `electron-log` directly or constructing a logger itself. The file name, size limit and retained archive count are passed in by the application, from `LOGGING_CONFIG`.
 
-**Every run opens with one `config.startup` entry**, written by `src/main/config/StartupConfigurationLog.ts`. A log file otherwise only says what happened, never what it happened in: the version, the runtime, the resolved language, the folders, and the settings behind a backup that was late or a write that was refused are in no other entry, and a file collected from an installed SPOT cannot be asked about them afterwards. It is written once the backup folder has been resolved, so it names the folder that run will actually back up to, and it holds the settings that change how a run behaves rather than every value in `AppConfig`. The folder in use is therefore reported by this entry and not by a `config.backupDirectory` one: that one is written only when the user actually moves the backups somewhere else, since an entry for the folder every startup applies again would say nothing while pushing the entries that do out of the rolled file.
+**Every run opens with one `config.startup` entry**, written by `src/main/config/StartupConfigurationLog.ts`. A log file otherwise only says what happened, never what it happened in: the version, the runtime, the resolved language, the folders, and the settings behind a backup that was late or a write that was refused are in no other entry, and a file collected from an installed SPOT cannot be asked about them afterwards. It is written once the backup folder has been resolved, so it names the folder that run will actually back up to, and it holds the settings that change how a run behaves rather than every value in `AppConfig`. The folder in use is therefore reported by this entry and not by a `config.backupDirectory` one: that one is written only when the user actually moves the backups somewhere else, since an entry for the folder every startup applies again would say nothing while pushing the entries that do out of the rolled file. `config.backupRetention` follows the same rule for the number of copies kept.
 
 The main process logs every incoming React storage command and every SQL query run by the storage layer, including `SELECT` queries. SQL log entries include the query text, `elapsedMillis`, and success or failure. Query parameters should be logged only when they are useful for debugging and safe to write to disk.
 
@@ -136,7 +150,7 @@ It also logs what the renderer asks it to, which is the two failures the rendere
 Example entries:
 
 ```json
-{"createdAt":"2026-06-02T11:59:59.000Z","level":"info","message":"SPOT started","type":"config.startup","version":"1.0.0","isDevelopment":false,"platform":"darwin","architecture":"arm64","electronVersion":"38.2.2","chromeVersion":"140.0.7339.207","nodeVersion":"22.20.0","locale":"it-IT","language":"en","renderer":{"source":"build","location":"/Applications/SPOT.app/.../build/index.html"},"drawsMenuBar":false,"paths":{"root":"...","config":".../spot-config.json","log":".../logs/spot-logs.ndjson","database":".../storage/spot.sqlite","defaultBackupDirectory":".../backups","backupDirectory":"/Volumes/Backups/spot"},"settings":{"databaseTimeoutMs":5000,"writeRetryDelayMs":5000,"maximumWriteAttempts":5,"taskFlushDelayMs":5000,"backupDelayAfterChangeMs":120000,"retainedBackupCount":5,"backupShutdownTimeoutMs":5000,"logMaximumFileSizeBytes":104857600,"logRetainedArchiveCount":5,"auditEnabled":true,"auditInitialDelayMs":60000,"auditIntervalMs":600000}}
+{"createdAt":"2026-06-02T11:59:59.000Z","level":"info","message":"SPOT started","type":"config.startup","version":"1.0.0","isDevelopment":false,"platform":"darwin","architecture":"arm64","electronVersion":"38.2.2","chromeVersion":"140.0.7339.207","nodeVersion":"22.20.0","locale":"it-IT","language":"en","renderer":{"source":"build","location":"/Applications/SPOT.app/.../build/index.html"},"drawsMenuBar":false,"paths":{"root":"...","config":".../spot-config.json","log":".../logs/spot-logs.ndjson","database":".../storage/spot.sqlite","defaultBackupDirectory":".../backups","backupDirectory":"/Volumes/Backups/spot"},"settings":{"databaseTimeoutMs":5000,"writeRetryDelayMs":5000,"maximumWriteAttempts":5,"taskFlushDelayMs":5000,"backupDelayAfterChangeMs":120000,"backupArchiveIntervalMs":43200000,"backupArchiveCheckIntervalMs":900000,"retainedBackupCount":10,"backupShutdownTimeoutMs":15000,"logMaximumFileSizeBytes":104857600,"logRetainedArchiveCount":5,"auditEnabled":true,"auditInitialDelayMs":60000,"auditIntervalMs":600000}}
 {"createdAt":"2026-06-02T12:00:00.000Z","level":"info","message":"React storage command received","type":"react.command","command":"task.update","payload":{"taskId":"...","change":{"text":"New"}}}
 {"createdAt":"2026-06-02T12:00:00.001Z","level":"info","message":"React storage command received","type":"react.command","command":"tasks.updateMany","payload":{"reason":"manual-reorder","updates":[{"taskId":"...","change":{"sortPosition":1000}},{"taskId":"...","change":{"sortPosition":2000}}]}}
 {"createdAt":"2026-06-02T12:00:00.003Z","level":"info","message":"Storage SQL query completed","type":"sql.query","query":"UPDATE tasks SET text = ? WHERE id = ?","elapsedMillis":2.4,"result":"success"}
