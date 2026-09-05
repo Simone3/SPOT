@@ -1,0 +1,32 @@
+docs/technical/09-tasks.md
+  s_8e4434d2f20cba::t_ba20fb495e4a9a 94,96,98,100-104,108
+src/components/tasks/TaskFilters.tsx
+  s_8e4434d2f20cba::t_cd5c939c697c51 94
+src/logic/DomainsLogic.ts
+  s_8e4434d2f20cba::t_de4856508322b4 3,10-14,20,24,43-62,64-66,69,75-76,80-87,90-118,123-125,131-133,138,181-196,218-222,261,263,271-278,286-287,318-321,332,334,352-358,370,376,382,385-386,396
+tests/components/TaskFilters.test.tsx
+  s_8e4434d2f20cba::t_85b20f214c1260 119,132-155
+tests/logic/DomainsLogic.test.ts
+  s_8e4434d2f20cba::t_8ef7a6f4176581 124-186,213-215
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "eecf11e7a96e910960631ab172a83c6965d1c5d9",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_8e4434d2f20cba": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cb43349a-ab3e-4b9d-a9be-c8b99284bc5f",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
