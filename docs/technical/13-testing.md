@@ -47,7 +47,6 @@ Tests run on Vitest, configured in the `test` section of `vite.config.mts`: it r
 - **`tests/setupTests.ts` defines a global `jest` object** holding a single `advanceTimersByTime` helper that forwards to `vi`. That is not leftover Jest: Testing Library decides whether fake timers are installed by probing for a global `jest`, and without one its `findBy` queries poll on timers Vitest has already frozen and hang until the test times out. **The suite itself uses `vi` everywhere.**
 - **Stub Electron at the seam.** The main process modules take the parts of Electron they use as options, so a test passes an object rather than mocking the `electron` module.
 - **Test the refusal, not only the happy path.** The cases worth writing down are usually the ones that say no: a packaged run ignoring the development server variable, a command the database will never accept, a bridge that does not answer.
-- **`TextArea` is replaced by a plain `textarea` mock**, so what [§11.4](11-interface.md#114-common-components) says about pushing a value into MDXEditor is not covered.
 
 ## 13.5 Running them
 

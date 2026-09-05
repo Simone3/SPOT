@@ -16,7 +16,9 @@
 	animation: task-state-change-fade var(--task-state-change-delay) ease-in forwards;
 }
 
-.task-container-completed, .task-container-completed ._placeholder_sects_1101 {
+/* A completed task is struck through. The decoration of a block does not reach into a form control, so the text field
+   and the placeholder it shows when there is no text are struck through by rules of their own. */
+.task-container-completed, .task-container-completed .textarea-input, .task-container-completed .textarea-input::placeholder {
 	text-decoration: line-through;
 }
 

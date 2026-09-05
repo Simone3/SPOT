@@ -28,7 +28,7 @@ The task shape is a TypeScript interface in `src/types/TaskTypes.ts`:
 | Field | Notes |
 | --- | --- |
 | `id` | A UUID string |
-| `text` | Free-form task content |
+| `text` | Free-form task content, as plain text: the blank lines and the line breaks it holds are the ones the user typed ([§11.4](11-interface.md#114-common-components)) |
 | `state` | `ACTIVE` or `COMPLETED` |
 | `priority` | `URGENT`, `HIGH`, `NORMAL` or `LOW` |
 | `owner` | A free-form string. A missing or empty owner is displayed as `Me` |

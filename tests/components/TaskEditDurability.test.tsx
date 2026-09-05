@@ -1,5 +1,5 @@
 import type { Mock } from 'vitest';
-import type { ChangeEvent, ReactElement, ReactNode } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import { act, fireEvent, screen } from '@testing-library/react';
 import { useSortable } from '@dnd-kit/react/sortable';
 import { makeFormDomains, makeTask, renderWithTranslations } from '../testUtils';
@@ -7,35 +7,6 @@ import { TASKS_CONFIG } from 'src/config/AppConfig';
 import { clearPendingTaskChanges, flushPendingTaskChanges, registerPendingTaskChangesApplier, resetPendingTaskChangesForTests } from 'src/logic/PendingTaskChanges';
 import { TasksList } from 'src/components/tasks/TasksList';
 import type { Task, TaskChange } from 'src/types/TaskTypes';
-
-vi.mock('src/components/inputs/TextArea', async() => {
-	// The mock factory is hoisted above the imports, so React is loaded here rather than referenced from the module scope
-	const React = await vi.importActual<typeof import('react')>('react');
-
-	type MockTextAreaProps = {
-		placeholder?: string;
-		value: string;
-		onChange: (value: string) => void;
-		onBlur: () => void;
-		disabled?: boolean;
-	};
-
-	const MockTextArea = ({ placeholder, value, onChange, onBlur, disabled }: MockTextAreaProps): ReactElement => {
-		return React.createElement('textarea', {
-			'aria-label': placeholder || 'Task text',
-			value,
-			readOnly: disabled,
-			onChange: (event: ChangeEvent<HTMLTextAreaElement>) => {
-				onChange(event.target.value);
-			},
-			onBlur
-		});
-	};
-
-	return {
-		TextArea: MockTextArea
-	};
-});
 
 vi.mock('@dnd-kit/react', async() => {
 	// The mock factory is hoisted above the imports, so React is loaded here rather than referenced from the module scope
@@ -108,7 +79,7 @@ const renderTasksList = (tasks: Task[]): RenderedTasksList => {
 };
 
 const getTaskTextInput = (): HTMLElement => {
-	return screen.getByLabelText('Add content...');
+	return screen.getByPlaceholderText('Add content...');
 };
 
 const typeTaskText = (value: string): void => {
@@ -226,6 +197,33 @@ describe('Task edit durability', () => {
 		}) ]);
 
 		expect(getTaskTextInput()).toHaveValue('Original task');
+	});
+
+	// The text field was written over Markdown before, which has no way to write two blank lines in a row: every value that
+	// went back into the field came back with them collapsed into one paragraph break
+	test('keeps the blank lines the user typed when the task is rendered again', () => {
+		const task = makeTask({
+			text: 'Original task',
+			visible: true
+		});
+		const { rerenderTasks, applyPendingTaskChanges } = renderTasksList([ task ]);
+		const spacedText = 'First line\n\n\n\nLast line';
+
+		typeTaskText(spacedText);
+		fireEvent.blur(getTaskTextInput());
+
+		expect(applyPendingTaskChanges).toHaveBeenCalledWith(task.id, {
+			text: spacedText
+		});
+
+		rerenderTasks([ makeTask({
+			id: task.id,
+			text: spacedText,
+			sortPosition: task.sortPosition,
+			visible: true
+		}) ]);
+
+		expect(getTaskTextInput()).toHaveValue(spacedText);
 	});
 
 	test('keeps showing what the user is typing while the parent replaces the task', () => {

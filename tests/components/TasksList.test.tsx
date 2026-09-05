@@ -1,40 +1,11 @@
 import type { Mock } from 'vitest';
-import type { ChangeEvent, ReactElement, ReactNode } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import { act, fireEvent, screen } from '@testing-library/react';
 import { useSortable } from '@dnd-kit/react/sortable';
 import { makeFormDomains, makeTask, renderWithTranslations } from '../testUtils';
 import { registerPendingTaskChangesApplier, resetPendingTaskChangesForTests } from 'src/logic/PendingTaskChanges';
 import { TasksList } from 'src/components/tasks/TasksList';
 import type { Task, TaskChange } from 'src/types/TaskTypes';
-
-vi.mock('src/components/inputs/TextArea', async() => {
-	// The mock factory is hoisted above the imports, so React is loaded here rather than referenced from the module scope
-	const React = await vi.importActual<typeof import('react')>('react');
-
-	type MockTextAreaProps = {
-		placeholder?: string;
-		value: string;
-		onChange: (value: string) => void;
-		onBlur: () => void;
-		disabled?: boolean;
-	};
-
-	const MockTextArea = ({ placeholder, value, onChange, onBlur, disabled }: MockTextAreaProps): ReactElement => {
-		return React.createElement('textarea', {
-			'aria-label': placeholder || 'Task text',
-			value,
-			readOnly: disabled,
-			onChange: (event: ChangeEvent<HTMLTextAreaElement>) => {
-				onChange(event.target.value);
-			},
-			onBlur
-		});
-	};
-
-	return {
-		TextArea: MockTextArea
-	};
-});
 
 vi.mock('@dnd-kit/react', async() => {
 	// The mock factory is hoisted above the imports, so React is loaded here rather than referenced from the module scope
@@ -167,7 +138,7 @@ describe('TasksList', () => {
 		});
 		const { container, applyPendingTaskChanges } = renderTasksList([ task ]);
 
-		const taskText = screen.getByLabelText('Add content...');
+		const taskText = screen.getByPlaceholderText('Add content...');
 		fireEvent.change(taskText, {
 			target: {
 				value: 'Updated task'
@@ -203,7 +174,7 @@ describe('TasksList', () => {
 		expect(getUseSortableMock()).toHaveBeenLastCalledWith(expect.objectContaining({
 			disabled: true
 		}));
-		expect(taskText).toHaveAttribute('readonly');
+		expect(taskText).toBeDisabled();
 		expect(screen.getByPlaceholderText('Me')).toBeDisabled();
 		expect(screen.getByPlaceholderText('No due date')).toBeDisabled();
 		expect(screen.getByPlaceholderText('Add tag...')).toBeDisabled();
@@ -220,7 +191,7 @@ describe('TasksList', () => {
 		expect(getUseSortableMock()).toHaveBeenLastCalledWith(expect.objectContaining({
 			disabled: false
 		}));
-		expect(taskText).not.toHaveAttribute('readonly');
+		expect(taskText).not.toBeDisabled();
 		expect(screen.getByPlaceholderText('Me')).not.toBeDisabled();
 		expect(screen.getByPlaceholderText('No due date')).not.toBeDisabled();
 		expect(screen.getByPlaceholderText('Add tag...')).not.toBeDisabled();

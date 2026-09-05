@@ -466,7 +466,6 @@ module.exports = defineConfig([
 					'tests/**',
 					'@dnd-kit/react/sortable',
 					'@fontsource/inter/*.css',
-					'@mdxeditor/editor/style.css',
 					'react-datepicker/dist/react-datepicker.css',
 					'react-dom/client'
 				]
