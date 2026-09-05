@@ -116,7 +116,7 @@ describe('TaskFilters', () => {
 		expect(onFilterChange).toHaveBeenCalledWith({ tags: [ '' ] });
 	});
 
-	test('hides the tags filter when the untagged entry is the only one, since it would filter nothing out', () => {
+	test('offers an entry that is the only one in its filter', () => {
 		renderWithTranslations(
 			<TaskFilters
 				domains={{
@@ -129,7 +129,29 @@ describe('TaskFilters', () => {
 			/>
 		);
 
-		expect(screen.queryByText('Tags')).toBeNull();
-		expect(screen.queryByRole('button', { name: 'Untagged' })).toBeNull();
+		expect(screen.getByText('Tags')).toBeTruthy();
+		expect(screen.getByRole('button', { name: 'Untagged' })).toBeTruthy();
+	});
+
+	test('shows the content search alone when no task matches any filter', () => {
+		renderWithTranslations(
+			<TaskFilters
+				domains={{
+					priorities: [],
+					owners: [],
+					dueDates: [],
+					tags: []
+				}}
+				filters={getInitialFilters()}
+				onFilterChange={vi.fn()}
+				onResetDefaultFilters={vi.fn()}
+			/>
+		);
+
+		expect(screen.getByLabelText('Content')).toBeTruthy();
+		expect(screen.getByLabelText('Show completed')).toBeTruthy();
+		for(const filterLabel of [ 'Priorities', 'Owners', 'Due dates', 'Tags' ]) {
+			expect(screen.queryByText(filterLabel)).toBeNull();
+		}
 	});
 });

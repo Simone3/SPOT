@@ -39,11 +39,6 @@ const TaskFilters = ({ domains, filters, onFilterChange, onResetDefaultFilters }
 	const { t } = translator;
 	const dueDateLabelOptions = createDueDateLabelOptions(translator);
 
-	// The tags filter is there for the tags the tasks carry: the "Untagged" entry rides along with them, but on its own it would filter nothing out
-	const hasTagDomains = domains.tags.some((tagDomain) => {
-		return Boolean(tagDomain.value);
-	});
-
 	return (
 		<div className='task-filters-container'>
 			<Header
@@ -96,7 +91,7 @@ const TaskFilters = ({ domains, filters, onFilterChange, onResetDefaultFilters }
 						})
 						}/>
 				}
-				{hasTagDomains &&
+				{domains.tags.length > 0 &&
 					<ButtonsSelect
 						label={t('filters.tags')}
 						allowMultiSelect={true}

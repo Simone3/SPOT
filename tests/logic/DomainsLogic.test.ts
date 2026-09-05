@@ -121,6 +121,69 @@ describe('DomainsLogic', () => {
 		expect(domainValues(domainsContainer.form.tags)).toEqual([ 'work', 'home', 'errands' ]);
 	});
 
+	test('offers a filter entry only while an active task matches it', () => {
+		const domainsContainer = getInitialDomains(makeDomainLabels());
+
+		// Nothing is offered before a task calls for it, whatever the entry would have been worded from
+		expect(domainsContainer.filters.priorities).toEqual([]);
+		expect(domainsContainer.filters.owners).toEqual([]);
+		expect(domainsContainer.filters.dueDates).toEqual([]);
+		expect(domainsContainer.filters.tags).toEqual([]);
+
+		// The form section still offers what it always offers, whatever the tasks look like
+		expect(domainValues(domainsContainer.form.priorities)).toEqual([ 'URGENT', 'HIGH', 'NORMAL', 'LOW' ]);
+		expect(domainValues(domainsContainer.form.owners)).toEqual([ '' ]);
+
+		const highTask = makeTask({
+			priority: 'HIGH',
+			owner: 'Alice',
+			dueDate: '2026-05-10',
+			tags: [ 'work' ]
+		});
+		const barePriorityTask = makeTask({
+			priority: 'URGENT',
+			owner: undefined,
+			dueDate: undefined,
+			tags: []
+		});
+
+		addDomainsForTasks(domainsContainer, {
+			active: [ highTask, barePriorityTask ],
+			completed: []
+		}, makeDomainLabels());
+
+		// Only the two priorities in use are offered, in the order they mean rather than the one their values sort in
+		expect(domainValues(domainsContainer.filters.priorities)).toEqual([ 'URGENT', 'HIGH' ]);
+		expect(domainByValue(domainsContainer.filters.priorities, 'HIGH')?.label).toBe('High');
+		expect(domainByValue(domainsContainer.filters.priorities, 'HIGH')?.color).toBe('var(--colors-priority-high)');
+
+		// The entries standing for "no value" are worded, counted and first, exactly like the untagged one
+		expect(domainValues(domainsContainer.filters.owners)).toEqual([ '', 'Alice' ]);
+		expect(domainByValue(domainsContainer.filters.owners, '')?.label).toBe('Me');
+		expect(domainByValue(domainsContainer.filters.dueDates, '')?.label).toBe('None');
+		expect(domainByValue(domainsContainer.filters.tags, '')?.label).toBe('Untagged');
+
+		// Giving the bare task everything the other one has takes all four entries away with it
+		const filledTask = {
+			...barePriorityTask,
+			priority: 'HIGH' as const,
+			owner: 'Alice',
+			dueDate: '2026-05-10',
+			tags: [ 'work' ]
+		};
+		updateDomainsForTask(domainsContainer, barePriorityTask, filledTask, {
+			priority: 'HIGH',
+			owner: 'Alice',
+			dueDate: '2026-05-10',
+			tags: [ 'work' ]
+		}, makeDomainLabels());
+
+		expect(domainValues(domainsContainer.filters.priorities)).toEqual([ 'HIGH' ]);
+		expect(domainValues(domainsContainer.filters.owners)).toEqual([ 'Alice' ]);
+		expect(domainValues(domainsContainer.filters.dueDates)).toEqual([ '2026-05-10' ]);
+		expect(domainValues(domainsContainer.filters.tags)).toEqual([ 'work' ]);
+	});
+
 	test('cleans selected filters when the last matching active domain disappears', () => {
 		const task = makeTask({
 			priority: 'HIGH',
@@ -147,7 +210,9 @@ describe('DomainsLogic', () => {
 		expect(filters.owners).toEqual([]);
 		expect(filters.dueDates).toEqual([]);
 		expect(filters.tags).toEqual([]);
-		expect(filters.priorities).toEqual([ 'HIGH' ]);
+
+		// Priorities are counted like every other domain, so a selected one is cleaned when the last task carrying it goes
+		expect(filters.priorities).toEqual([]);
 	});
 
 	test('offers the untagged filter entry only while some active task carries no tag', () => {
