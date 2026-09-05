@@ -1,0 +1,44 @@
+docs/technical/09-tasks.md
+  s_8e4434d2f20cba::t_cffa63786cf866 75,94,98-101
+src/components/tasks/TaskFilters.tsx
+  s_8e4434d2f20cba::t_5b5ed2e26c6a38 42-46,99
+src/contexts/TasksContext.tsx
+  s_8e4434d2f20cba::t_9c5e74eaac7bda 59-60,394,412,435
+src/i18n/lang/en.ts
+  s_8e4434d2f20cba::t_0597de2f3b396d 112,115-116
+src/logic/DomainsLogic.ts
+  s_8e4434d2f20cba::t_c986b8fe993116 15,19,29,32,36,93-105,187-189,228,230,237,244-253,287,298,300,320-338,343-345,347,352-354,377,379,381,389,393,397,402,410,412-413,421,423-424,434,436-437,445,447,449,453
+src/logic/FiltersLogic.ts
+  s_8e4434d2f20cba::t_f598b23b00a719 69-82
+src/logic/TaskStateLogic.ts
+  s_8e4434d2f20cba::t_8663f8ea6e9020 48,66,74,89,91,95,104,124,126,130,139,151,153
+tests/components/TaskFilters.test.tsx
+  s_8e4434d2f20cba::t_c1fbada390a9ef 6,54-63,98-134
+tests/logic/DomainsLogic.test.ts
+  s_8e4434d2f20cba::t_e30b30ba8279c6 48,89,93,114,143-144,152-221
+tests/logic/FiltersLogic.test.ts
+  s_8e4434d2f20cba::t_563e222c0916b9 113-157
+tests/testUtils/TranslationTestFactory.tsx
+  s_8e4434d2f20cba::t_517433ce974d19 18,29-30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "74822e9c2d0edcbf4ef5b15685e9d26a97b2b297",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_8e4434d2f20cba": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cb43349a-ab3e-4b9d-a9be-c8b99284bc5f",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
