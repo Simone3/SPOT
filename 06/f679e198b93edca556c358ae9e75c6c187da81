@@ -1,0 +1,94 @@
+src/config/AppConfig.ts
+  s_e557eb738324a7::t_046172f05baf8e 64-69,71-90
+src/contexts/BackupLocationContext.tsx
+  s_e557eb738324a7::t_cfe741275f2d64 3,5,15-17,38,94-96,125-126,129,131-132,135-141,150-151,153
+src/framework/main/ipc/BackupLocationIpc.ts
+  s_e557eb738324a7::t_38f348150ea18a 14,96-99
+src/framework/main/storage/DatabaseBackup.ts
+  s_e557eb738324a7::t_6b0ab20e7bf174 1,6,11-20,24-35,41-66,82,84,88-110,121-125,131,136-154,156-157,163,170-171,174,182-223,225
+src/framework/main/storage/DatabaseStorage.ts
+  s_e557eb738324a7::t_3816dbd7a1e468 4,21-33,42-43,66,82,183-206,208,212,216,219-221,224,236-261,264-265,267-269,272,274-275,279-280,284-290,332-337
+src/framework/types/BackupTypes.ts
+  s_e557eb738324a7::t_58706e31704229 2-3,13-15,29-31,43-45,48,54-57
+src/framework/types/StorageTypes.ts
+  s_e557eb738324a7::t_85344de42c084b 16-17,21-24
+src/main/Main.ts
+  s_e557eb738324a7::t_f2981a4ab657e8 6,15,295-298,302-303,305-307,316,319,321-323,325,342-345
+src/main/config/SpotConfigStore.ts
+  s_e557eb738324a7::t_baf8521a21f947 1,6,17,20-24,35-38,41-46,48-53
+src/main/config/StartupConfigurationLog.ts
+  s_e557eb738324a7::t_d8ee83d84dc21a 28-29,88-93
+src/main/preload/Preload.ts
+  s_e557eb738324a7::t_66e5781485d4ca 50-52
+src/main/storage/TaskStorage.ts
+  s_e557eb738324a7::t_9998fc46d68198 40-43,63,107-110
+src/types/BackupLocationIpcChannels.ts
+  s_e557eb738324a7::t_a181f067d8a543 5-6
+src/types/BackupLocationTypes.ts
+  s_e557eb738324a7::t_d1ade635aa61cd 2
+README.md
+  s_e557eb738324a7::t_3229e4af2b9aee 5,14,60
+docs/technical/01-architecture.md
+  s_e557eb738324a7::t_90f8b2cdf83eaf 25
+docs/technical/02-repository-map.md
+  s_e557eb738324a7::t_5bdd38b5b998f2 31,57,62-63,79,100
+docs/technical/04-framework.md
+  s_e557eb738324a7::t_5591ebffde901e 9,35
+docs/technical/05-configuration.md
+  s_e557eb738324a7::t_d35161475f1da4 22
+docs/technical/06-persistence.md
+  s_e557eb738324a7::t_a2750bb78a3efe 19,21,31,63-67,71-73,75,77,79-85,87,89-91,98-101,103,111,136,144,153
+docs/technical/11-interface.md
+  s_e557eb738324a7::t_f41199f628087d 62-63,65-67
+docs/technical/13-testing.md
+  s_e557eb738324a7::t_52b011b408f622 33
+src/components/inputs/NumberInput.css
+  s_e557eb738324a7::t_8e4265189c4f64 1-25
+src/components/inputs/NumberInput.tsx
+  s_e557eb738324a7::t_7d9e6d0d345738 1-49
+src/components/storage/BackupSettings.css
+  s_e557eb738324a7::t_e30fdf8d8f6d75 67-77
+src/components/storage/BackupSettings.tsx
+  s_e557eb738324a7::t_6f9dc1c7b15224 5,17-19,21,24-25,27,30-32,35-36,38-39,42-75,119,125-132,216-261,270,292-309,313-314,316-325
+src/framework/main/config/BackupLocationManager.ts
+  s_e557eb738324a7::t_0e45647396be1e 5,9,12-21,27,29-34,36,42-45,51-54,58-60,64,66-68,72,78-92,99,104-109,111,114-115,121-123,125,131,137,140,145-146,149,155,159,164-169,173,177-219,221-225,229,241,243,248-250,252-253,258-260
+src/framework/main/storage/BackupScheduler.ts
+  s_e557eb738324a7::t_faf6746043c804 6-8,13-14,16-22,25-28,32,36,40,57-81,85-86,88,92-93,96,98-103,114-115,117-118,121,124-146,148-153,156-176,179,181-182,201-202,211-230,233,239,243
+src/i18n/lang/en.ts
+  s_e557eb738324a7::t_06353db0ccc321 199-200,223-243,248-250
+tests/components/BackupSettings.test.tsx
+  s_e557eb738324a7::t_eb4ec89b1ec35b 16-17,59-67,109,136,182-262
+tests/framework/BackupLocationManager.test.ts
+  s_e557eb738324a7::t_1e90f779e22488 4,13-18,21,24,65-67,69,72,74,76-77,80-81,86-96,126,130,134-136,154,156,174,176,182,191,193,205,207,220,222-223,234,236,244,246,253,263,265,278,280,293,295,307,315,320-417
+tests/framework/BackupScheduler.test.ts
+  s_e557eb738324a7::t_f240cfcc80a027 10,12-20,24-25,27-32,40,44,61-73,75-82,97-98,104,106,110,115,118-119,126,129-133,145,154,169-170,175-245,248-251,253-262,264-290,292,299-300,313
+tests/framework/DatabaseBackup.test.ts
+  s_e557eb738324a7::t_e3037b4171241d 1,6,13-14,17,81-83,85,87-96,104,108,111-112,114,123-145,151-167,171-174,176-177,180-182,185,189-211,215-222,224-225,228,233,235-236,239-241,244,251,255,259,263,272,276
+tests/main/BackupLocationIpc.test.ts
+  s_e557eb738324a7::t_1222603ba16c1b 10,29-30,52,64-66,73-75,129-130,135-136,139
+tests/main/StartupConfigurationLog.test.ts
+  s_e557eb738324a7::t_8dcfb2aba6acbe 53-54,127-131
+tests/main/TaskStorage.test.ts
+  s_e557eb738324a7::t_4f908b27ff1a14 7,235,244-246,248-249,272
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "06f679e198b93edca556c358ae9e75c6c187da81",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_e557eb738324a7": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "12af7c0a-f1ba-47b5-9fbb-6e53c424fc21",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
