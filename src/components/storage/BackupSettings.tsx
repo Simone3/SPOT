@@ -66,13 +66,10 @@ const createRetainedBackupCountMessage = (retainedBackupCount: number, translato
 	}
 
 	if(retainedBackupCount === 1) {
-		return t('backup.countLatestOnly', { latestFileName: BACKUP_CONFIG.latestFileName });
+		return t('backup.countLatestOnly');
 	}
 
-	return t('backup.countHelp', {
-		count: retainedBackupCount - 1,
-		latestFileName: BACKUP_CONFIG.latestFileName
-	});
+	return t('backup.countHelp', { count: retainedBackupCount - 1 });
 };
 
 // The backup outcome arrives long after the task command that triggered it, so the status is both read once and then pushed by the main process
@@ -266,10 +263,7 @@ const BackupSettings = (): ReactElement => {
 			<p className='backup-settings-directory'>{location?.databasePath || t('backup.unknownDatabasePath')}</p>
 
 			<h3 className='backup-settings-title backup-settings-title-spaced'>{t('backup.folderTitle')}</h3>
-			<p className='backup-settings-description'>
-				{t('backup.folderDescription', { latestFileName: BACKUP_CONFIG.latestFileName })}
-			</p>
-			<p className='backup-settings-warning'>{t('backup.folderWarning')}</p>
+			<p className='backup-settings-description'>{t('backup.folderDescription')}</p>
 			<p className='backup-settings-directory'>{currentDirectory || t('backup.noFolderSelected')}</p>
 			{location?.isDevelopment &&
 				<p className='backup-settings-notice'>{t('backup.developmentNotice')}</p>
@@ -305,7 +299,6 @@ const BackupSettings = (): ReactElement => {
 					<p className='backup-settings-description'>{createRetainedBackupCountMessage(retainedBackupCount, translator)}</p>
 				}
 			</div>
-			<p className='backup-settings-warning'>{t('backup.countKeepsExisting')}</p>
 
 			{isChangingDirectory &&
 				<p className='backup-settings-feedback' role='status'>{t('backup.changingFolder')}</p>

@@ -1,6 +1,5 @@
 
 .backup-settings {
-	max-width: 640px;
 	margin: 20px;
 	line-height: 1.4;
 }
@@ -19,13 +18,8 @@
 	color: var(--colors-text-secondary);
 }
 
-.backup-settings-warning {
-	margin: 10px 0 0 0;
-	color: var(--colors-text-secondary);
-	font-size: 0.85rem;
-}
-
 .backup-settings-directory {
+	max-width: 640px;
 	margin: 12px 0 0 0;
 	padding: 10px 12px;
 	border: 1px solid var(--colors-border-subtle);

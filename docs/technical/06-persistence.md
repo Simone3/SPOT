@@ -18,7 +18,7 @@ What the renderer does with all of this is [§7](07-task-write-path.md).
 - Because the database is local, write-ahead logging is safe to use, and its `-wal` and `-shm` companion files never have to be understood by a synchronization client.
 - The backup folder only ever receives finished files. Each copy is built locally and published with an atomic rename, including the one that is overwritten on every refresh, so a synchronization client watching that folder cannot observe a database that is still being written.
 
-**The backup folder is therefore a write-only destination.** SPOT never reads a backup back, never compares one against the live database, and does not keep two computers in sync. Restoring a backup is a manual step: with SPOT closed, copy the chosen copy over `spot.sqlite` in the database folder. The Settings notice about the backup folder says this too, because a backup nobody knows how to use is not a backup, and it says what the copy costs: every change made after that copy was written is replaced ([§11.3](11-interface.md#113-settings)).
+**The backup folder is therefore a write-only destination.** SPOT never reads a backup back, never compares one against the live database, and does not keep two computers in sync. Restoring a backup is a manual step: with SPOT closed, copy the chosen copy over `spot.sqlite` in the database folder. The Settings description of the backup folder says this too, and says how to do it, because a backup nobody knows how to use is not a backup ([§11.3](11-interface.md#113-settings)).
 
 ## 6.2 What is in each folder
 

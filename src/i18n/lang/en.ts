@@ -196,8 +196,7 @@ export const EN_TRANSLATIONS = {
 		databaseDescription: 'SPOT keeps all your tasks in a single spot.sqlite database inside its own application folder. This is always where your tasks are read from and written to, and it cannot be moved.',
 		unknownDatabasePath: 'Unknown.',
 		folderTitle: 'Backup folder',
-		folderDescription: 'SPOT writes complete copies of the database here. "{latestFileName}" is rewritten a couple of minutes after you stop making changes, so it always holds what you have just done. Dated copies are added beside it every twelve hours of work, so that you can also go back to how things were a few days ago.',
-		folderWarning: 'This folder is a backup destination, not a shared one. A folder synchronized by OneDrive, Google Drive, Dropbox or iCloud is safe to use, because each copy is written as one finished file. SPOT never reads these copies back though: it does not keep two computers in sync, and restoring is a manual step. To restore, close SPOT and copy the copy you want over the database above under that exact name, which replaces every change made after that copy was written.',
+		folderDescription: 'SPOT writes complete copies of the database here. SPOT never reads these copies back and it does not keep two computers in sync. To restore a backup manually, close SPOT and copy the backup you want over the database above under that exact name.',
 		noFolderSelected: 'No folder is selected.',
 		developmentNotice: 'Development run: the backup folder can be changed to test the app, but the next development startup goes back to the development folder.',
 
@@ -226,13 +225,12 @@ export const EN_TRANSLATIONS = {
 		// What the chosen number actually means, which is one of three things: nothing at all, the up-to-date copy alone, or that
 		// copy and however many dated ones are left over. The plural counts the dated copies and so is never reached with none.
 		countNone: 'No backup copies are written at all. Your tasks are still saved in the database above.',
-		countLatestOnly: 'Only "{latestFileName}" is written, always holding your latest changes.',
+		countLatestOnly: 'Only one backup, written a couple of minutes after you stop making changes.',
 		countHelp: {
-			one: '"{latestFileName}" always holds your latest changes, and one dated copy is kept beside it.',
-			other: '"{latestFileName}" always holds your latest changes, and the {count} most recent dated copies are kept beside it.'
+			one: 'One backup written a couple of minutes after you stop making changes and one other dated backup written after twelve hours of work.',
+			other: 'One backup written a couple of minutes after you stop making changes and {count} other dated backups written after twelve hours of work.'
 		},
 
-		countKeepsExisting: 'Copies already in the folder are never deleted when you lower this number: the folder comes down to it as new dated copies replace the oldest ones.',
 		countChanged: {
 			one: 'SPOT now keeps one backup copy.',
 			other: 'SPOT now keeps {count} backup copies.'

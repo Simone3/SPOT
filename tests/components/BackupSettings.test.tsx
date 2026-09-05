@@ -121,7 +121,7 @@ describe('BackupSettings', () => {
 	});
 
 	// Backups nobody knows how to use are not backups, and SPOT never reads one back on its own
-	test('says how to restore a backup copy, in the notice about the folder', async() => {
+	test('says how to restore a backup copy, where it says they are never read back', async() => {
 		setWindowApi('spotBackupLocation', createMockBackupLocationApi());
 		setWindowApi('spotStorage', createMockStorageApi(undefined));
 
@@ -131,10 +131,9 @@ describe('BackupSettings', () => {
 			</BackupLocationContextProvider>
 		);
 
-		const notice = await screen.findByText(/it does not keep two computers in sync/);
+		const description = await screen.findByText(/it does not keep two computers in sync/);
 
-		expect(notice).toHaveTextContent('close SPOT and copy the copy you want over the database above');
-		expect(notice).toHaveTextContent('replaces every change made after that copy was written');
+		expect(description).toHaveTextContent('close SPOT and copy the backup you want over the database above under that exact name');
 	});
 
 	test('reports a failed backup without claiming the tasks are lost', async() => {
@@ -211,7 +210,7 @@ describe('BackupSettings', () => {
 			</BackupLocationContextProvider>
 		);
 
-		expect(await screen.findByText(/the 9 most recent dated copies are kept beside it/)).toBeInTheDocument();
+		expect(await screen.findByText(/9 other dated backups written after twelve hours of work/)).toBeInTheDocument();
 		expect(screen.getByLabelText('Number of copies')).toHaveValue(10);
 	});
 
@@ -227,7 +226,7 @@ describe('BackupSettings', () => {
 		);
 
 		// The field is only usable once the settings have arrived from the main process
-		await screen.findByText(/the 9 most recent dated copies are kept beside it/);
+		await screen.findByText(/9 other dated backups written after twelve hours of work/);
 
 		const countField = screen.getByLabelText('Number of copies');
 
