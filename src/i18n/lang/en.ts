@@ -109,10 +109,11 @@ export const EN_TRANSLATIONS = {
 			low: 'Low'
 		},
 
-		// The entries the domain lists always carry, whether or not a task uses them
+		// The entries the domain lists carry beyond the values the tasks themselves name
 		domains: {
 			noOwner: 'Me',
-			noDueDate: 'None'
+			noDueDate: 'None',
+			noTags: 'Untagged'
 		}
 	},
 

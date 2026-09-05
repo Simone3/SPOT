@@ -66,10 +66,20 @@ const matchesFilters = (task: Task, filters: TaskFilters): boolean => {
 		return false;
 	}
 
-	if(filters.tags.length > 0 && (task.tags.length === 0 || task.tags.every((tag) => {
-		return !filters.tags.includes(tag);
-	}))) {
-		return false;
+	// A task with no tag at all matches the empty filter value, the "no value" convention the owner and due date filters follow
+	// too. A tag the user has started typing but not finished is empty and stands for nothing, so it does not count as a tag.
+	if(filters.tags.length > 0) {
+		const taskTags = task.tags.filter((tag) => {
+			return Boolean(tag);
+		});
+		const matchesTags = taskTags.length === 0 ?
+			filters.tags.includes('') :
+			taskTags.some((tag) => {
+				return filters.tags.includes(tag);
+			});
+		if(!matchesTags) {
+			return false;
+		}
 	}
 
 	if(filters.text && !matchesText(task.text, filters.text)) {

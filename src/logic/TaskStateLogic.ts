@@ -45,7 +45,7 @@ export const loadTasksIntoTaskState = (prevTaskState: TaskStateContainer, tasks:
 	loadBackEndTasks(newTasksContainer, tasks);
 
 	// Extract domains from all tasks and add them to the proper state lists
-	addDomainsForTasks(newDomainsContainer, newTasksContainer);
+	addDomainsForTasks(newDomainsContainer, newTasksContainer, domainLabels);
 
 	// Compute initial visibility of all tasks
 	refreshTasksVisibility(newTasksContainer, prevTaskState.filters, prevTaskState.filters, cloneTask);
@@ -63,7 +63,7 @@ export const loadTasksIntoState = (setTaskState: SetTaskState, tasks: Task[], do
 	});
 };
 
-export const addTaskToTaskState = (prevTaskState: TaskStateContainer): AddTaskToTaskStateResult => {
+export const addTaskToTaskState = (prevTaskState: TaskStateContainer, domainLabels: DomainLabels): AddTaskToTaskStateResult => {
 	const newTasksContainer = cloneTasks(prevTaskState.tasksContainer);
 	const newDomainsContainer = cloneDomains(prevTaskState.domainsContainer);
 
@@ -71,7 +71,7 @@ export const addTaskToTaskState = (prevTaskState: TaskStateContainer): AddTaskTo
 	const newTask = addNewTask(newTasksContainer);
 
 	// Extract domains from the new task and update the state lists
-	addDomainsForTask(newDomainsContainer, newTask);
+	addDomainsForTask(newDomainsContainer, newTask, domainLabels);
 
 	// New tasks are always visible, regardless of current filters
 	newTask.visible = true;
@@ -86,13 +86,13 @@ export const addTaskToTaskState = (prevTaskState: TaskStateContainer): AddTaskTo
 	};
 };
 
-export const addTaskToState = (setTaskState: SetTaskState): void => {
+export const addTaskToState = (setTaskState: SetTaskState, domainLabels: DomainLabels): void => {
 	setTaskState((prevTaskState) => {
-		return addTaskToTaskState(prevTaskState).taskState;
+		return addTaskToTaskState(prevTaskState, domainLabels).taskState;
 	});
 };
 
-export const updateTaskInTaskState = (prevTaskState: TaskStateContainer, oldTask: Task, changedValues: TaskChange): UpdateTaskInTaskStateResult => {
+export const updateTaskInTaskState = (prevTaskState: TaskStateContainer, oldTask: Task, changedValues: TaskChange, domainLabels: DomainLabels): UpdateTaskInTaskStateResult => {
 	const newTasksContainer = cloneTasks(prevTaskState.tasksContainer);
 	const newDomainsContainer = cloneDomains(prevTaskState.domainsContainer);
 	const newFilters = cloneFilters(prevTaskState.filters);
@@ -101,7 +101,7 @@ export const updateTaskInTaskState = (prevTaskState: TaskStateContainer, oldTask
 	const newTask = updateTask(newTasksContainer, oldTask, changedValues);
 
 	// Extract changed domains and update the state lists
-	updateDomainsForTask(newDomainsContainer, oldTask, newTask, changedValues);
+	updateDomainsForTask(newDomainsContainer, oldTask, newTask, changedValues, domainLabels);
 
 	// Clean currently selected filters if domains values were removed
 	updateFiltersOnDomainsChange(newDomainsContainer.filters, newFilters);
@@ -121,13 +121,13 @@ export const updateTaskInTaskState = (prevTaskState: TaskStateContainer, oldTask
 	};
 };
 
-export const updateTaskInState = (setTaskState: SetTaskState, oldTask: Task, changedValues: TaskChange): void => {
+export const updateTaskInState = (setTaskState: SetTaskState, oldTask: Task, changedValues: TaskChange, domainLabels: DomainLabels): void => {
 	setTaskState((prevTaskState) => {
-		return updateTaskInTaskState(prevTaskState, oldTask, changedValues).taskState;
+		return updateTaskInTaskState(prevTaskState, oldTask, changedValues, domainLabels).taskState;
 	});
 };
 
-export const deleteTaskFromTaskState = (prevTaskState: TaskStateContainer, task: Task): TaskStateContainer => {
+export const deleteTaskFromTaskState = (prevTaskState: TaskStateContainer, task: Task, domainLabels: DomainLabels): TaskStateContainer => {
 	const newTasksContainer = cloneTasks(prevTaskState.tasksContainer);
 	const newDomainsContainer = cloneDomains(prevTaskState.domainsContainer);
 	const newFilters = cloneFilters(prevTaskState.filters);
@@ -136,7 +136,7 @@ export const deleteTaskFromTaskState = (prevTaskState: TaskStateContainer, task:
 	deleteTask(newTasksContainer, task);
 
 	// Update domains in the state lists
-	removeDomainsForTask(newDomainsContainer, task);
+	removeDomainsForTask(newDomainsContainer, task, domainLabels);
 
 	// Clean currently selected filters if domains values were removed
 	updateFiltersOnDomainsChange(newDomainsContainer.filters, newFilters);
@@ -148,9 +148,9 @@ export const deleteTaskFromTaskState = (prevTaskState: TaskStateContainer, task:
 	};
 };
 
-export const deleteTaskFromState = (setTaskState: SetTaskState, task: Task): void => {
+export const deleteTaskFromState = (setTaskState: SetTaskState, task: Task, domainLabels: DomainLabels): void => {
 	setTaskState((prevTaskState) => {
-		return deleteTaskFromTaskState(prevTaskState, task);
+		return deleteTaskFromTaskState(prevTaskState, task, domainLabels);
 	});
 };
 

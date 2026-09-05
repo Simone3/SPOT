@@ -72,7 +72,7 @@ The state helpers clone top-level containers and lists before updating them. **T
 
 - Completed tasks are hidden unless `showCompleted` is true.
 - Priority, owner and due date filters match exact values.
-- Tag filtering matches if a task has at least one selected tag.
+- Tag filtering matches if a task has at least one selected tag, or if it has no tag at all and the empty value is selected. The empty value is the `Untagged` entry, the same "no value" convention the owner and due date filters already use.
 - Active tasks are refreshed whenever filters change.
 - Completed tasks are refreshed only when `showCompleted` is active or when that toggle changes.
 
@@ -91,9 +91,13 @@ The state helpers clone top-level containers and lists before updating them. **T
 }
 ```
 
-**Persistent domains**, whose labels are translated while their values are not: the priorities Urgent, High, Normal and Low, stored as `URGENT`, `HIGH`, `NORMAL` and `LOW`; the owner `Me`, represented by an empty string; and the due date `None`, also an empty string. `getInitialDomains()` takes those six labels as a `DomainLabels` argument rather than reading them itself, so the domain logic stays pure and free of translation; `TasksContext` builds them from the translator. Every list is built fresh on each call, so the filter section and the form section count their entries independently.
+**Persistent domains**, whose labels are translated while their values are not: the priorities Urgent, High, Normal and Low, stored as `URGENT`, `HIGH`, `NORMAL` and `LOW`; the owner `Me`, represented by an empty string; and the due date `None`, also an empty string. Every list is built fresh on each call, so the filter section and the form section count their entries independently.
 
 **Dynamic domains** are the owners found in tasks, the due dates found in active tasks for filters, and the tags found in tasks. Their counts are incremented or decremented as tasks change, and a non-persistent domain is removed when its count reaches zero. Existing filters are cleaned when a selected domain value disappears. A dynamic entry takes its label from the task value itself, so it is never translated.
+
+**The `Untagged` entry** is the one exception to those two, and it is why the whole domain logic takes its wording rather than only `getInitialDomains()` does: it is worded like a persistent entry and counted like a dynamic one. A task carrying no tag at all counts under the empty tag value, so the filter offers `Untagged` only while some active task has no tags, and it goes away — taking the selected filter with it — as soon as the last of them is tagged. The form section never carries it: those lists suggest values to type into a tag input, and "no value" is not one of them. A tag the user has started typing but not finished is an empty value that stands for nothing, so both the domains and the filter read past it: it is not a tag of its own, and it does not stop a task from counting as untagged. It needs no sort rule to stay first, because the filter lists are sorted by value and the empty string sorts before anything a user can type. `TaskFilters` hides the tags filter altogether when `Untagged` is the only entry in it: with nothing tagged at all, selecting it would filter nothing out.
+
+The labels of all of these are passed in as a `DomainLabels` argument rather than read by the domain logic itself, so it stays pure and free of translation; `TasksContext` builds them from the translator, both when it creates the domains and whenever a task change may have to build the `Untagged` entry again.
 
 **The two sections are kept in different orders, because the user reads them differently:**
 

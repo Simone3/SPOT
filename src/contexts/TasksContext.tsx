@@ -56,7 +56,8 @@ const createDomainLabels = (translator: SpotTranslator): DomainLabels => {
 		normal: translator.t('tasks.priorities.normal'),
 		low: translator.t('tasks.priorities.low'),
 		noOwner: translator.t('tasks.domains.noOwner'),
-		noDueDate: translator.t('tasks.domains.noDueDate')
+		noDueDate: translator.t('tasks.domains.noDueDate'),
+		noTags: translator.t('tasks.domains.noTags')
 	};
 };
 
@@ -390,7 +391,7 @@ export const TasksContextProvider = ({ children }: TasksContextProviderProps): R
 
 	const onAddNewTask = useCallback((): void => {
 		applyOptimisticTaskCommand((currentTaskState) => {
-			const result = addTaskToTaskState(currentTaskState);
+			const result = addTaskToTaskState(currentTaskState, createDomainLabels(translatorRef.current));
 
 			return {
 				taskState: result.taskState,
@@ -408,7 +409,7 @@ export const TasksContextProvider = ({ children }: TasksContextProviderProps): R
 		clearPendingTaskChanges(task.id);
 		applyOptimisticTaskCommand((currentTaskState) => {
 			return {
-				taskState: deleteTaskFromTaskState(currentTaskState, task),
+				taskState: deleteTaskFromTaskState(currentTaskState, task, createDomainLabels(translatorRef.current)),
 				command: {
 					command: 'task.delete',
 					payload: {
@@ -431,7 +432,7 @@ export const TasksContextProvider = ({ children }: TasksContextProviderProps): R
 				};
 			}
 
-			const result = updateTaskInTaskState(currentTaskState, oldTask, changedValues);
+			const result = updateTaskInTaskState(currentTaskState, oldTask, changedValues, createDomainLabels(translatorRef.current));
 			const change = createPersistedTaskChange(oldTask, result.task);
 
 			return {

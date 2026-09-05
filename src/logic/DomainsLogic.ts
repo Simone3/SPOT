@@ -12,10 +12,11 @@ type TaskDomainHandler = {
 	isTaskFieldList: boolean;
 	domainListField: FilterListField;
 	filtersField: FilterListField;
+	createEmptyListDomain?: (labels: DomainLabels) => DomainEntry;
 };
 
 /**
- * Wording for the domain entries that are always there, whatever the tasks look like.
+ * Wording for the domain entries the tasks themselves do not name: the ones that are always there, plus the one that stands for a task with no tag at all.
  * Only the labels are translated: the values next to them are what a task stores, so they never change with the language.
  */
 export interface DomainLabels {
@@ -25,12 +26,14 @@ export interface DomainLabels {
 	low: string;
 	noOwner: string;
 	noDueDate: string;
+	noTags: string;
 }
 
-// The keys of the two entries that stand for "no value" are random, so they can never collide with an owner or a due date a
+// The keys of the entries that stand for "no value" are random, so they can never collide with an owner, a due date or a tag a
 // user typed. They are generated once, so that rebuilding the domains keeps React rendering the same elements.
 const NO_OWNER_KEY = `no-owner-${crypto.randomUUID()}`;
 const NO_DUE_DATE_KEY = `no-due-date-${crypto.randomUUID()}`;
+const NO_TAGS_KEY = `no-tags-${crypto.randomUUID()}`;
 
 const createPriorityDomains = (labels: DomainLabels): DomainEntry[] => {
 	return [{
@@ -84,6 +87,19 @@ const createNoDueDateDomain = (labels: DomainLabels): DomainEntry => {
 		color: undefined,
 		persistent: true,
 		count: 0
+	};
+};
+
+// Unlike the other entries that stand for "no value", this one is not persistent: it is counted like a tag, so the filters
+// only offer it while some task carries no tag at all. It is therefore built when the first such task needs it, already counting it.
+const createNoTagsDomain = (labels: DomainLabels): DomainEntry => {
+	return {
+		key: NO_TAGS_KEY,
+		value: '',
+		label: labels.noTags,
+		color: undefined,
+		persistent: false,
+		count: 1
 	};
 };
 
@@ -168,8 +184,9 @@ const domainCountCompareFunction = (entryA: DomainEntry, entryB: DomainEntry): n
  */
 const sortAllDomains = (domainsContainer: DomainsContainer): void => {
 	// The filter lists are a checklist the user reads front to back, so they stay in value order (priorities are already
-	// sorted by default). The form lists are suggestions the user picks one entry from, so the most used ones come first,
-	// with the entry that stands for "no value" kept at the top because it is the default rather than a suggestion.
+	// sorted by default). That is what keeps the entries standing for "no value" first, since the empty string sorts before
+	// anything a user can type. The form lists are suggestions the user picks one entry from, so the most used ones come
+	// first, with the entry that stands for "no value" kept at the top because it is the default rather than a suggestion.
 	domainsContainer.filters.owners.sort(domainValueCompareFunction);
 	domainsContainer.filters.dueDates.sort(domainValueCompareFunction);
 	domainsContainer.filters.tags.sort(domainValueCompareFunction);
@@ -208,29 +225,32 @@ const removeDomain = (domainsList: DomainEntry[], oldDomainValue: string): void 
  * Adds a domain value to a domain list (either by creating a new entry or by cloning & updating an existing entry counter).
  * @param domainsList Domain list to update.
  * @param newDomainValue Domain value to add.
+ * @param createMissingDomain Builds the entry when the list does not carry it yet, for the values that need more than their own text.
  */
-const addDomain = (domainsList: DomainEntry[], newDomainValue: string): void => {
+const addDomain = (domainsList: DomainEntry[], newDomainValue: string, createMissingDomain?: () => DomainEntry): void => {
 	// Find new domain by value
 	const domainIndex = domainsList.findIndex((domain) => {
 		return domain.value === newDomainValue;
 	});
 
 	// Skip new domain value if empty and there's no predefined entry for it
-	if(domainIndex === -1 && !newDomainValue) {
+	if(domainIndex === -1 && !newDomainValue && !createMissingDomain) {
 		return;
 	}
 
 	let domain;
 	if(domainIndex === -1) {
 		// Create new entry and add it to the list
-		domain = {
-			key: newDomainValue,
-			value: newDomainValue,
-			label: newDomainValue,
-			color: undefined,
-			persistent: false,
-			count: 1
-		};
+		domain = createMissingDomain ?
+			createMissingDomain() :
+			{
+				key: newDomainValue,
+				value: newDomainValue,
+				label: newDomainValue,
+				color: undefined,
+				persistent: false,
+				count: 1
+			};
 		domainsList.push(domain);
 	}
 	else {
@@ -264,7 +284,7 @@ const taskDomainHandlers: TaskDomainHandler[] = [
 	{ taskField: 'priority', isTaskFieldList: false, domainListField: 'priorities', filtersField: 'priorities' },
 	{ taskField: 'owner', isTaskFieldList: false, domainListField: 'owners', filtersField: 'owners' },
 	{ taskField: 'dueDate', isTaskFieldList: false, domainListField: 'dueDates', filtersField: 'dueDates' },
-	{ taskField: 'tags', isTaskFieldList: true, domainListField: 'tags', filtersField: 'tags' }
+	{ taskField: 'tags', isTaskFieldList: true, domainListField: 'tags', filtersField: 'tags', createEmptyListDomain: createNoTagsDomain }
 ];
 
 /**
@@ -275,8 +295,9 @@ const taskDomainHandlers: TaskDomainHandler[] = [
  * @param oldTask Previous task values, when present.
  * @param newTask New task values, when present.
  * @param changedTaskValues Task fields that changed.
+ * @param emptyListLabels Wording for the entries that stand for an empty task list, or nothing for a section that does not offer them.
  */
-const updateDomainsForTaskInSection = (domainsSection: DomainsSection, oldTask: Task | undefined, newTask: Task | undefined, changedTaskValues: TaskChange | undefined): void => {
+const updateDomainsForTaskInSection = (domainsSection: DomainsSection, oldTask: Task | undefined, newTask: Task | undefined, changedTaskValues: TaskChange | undefined, emptyListLabels: DomainLabels | undefined): void => {
 	// Loop all dynamic handlers
 	for(const handler of taskDomainHandlers) {
 		// Extract the handler's domains list (if present)
@@ -296,18 +317,40 @@ const updateDomainsForTaskInSection = (domainsSection: DomainsSection, oldTask: 
 
 		// If the task value is actually a list, remove all old values and add all new values (for simplicity)
 		if(handler.isTaskFieldList) {
-			const oldDomainValues = oldDomainValue as string[] | undefined;
-			const newDomainValues = newDomainValue as string[] | undefined;
-			if(oldDomainValues) {
+			// A value the user has started typing but not finished is empty and stands for nothing, so it is neither a domain
+			// of its own nor something that keeps the list from being empty
+			const oldDomainValues = (oldDomainValue as string[] | undefined)?.filter((domainValue) => {
+				return Boolean(domainValue);
+			});
+			const newDomainValues = (newDomainValue as string[] | undefined)?.filter((domainValue) => {
+				return Boolean(domainValue);
+			});
+
+			// An empty list is a value of its own, counted under the empty domain value like a missing owner or due date is,
+			// but only in the sections that offer it: the form lists suggest values to type, and "no value" is not one of them.
+			const createEmptyListDomain = handler.createEmptyListDomain;
+			const emptyListDomainFactory = emptyListLabels && createEmptyListDomain ?
+				(): DomainEntry => {
+					return createEmptyListDomain(emptyListLabels);
+				} :
+				undefined;
+
+			if(oldDomainValues && oldDomainValues.length > 0) {
 				for(const oldDomainValueElem of oldDomainValues) {
 					removeDomain(domainsList, oldDomainValueElem);
 				}
 			}
+			else if(oldDomainValues && emptyListDomainFactory) {
+				removeDomain(domainsList, '');
+			}
 
-			if(newDomainValues) {
+			if(newDomainValues && newDomainValues.length > 0) {
 				for(const newDomainValueElem of newDomainValues) {
 					addDomain(domainsList, newDomainValueElem);
 				}
+			}
+			else if(newDomainValues && emptyListDomainFactory) {
+				addDomain(domainsList, '', emptyListDomainFactory);
 			}
 		}
 
@@ -331,10 +374,11 @@ const updateDomainsForTaskInSection = (domainsSection: DomainsSection, oldTask: 
  * @param oldTask Previous task values, when present.
  * @param newTask New task values, when present.
  * @param changedTaskValues Task fields that changed.
+ * @param labels Wording for the entries the tasks themselves do not name.
  */
-const updateDomainsForTaskHelper = (domainsContainer: DomainsContainer, oldTask: Task | undefined, newTask: Task | undefined, changedTaskValues: TaskChange | undefined): void => {
+const updateDomainsForTaskHelper = (domainsContainer: DomainsContainer, oldTask: Task | undefined, newTask: Task | undefined, changedTaskValues: TaskChange | undefined, labels: DomainLabels): void => {
 	// The form section needs to be updated in any case (it contains domains for ALL tasks, both active and completed)
-	updateDomainsForTaskInSection(domainsContainer.form, oldTask, newTask, changedTaskValues);
+	updateDomainsForTaskInSection(domainsContainer.form, oldTask, newTask, changedTaskValues, undefined);
 
 	// Update the filters section (it contains domains for the active tasks only)
 	if(newTask && oldTask) {
@@ -342,20 +386,20 @@ const updateDomainsForTaskHelper = (domainsContainer: DomainsContainer, oldTask:
 		const newActive = newTask.state === 'ACTIVE';
 		if(oldActive && !newActive) {
 			// Task changes state to completed: remove the domains from filters section
-			updateDomainsForTaskInSection(domainsContainer.filters, oldTask, undefined, undefined);
+			updateDomainsForTaskInSection(domainsContainer.filters, oldTask, undefined, undefined, labels);
 		}
 		else if(!oldActive && newActive) {
 			// Task changes state to active: add the domains to filters section
-			updateDomainsForTaskInSection(domainsContainer.filters, undefined, newTask, undefined);
+			updateDomainsForTaskInSection(domainsContainer.filters, undefined, newTask, undefined, labels);
 		}
 		else if(oldActive && newActive) {
 			// Task remains active: update the filters section
-			updateDomainsForTaskInSection(domainsContainer.filters, oldTask, newTask, changedTaskValues);
+			updateDomainsForTaskInSection(domainsContainer.filters, oldTask, newTask, changedTaskValues, labels);
 		}
 	}
 	else if((oldTask && oldTask.state === 'ACTIVE') || (newTask && newTask.state === 'ACTIVE')) {
 		// Add or remove active task: update the filters section
-		updateDomainsForTaskInSection(domainsContainer.filters, oldTask, newTask, changedTaskValues);
+		updateDomainsForTaskInSection(domainsContainer.filters, oldTask, newTask, changedTaskValues, labels);
 	}
 };
 
@@ -363,9 +407,10 @@ const updateDomainsForTaskHelper = (domainsContainer: DomainsContainer, oldTask:
  * Adds all domains of a given task to their respective domains lists, keeping them in order.
  * @param domainsContainer Domain lists to update.
  * @param task Task providing domain values.
+ * @param labels Wording for the entries the tasks themselves do not name.
  */
-export const addDomainsForTask = (domainsContainer: DomainsContainer, task: Task): void => {
-	updateDomainsForTaskHelper(domainsContainer, undefined, task, undefined);
+export const addDomainsForTask = (domainsContainer: DomainsContainer, task: Task, labels: DomainLabels): void => {
+	updateDomainsForTaskHelper(domainsContainer, undefined, task, undefined, labels);
 	sortAllDomains(domainsContainer);
 };
 
@@ -373,9 +418,10 @@ export const addDomainsForTask = (domainsContainer: DomainsContainer, task: Task
  * Removes all domains of a given task from their respective domains lists, keeping them in order.
  * @param domainsContainer Domain lists to update.
  * @param task Task providing domain values.
+ * @param labels Wording for the entries the tasks themselves do not name.
  */
-export const removeDomainsForTask = (domainsContainer: DomainsContainer, task: Task): void => {
-	updateDomainsForTaskHelper(domainsContainer, task, undefined, undefined);
+export const removeDomainsForTask = (domainsContainer: DomainsContainer, task: Task, labels: DomainLabels): void => {
+	updateDomainsForTaskHelper(domainsContainer, task, undefined, undefined, labels);
 	sortAllDomains(domainsContainer);
 };
 
@@ -385,9 +431,10 @@ export const removeDomainsForTask = (domainsContainer: DomainsContainer, task: T
  * @param oldTask Previous task values.
  * @param newTask New task values.
  * @param changedTaskValues Task fields that changed.
+ * @param labels Wording for the entries the tasks themselves do not name.
  */
-export const updateDomainsForTask = (domainsContainer: DomainsContainer, oldTask: Task, newTask: Task, changedTaskValues: TaskChange): void => {
-	updateDomainsForTaskHelper(domainsContainer, oldTask, newTask, changedTaskValues);
+export const updateDomainsForTask = (domainsContainer: DomainsContainer, oldTask: Task, newTask: Task, changedTaskValues: TaskChange, labels: DomainLabels): void => {
+	updateDomainsForTaskHelper(domainsContainer, oldTask, newTask, changedTaskValues, labels);
 	sortAllDomains(domainsContainer);
 };
 
@@ -395,14 +442,15 @@ export const updateDomainsForTask = (domainsContainer: DomainsContainer, oldTask
  * For each task, adds all its domains to their respective domains lists, keeping them in order.
  * @param domainsContainer Domain lists to populate.
  * @param tasksContainer Task lists providing domain values.
+ * @param labels Wording for the entries the tasks themselves do not name.
  */
-export const addDomainsForTasks = (domainsContainer: DomainsContainer, tasksContainer: TasksContainer): void => {
+export const addDomainsForTasks = (domainsContainer: DomainsContainer, tasksContainer: TasksContainer, labels: DomainLabels): void => {
 	for(const task of tasksContainer.active) {
-		updateDomainsForTaskHelper(domainsContainer, undefined, task, undefined);
+		updateDomainsForTaskHelper(domainsContainer, undefined, task, undefined, labels);
 	}
 
 	for(const task of tasksContainer.completed) {
-		updateDomainsForTaskHelper(domainsContainer, undefined, task, undefined);
+		updateDomainsForTaskHelper(domainsContainer, undefined, task, undefined, labels);
 	}
 
 	sortAllDomains(domainsContainer);

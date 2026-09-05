@@ -3,7 +3,7 @@ import { renderWithTranslations } from '../testUtils';
 import { TaskFilters } from 'src/components/tasks/TaskFilters';
 import { DateUtils } from 'src/framework/utils/DateUtils';
 import { getInitialFilters } from 'src/logic/FiltersLogic';
-import type { FilterDomains } from 'src/types/DomainTypes';
+import type { DomainEntry, FilterDomains } from 'src/types/DomainTypes';
 
 // Due date labels are relative to the real current day, so the fixture has to be too
 const todayValue = DateUtils.toStandardYearMonthDay(new Date());
@@ -51,6 +51,16 @@ const domains: FilterDomains = {
 	]
 };
 
+// The entry the domains carry while some task has no tag at all, worded rather than named after a task value
+const untaggedDomain: DomainEntry = {
+	key: 'no-tags',
+	value: '',
+	label: 'Untagged',
+	color: undefined,
+	persistent: false,
+	count: 1
+};
+
 describe('TaskFilters', () => {
 	test('renders filter controls and emits focused filter changes', () => {
 		const onFilterChange = vi.fn();
@@ -84,5 +94,42 @@ describe('TaskFilters', () => {
 		expect(onFilterChange).toHaveBeenCalledWith({ tags: [ 'work' ] });
 		expect(onFilterChange).toHaveBeenCalledWith({ showCompleted: true });
 		expect(onResetDefaultFilters).toHaveBeenCalledTimes(1);
+	});
+
+	test('selects the untagged entry through the empty tag filter value', () => {
+		const onFilterChange = vi.fn();
+
+		renderWithTranslations(
+			<TaskFilters
+				domains={{
+					...domains,
+					tags: [ untaggedDomain, ...domains.tags ]
+				}}
+				filters={getInitialFilters()}
+				onFilterChange={onFilterChange}
+				onResetDefaultFilters={vi.fn()}
+			/>
+		);
+
+		fireEvent.click(screen.getByRole('button', { name: 'Untagged' }));
+
+		expect(onFilterChange).toHaveBeenCalledWith({ tags: [ '' ] });
+	});
+
+	test('hides the tags filter when the untagged entry is the only one, since it would filter nothing out', () => {
+		renderWithTranslations(
+			<TaskFilters
+				domains={{
+					...domains,
+					tags: [ untaggedDomain ]
+				}}
+				filters={getInitialFilters()}
+				onFilterChange={vi.fn()}
+				onResetDefaultFilters={vi.fn()}
+			/>
+		);
+
+		expect(screen.queryByText('Tags')).toBeNull();
+		expect(screen.queryByRole('button', { name: 'Untagged' })).toBeNull();
 	});
 });

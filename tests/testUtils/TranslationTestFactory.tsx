@@ -15,7 +15,7 @@ export const makeTranslator = (): SpotTranslator => {
 
 /**
  * The labels the pure domain logic needs, in English.
- * @returns Domain labels for the entries that are always present.
+ * @returns Domain labels for the entries the tasks themselves do not name.
  */
 export const makeDomainLabels = (): DomainLabels => {
 	const translator = makeTranslator();
@@ -26,7 +26,8 @@ export const makeDomainLabels = (): DomainLabels => {
 		normal: translator.t('tasks.priorities.normal'),
 		low: translator.t('tasks.priorities.low'),
 		noOwner: translator.t('tasks.domains.noOwner'),
-		noDueDate: translator.t('tasks.domains.noDueDate')
+		noDueDate: translator.t('tasks.domains.noDueDate'),
+		noTags: translator.t('tasks.domains.noTags')
 	};
 };
 

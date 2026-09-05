@@ -110,6 +110,51 @@ describe('FiltersLogic', () => {
 		expect(task.visible).toBe(true);
 	});
 
+	test('matches the empty tag filter value against tasks carrying no tag', () => {
+		const untaggedTask = makeTask({ tags: [], visible: false });
+		const taggedTask = makeTask({ tags: [ 'work' ], visible: true });
+
+		refreshTaskVisibility(untaggedTask, {
+			...getInitialFilters(),
+			tags: [ '' ]
+		});
+		refreshTaskVisibility(taggedTask, {
+			...getInitialFilters(),
+			tags: [ '' ]
+		});
+
+		expect(untaggedTask.visible).toBe(true);
+		expect(taggedTask.visible).toBe(false);
+	});
+
+	test('matches a task selected either by the empty tag filter value or by one of its own tags', () => {
+		const untaggedTask = makeTask({ tags: [], visible: false });
+		const taggedTask = makeTask({ tags: [ 'work' ], visible: false });
+		const otherTaggedTask = makeTask({ tags: [ 'home' ], visible: true });
+
+		for(const task of [ untaggedTask, taggedTask, otherTaggedTask ]) {
+			refreshTaskVisibility(task, {
+				...getInitialFilters(),
+				tags: [ '', 'work' ]
+			});
+		}
+
+		expect(untaggedTask.visible).toBe(true);
+		expect(taggedTask.visible).toBe(true);
+		expect(otherTaggedTask.visible).toBe(false);
+	});
+
+	test('treats a task whose only tag is the empty one still being typed as untagged', () => {
+		const typingTask = makeTask({ tags: [ '' ], visible: false });
+
+		refreshTaskVisibility(typingTask, {
+			...getInitialFilters(),
+			tags: [ '' ]
+		});
+
+		expect(typingTask.visible).toBe(true);
+	});
+
 	test('matches text as a plain literal substring, ignoring regex metacharacters', () => {
 		const literalMatchTask = makeTask({ text: 'Write project (draft)', visible: false });
 		const noMetacharacterMatchTask = makeTask({ text: 'Write projectXdraft', visible: false });
