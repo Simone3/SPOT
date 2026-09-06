@@ -81,7 +81,9 @@ const ButtonsSelect = ({ label, allowMultiSelect, options, value, onChange }: Bu
 							ariaLabel={option.count === undefined ? undefined : option.countLabel}
 							label={
 								<>
-									{option.label}
+									{/* The label is cut to one line rather than wrapped, so a long owner or tag stays a button and not a
+									    paragraph. What the cut takes away is given back on hover, since the value is still what it names. */}
+									<span className='buttons-select-option-label' title={option.label}>{option.label}</span>
 									{option.count !== undefined &&
 										<span className='buttons-select-option-count' style={countStyle}>{option.count}</span>
 									}

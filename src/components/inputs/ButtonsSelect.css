@@ -17,6 +17,21 @@
 	align-items: center;
 	min-height: 30px;
 	gap: 6px;
+
+	/* An option never grows past the pane it is in, however long the value it names is */
+	max-width: 100%;
+}
+
+/* A value of any length is one line ending in an ellipsis: an option is read at a glance and against the ones beside it, and a
+   label wrapped over three lines is neither. The cap is what a value needs to be told apart from the others rather than what it
+   needs to be read in full, which is what the tooltip and the task itself are for. "min-width" is what lets a flex item shrink
+   below the text it holds, and so what makes the ellipsis appear at all in a pane narrower than the cap. */
+.buttons-select-option-label {
+	max-width: 20ch;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 /* The count reads as a figure beside the label rather than as part of it, and its digits are of one width so that a pane of
@@ -25,6 +40,9 @@
 	font-size: 0.75em;
 	font-weight: 500;
 	font-variant-numeric: tabular-nums;
+
+	/* The label is what gives way when the option is too wide, never the count */
+	flex-shrink: 0;
 }
 
 .buttons-select-options .buttons-select-option-unselected:hover {

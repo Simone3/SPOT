@@ -80,6 +80,8 @@ Input components: `Button`, `ButtonsSelect`, `Checkbox`, `DatePicker`, `FreeSele
 
 `ButtonsSelect` shows an optional count beside an option's label, tinted with a colour the caller supplies. **The tint is dropped while the option is selected**, because a selected option is filled with the very colour the count would be tinted with, and the count then takes the colour the label takes. The number is a figure rather than part of the label: smaller, and with digits of one width, so a pane of buttons does not shift as the counts change. Since a label followed by a bare number does not name the control, the caller also passes the wording that does, which `Button` puts on the button as its `aria-label`.
 
+**An option is one line whatever it holds**: a long owner or tag is cut with an ellipsis instead of being wrapped over three lines, because an option is read at a glance and against the ones beside it, and a paragraph in a button is neither. The label is capped at the width a value needs to be told apart from the others rather than the width it needs to be read in full, and it gives way twice over: to the cap, and to a pane narrower than the cap, which the count never does. What the cut takes away is on the label's `title`, so hovering it still says which value the option stands for, and the `aria-label` carries the whole value already.
+
 `FreeSelectInput` is a text input with a suggestion dropdown, and shows the options in the order the caller gives them:
 
 - **The dropdown exists only while it is open.** The options are neither computed nor rendered otherwise, which matters because a task list renders one of these inputs per owner and per tag of every visible task, and only one of them can be open at a time.
