@@ -38,6 +38,10 @@
 .task-text {
 	flex-grow: 1;
 	cursor: text;
+
+	/* The gap that keeps the chips off the text is padding here rather than a margin on the chips, so that it belongs to
+	   the click target too and there is no dead line left between the two */
+	padding-bottom: 12px;
 }
 
 @keyframes task-state-change-fade {
