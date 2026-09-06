@@ -1,0 +1,28 @@
+docs/technical/11-interface.md
+  s_c9a656afcc73cc::t_54ebce0621dd39 44
+src/components/tasks/Task.css
+  s_c9a656afcc73cc::t_ff7ab89d6e0463 35-42
+src/components/tasks/Task.tsx
+  s_c9a656afcc73cc::t_33d555b690c683 105-118
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "fc47d180b2eff9a2cde27f8bd4526374016e7ad1",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_c9a656afcc73cc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e1ca8262-550c-4ac4-befd-5b39f17cb70d",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
