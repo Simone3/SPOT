@@ -6,14 +6,18 @@ type ButtonProps = {
 	onClick: MouseEventHandler<HTMLButtonElement>;
 	className?: string;
 	style?: CSSProperties;
+
+	// What the button is called when reading its content out would not name it, the way a label followed by a bare count does not
+	ariaLabel?: string;
 };
 
-const Button = ({ label, onClick, className, style }: ButtonProps): ReactElement => {
+const Button = ({ label, onClick, className, style, ariaLabel }: ButtonProps): ReactElement => {
 	return (
 		<button
 			onClick={onClick}
 			className={`button ${className}`}
-			style={style}>
+			style={style}
+			aria-label={ariaLabel}>
 			{label}
 		</button>
 	);

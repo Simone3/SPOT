@@ -7,6 +7,12 @@ type ButtonsSelectOption = {
 	value: string;
 	label: string;
 	color?: string;
+
+	// How many things the option stands for, shown beside its label. "countLabel" is what the button is then called, because
+	// reading a label and a bare number out does not say what the number counts, and "countColor" is what the number is tinted with.
+	count?: number;
+	countLabel?: string;
+	countColor?: string;
 };
 
 type ButtonsSelectProps = {
@@ -62,13 +68,25 @@ const ButtonsSelect = ({ label, allowMultiSelect, options, value, onChange }: Bu
 						};
 					const isSelected = allowMultiSelect ? (value as string[]).includes(option.value) : value === option.value;
 					const extraStyle = isSelected && option.color ? { backgroundColor: option.color } : undefined;
+
+					// A selected option is filled with the very colour the count would be tinted with, so the count is left to
+					// take the colour of the label there and is tinted only while the option is unselected.
+					const countStyle = !isSelected && option.countColor ? { color: option.countColor } : undefined;
 					return (
 						<Button
 							key={option.key}
 							onClick={onClick}
 							className={`buttons-select-option ${isSelected ? 'buttons-select-option-selected' : 'buttons-select-option-unselected'}`}
 							style={extraStyle}
-							label={option.label}
+							ariaLabel={option.count === undefined ? undefined : option.countLabel}
+							label={
+								<>
+									{option.label}
+									{option.count !== undefined &&
+										<span className='buttons-select-option-count' style={countStyle}>{option.count}</span>
+									}
+								</>
+							}
 						/>
 					);
 				})}

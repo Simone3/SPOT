@@ -22,6 +22,8 @@ The page is a fixed-height flex application:
 
 `TasksPage` reads `TasksContext` and renders a filter pane, an active tasks list, and a completed tasks list when `showCompleted` is enabled.
 
+**Every filter option carries the number of active tasks behind it**, tinted with the highest priority among them: the count answers whether a value is a real bucket or one stray task, and the tint says an owner or a tag is holding something urgent without the labels having to be read. Both are read off the entry's `priorityCounts` ([§9.4](09-tasks.md#94-domains)), including on the priority options themselves, where the highest priority behind the entry is the priority the entry names.
+
 The filter pane and the task lists are the two panes of a `ResizablePanes` split, so the user can give the filters as much or as little width as they want, down to the width their own heading needs. **The loading and startup-error states stay a plain single-pane `Page`**: there are no filters to resize yet.
 
 `TasksList`:
@@ -75,6 +77,8 @@ Common components: `TitleBar`, `MenuBar`, `Sidebar`, `SidebarElement`, `MainCont
 Input components: `Button`, `ButtonsSelect`, `Checkbox`, `DatePicker`, `FreeSelectInput`, `TextArea`, `TextInput`. Icons are local React components under `src/components/icons`.
 
 `ButtonsSelect` and `FreeSelectInput` are string-valued input components. **They accept simple option objects instead of app-specific domain types.**
+
+`ButtonsSelect` shows an optional count beside an option's label, tinted with a colour the caller supplies. **The tint is dropped while the option is selected**, because a selected option is filled with the very colour the count would be tinted with, and the count then takes the colour the label takes. The number is a figure rather than part of the label: smaller, and with digits of one width, so a pane of buttons does not shift as the counts change. Since a label followed by a bare number does not name the control, the caller also passes the wording that does, which `Button` puts on the button as its `aria-label`.
 
 `FreeSelectInput` is a text input with a suggestion dropdown, and shows the options in the order the caller gives them:
 

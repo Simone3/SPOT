@@ -59,6 +59,72 @@ describe('DomainsLogic', () => {
 		expect(domainByValue(domainsContainer.form.tags, 'archive')?.count).toBe(1);
 	});
 
+	test('counts the priorities behind every entry, and carries them over when a task changes priority', () => {
+		const highAlice = makeTask({
+			priority: 'HIGH',
+			owner: 'Alice',
+			tags: [ 'work' ]
+		});
+		const lowAlice = makeTask({
+			priority: 'LOW',
+			owner: 'Alice',
+			tags: [ 'work' ]
+		});
+		const domainsContainer = getInitialDomains();
+
+		addDomainsForTasks(domainsContainer, { active: [ highAlice, lowAlice ], completed: [] });
+
+		expect(domainByValue(domainsContainer.filters.owners, 'Alice')?.priorityCounts).toEqual({ URGENT: 0, HIGH: 1, NORMAL: 0, LOW: 1 });
+		expect(domainByValue(domainsContainer.filters.tags, 'work')?.priorityCounts).toEqual({ URGENT: 0, HIGH: 1, NORMAL: 0, LOW: 1 });
+		expect(domainByValue(domainsContainer.filters.priorities, 'HIGH')?.priorityCounts).toEqual({ URGENT: 0, HIGH: 1, NORMAL: 0, LOW: 0 });
+
+		// The owner and the tag do not change, but the task moves from one of their priority counters into another
+		const urgentAlice = { ...lowAlice, priority: 'URGENT' as const };
+		updateDomainsForTask(domainsContainer, lowAlice, urgentAlice, { priority: 'URGENT' });
+
+		expect(domainByValue(domainsContainer.filters.owners, 'Alice')?.count).toBe(2);
+		expect(domainByValue(domainsContainer.filters.owners, 'Alice')?.priorityCounts).toEqual({ URGENT: 1, HIGH: 1, NORMAL: 0, LOW: 0 });
+		expect(domainByValue(domainsContainer.filters.tags, 'work')?.priorityCounts).toEqual({ URGENT: 1, HIGH: 1, NORMAL: 0, LOW: 0 });
+		expect(domainByValue(domainsContainer.filters.priorities, 'LOW')).toBeUndefined();
+		expect(domainByValue(domainsContainer.filters.priorities, 'URGENT')?.priorityCounts).toEqual({ URGENT: 1, HIGH: 0, NORMAL: 0, LOW: 0 });
+	});
+
+	test('keeps an entry counting a single task, and the filter selecting it, across a priority change', () => {
+		// Carrying the count from one priority to the other empties the entry on the way, so an entry with one task behind it
+		// is removed and rebuilt. Its key has to survive that, and so does a filter the user has already selected on it.
+		const onlyAliceTask = makeTask({ priority: 'NORMAL', owner: 'Alice', dueDate: undefined, tags: [] });
+		const domainsContainer = getInitialDomains();
+
+		addDomainsForTasks(domainsContainer, { active: [ onlyAliceTask ], completed: [] });
+
+		const ownerKey = domainByValue(domainsContainer.filters.owners, 'Alice')!.key;
+		const noTagsKey = domainByValue(domainsContainer.filters.tags, '')!.key;
+		const filters: TaskFilters = { ...getInitialFilters(), owners: [ 'Alice' ], tags: [ '' ] };
+
+		const urgentAliceTask = { ...onlyAliceTask, priority: 'URGENT' as const };
+		updateDomainsForTask(domainsContainer, onlyAliceTask, urgentAliceTask, { priority: 'URGENT' });
+		updateFiltersOnDomainsChange(domainsContainer.filters, filters);
+
+		expect(domainByValue(domainsContainer.filters.owners, 'Alice')?.key).toBe(ownerKey);
+		expect(domainByValue(domainsContainer.filters.owners, 'Alice')?.priorityCounts).toEqual({ URGENT: 1, HIGH: 0, NORMAL: 0, LOW: 0 });
+		expect(domainByValue(domainsContainer.filters.tags, '')?.key).toBe(noTagsKey);
+		expect(filters.owners).toEqual([ 'Alice' ]);
+		expect(filters.tags).toEqual([ '' ]);
+	});
+
+	test('takes the priority of a removed task back out of the entries it was counted in', () => {
+		const urgentWork = makeTask({ priority: 'URGENT', owner: 'Alice', tags: [ 'work' ] });
+		const normalWork = makeTask({ priority: 'NORMAL', owner: 'Alice', tags: [ 'work' ] });
+		const domainsContainer = getInitialDomains();
+
+		addDomainsForTasks(domainsContainer, { active: [ urgentWork, normalWork ], completed: [] });
+		removeDomainsForTask(domainsContainer, urgentWork);
+
+		expect(domainByValue(domainsContainer.filters.owners, 'Alice')?.count).toBe(1);
+		expect(domainByValue(domainsContainer.filters.owners, 'Alice')?.priorityCounts).toEqual({ URGENT: 0, HIGH: 0, NORMAL: 1, LOW: 0 });
+		expect(domainByValue(domainsContainer.filters.tags, 'work')?.priorityCounts).toEqual({ URGENT: 0, HIGH: 0, NORMAL: 1, LOW: 0 });
+	});
+
 	test('updates domain counters when active task fields change', () => {
 		const oldTask = makeTask({
 			owner: 'Alice',

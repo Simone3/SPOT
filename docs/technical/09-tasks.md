@@ -87,11 +87,18 @@ The state helpers clone top-level containers and lists before updating them. **T
 	labelKind,
 	color,
 	persistent,
-	count
+	count,
+	priorityCounts
 }
 ```
 
-`labelKind` is how the entry is worded, not the wording itself: `VALUE` for an entry named after the task value it was built from, and `PRIORITY`, `NO_OWNER`, `NO_DUE_DATE` or `NO_TAGS` for the ones the tasks never spell out. **`DomainsLogic` therefore holds no text and takes no translator**, and `src/components/tasks/DomainOptions.ts` turns entries into the `{ key, value, label, color }` options the select inputs take, wording each kind from the bundle. `TaskFilters` passes it a formatter as well, because a due date is stored as `2026-05-10` and read as `Today` ([§8.3](08-text-and-languages.md#83-reaching-the-translator)).
+`priorityCounts` is how many of the counted tasks carry each priority, and it always adds up to `count`. It is what puts a number on every filter button, tinted with the highest priority behind it, so that an owner or a tag holding something urgent says so before it is read ([§11.2](11-interface.md#112-the-task-page)). **A priority entry counts tasks that all carry the priority it names**, so its whole count sits in one bucket and the tint is its own colour: the same rule, read off the same counters, rather than a case of its own.
+
+**This is the one thing that ties the lists to each other.** A task that only changes priority keeps every owner, due date and tag it had, and still moves between their counters, so `updateDomainsForTaskInSection()` runs a handler when the priority changed as well as when the handler's own field did. Removing the old task and adding the new one under the same value is what carries the count from one priority to the other; an entry that falls to zero on the way is removed and rebuilt, which costs nothing because the key of an entry is its value and the keys of the "no value" entries are fixed.
+
+`labelKind` is how the entry is worded, not the wording itself: `VALUE` for an entry named after the task value it was built from, and `PRIORITY`, `NO_OWNER`, `NO_DUE_DATE` or `NO_TAGS` for the ones the tasks never spell out. **`DomainsLogic` therefore holds no text and takes no translator**, and `src/components/tasks/DomainOptions.ts` turns entries into the `{ key, value, label, color, count, countLabel, countColor }` options the select inputs take, wording each kind from the bundle. `TaskFilters` passes it a formatter as well, because a due date is stored as `2026-05-10` and read as `Today` ([§8.3](08-text-and-languages.md#83-reaching-the-translator)).
+
+`countColor` comes from `getHighestPriorityColor()`, which `DomainsLogic` exports because it already owns both the order the priorities mean and the `--colors-priority-*` naming. `countLabel` is what the button is called, since reading out a label followed by a bare number does not say what the number counts.
 
 **The two sections answer two different questions, which is why an entry can be in one and not the other.**
 

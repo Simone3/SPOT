@@ -1,4 +1,4 @@
-import { makeTranslator } from '../testUtils';
+import { makePriorityCounts, makeTranslator } from '../testUtils';
 import { toDomainOptions } from 'src/components/tasks/DomainOptions';
 import type { DomainEntry, DomainLabelKind } from 'src/types/DomainTypes';
 
@@ -9,7 +9,8 @@ const makeDomain = (value: string, labelKind: DomainLabelKind): DomainEntry => {
 		labelKind,
 		color: undefined,
 		persistent: false,
-		count: 1
+		count: 1,
+		priorityCounts: makePriorityCounts({ NORMAL: 1 })
 	};
 };
 
@@ -47,14 +48,38 @@ describe('DomainOptions', () => {
 	test('carries the key and the colour through, since those are not language', () => {
 		const priorityDomain: DomainEntry = {
 			...makeDomain('HIGH', 'PRIORITY'),
-			color: 'var(--colors-priority-high)'
+			color: 'var(--colors-priority-high)',
+			priorityCounts: makePriorityCounts({ HIGH: 1 })
 		};
 
 		expect(toDomainOptions([ priorityDomain ], makeTranslator())).toEqual([{
 			key: priorityDomain.key,
 			value: 'HIGH',
 			label: 'High',
-			color: 'var(--colors-priority-high)'
+			color: 'var(--colors-priority-high)',
+			count: 1,
+			countLabel: 'High, 1 task',
+			countColor: 'var(--colors-priority-high)'
 		}]);
+	});
+
+	test('tints the count with the highest priority behind the entry, and names what it counts', () => {
+		const alice: DomainEntry = {
+			...makeDomain('Alice', 'VALUE'),
+			count: 5,
+			priorityCounts: makePriorityCounts({ HIGH: 1, NORMAL: 3, LOW: 1 })
+		};
+		const untagged: DomainEntry = {
+			...makeDomain('', 'NO_TAGS'),
+			count: 1,
+			priorityCounts: makePriorityCounts({ LOW: 1 })
+		};
+
+		const options = toDomainOptions([ alice, untagged ], makeTranslator());
+
+		expect(options[0].countColor).toBe('var(--colors-priority-high)');
+		expect(options[0].countLabel).toBe('Alice, 5 tasks');
+		expect(options[1].countColor).toBe('var(--colors-priority-low)');
+		expect(options[1].countLabel).toBe('Untagged, 1 task');
 	});
 });

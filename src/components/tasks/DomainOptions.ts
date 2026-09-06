@@ -1,3 +1,4 @@
+import { getHighestPriorityColor } from 'src/logic/DomainsLogic';
 import type { DomainEntry } from 'src/types/DomainTypes';
 import type { SpotTranslationKey, SpotTranslator } from 'src/i18n/Translations';
 import type { TaskPriorityValue } from 'src/types/TaskTypes';
@@ -11,6 +12,9 @@ export type DomainOption = {
 	value: string;
 	label: string;
 	color?: string;
+	count: number;
+	countLabel: string;
+	countColor?: string;
 };
 
 // A priority is stored as its own value and read as the wording that value stands for
@@ -54,11 +58,21 @@ const getDomainLabel = (domain: DomainEntry, translator: SpotTranslator, formatV
  */
 export const toDomainOptions = (domains: DomainEntry[], translator: SpotTranslator, formatValue?: (value: string) => string): DomainOption[] => {
 	return domains.map((domain) => {
+		const label = getDomainLabel(domain, translator, formatValue);
+
 		return {
 			key: domain.key,
 			value: domain.value,
-			label: getDomainLabel(domain, translator, formatValue),
-			color: domain.color
+			label,
+			color: domain.color,
+			count: domain.count,
+
+			// A bare number beside a label says nothing on its own, so what a control carrying one is called says what it counts
+			countLabel: translator.t('tasks.domains.withTaskCount', { label, count: domain.count }),
+
+			// The highest priority behind the entry, which is what the count is tinted with. A priority entry counts tasks that
+			// all carry the priority it names, so this is its own colour there: the same rule, read off the same counters.
+			countColor: getHighestPriorityColor(domain.priorityCounts)
 		};
 	});
 };

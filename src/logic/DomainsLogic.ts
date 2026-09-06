@@ -1,5 +1,5 @@
 
-import type { DomainEntry, DomainsContainer, FilterDomains, FormDomains } from 'src/types/DomainTypes';
+import type { DomainEntry, DomainsContainer, FilterDomains, FormDomains, PriorityCounts } from 'src/types/DomainTypes';
 import type { Task, TaskChange, TaskPriorityValue, TasksContainer } from 'src/types/TaskTypes';
 import type { TaskFilters } from 'src/types/FilterTypes';
 
@@ -17,7 +17,7 @@ type TaskDomainHandler = {
 	isTaskFieldList: boolean;
 	domainListField: FilterListField;
 	filtersField: FilterListField;
-	createDomain: (domainValue: string) => DomainEntry;
+	createDomain: (domainValue: string, priority: TaskPriorityValue) => DomainEntry;
 };
 
 // Whether a section offers an entry standing for "no value" — no owner, no due date, no tag at all. The filter section does,
@@ -42,15 +42,58 @@ const PRIORITY_DOMAIN_DEFINITIONS: PriorityDomainDefinition[] = [
 	{ value: 'LOW', key: 'low' }
 ];
 
+// The histogram of an entry counting no task at all
+const createEmptyPriorityCounts = (): PriorityCounts => {
+	return {
+		URGENT: 0,
+		HIGH: 0,
+		NORMAL: 0,
+		LOW: 0
+	};
+};
+
+// The histogram of an entry whose counted tasks all carry the same priority, which is every entry at the moment it is created
+const buildPriorityCounts = (priority: TaskPriorityValue, count: number): PriorityCounts => {
+	const priorityCounts = createEmptyPriorityCounts();
+	priorityCounts[priority] = count;
+
+	return priorityCounts;
+};
+
+// A histogram with one priority counted up or down. The entry it belongs to is cloned rather than written to, like every
+// other domain update, so a list that has not changed keeps handing React the same objects back.
+const changePriorityCount = (priorityCounts: PriorityCounts, priority: TaskPriorityValue, change: number): PriorityCounts => {
+	const updatedCounts = { ...priorityCounts };
+	updatedCounts[priority] += change;
+
+	return updatedCounts;
+};
+
+/**
+ * Returns the colour of the highest priority the tasks behind an entry carry.
+ * This is what a filter option is marked with, so that a value holding something urgent says so before it is read.
+ * @param priorityCounts How many of the counted tasks carry each priority.
+ * @returns The priority colour, or undefined when the entry counts no task at all.
+ */
+export const getHighestPriorityColor = (priorityCounts: PriorityCounts): string | undefined => {
+	// The definitions are in the order the priorities mean, highest first, so the first one with a task behind it is the answer
+	const definition = PRIORITY_DOMAIN_DEFINITIONS.find((priorityDefinition) => {
+		return priorityCounts[priorityDefinition.value] > 0;
+	});
+
+	return definition ? `var(--colors-priority-${definition.key})` : undefined;
+};
+
 // An entry named after the task value it was built from, which is what every entry the tasks spell out themselves is
-const createValueDomain = (domainValue: string): DomainEntry => {
+const createValueDomain = (domainValue: string, priority: TaskPriorityValue): DomainEntry => {
 	return {
 		key: domainValue,
 		value: domainValue,
 		labelKind: 'VALUE',
 		color: undefined,
 		persistent: false,
-		count: 1
+		count: 1,
+		priorityCounts: buildPriorityCounts(priority, 1)
 	};
 };
 
@@ -61,7 +104,10 @@ const createPriorityDomain = (definition: PriorityDomainDefinition, persistent: 
 		labelKind: 'PRIORITY',
 		color: `var(--colors-priority-${definition.key})`,
 		persistent,
-		count
+		count,
+
+		// Every task behind a priority entry carries the priority that entry names, so its whole count sits in that one bucket
+		priorityCounts: buildPriorityCounts(definition.value, count)
 	};
 };
 
@@ -71,54 +117,57 @@ const createPriorityDomains = (): DomainEntry[] => {
 	});
 };
 
-const createNoOwnerDomain = (persistent: boolean, count: number): DomainEntry => {
+const createNoOwnerDomain = (persistent: boolean, count: number, priorityCounts: PriorityCounts): DomainEntry => {
 	return {
 		key: NO_OWNER_KEY,
 		value: '',
 		labelKind: 'NO_OWNER',
 		color: undefined,
 		persistent,
-		count
+		count,
+		priorityCounts
 	};
 };
 
 // What each handler builds when its list does not carry a value yet. An entry created on demand always counts the task that
-// called for it and is never persistent: only the entries a section offers up front are.
-const createPriorityDomainForValue = (domainValue: string): DomainEntry => {
+// called for it, under that task's priority, and is never persistent: only the entries a section offers up front are.
+const createPriorityDomainForValue = (domainValue: string, priority: TaskPriorityValue): DomainEntry => {
 	const definition = PRIORITY_DOMAIN_DEFINITIONS.find((priorityDefinition) => {
 		return priorityDefinition.value === domainValue;
 	});
 
-	return definition ? createPriorityDomain(definition, false, 1) : createValueDomain(domainValue);
+	return definition ? createPriorityDomain(definition, false, 1) : createValueDomain(domainValue, priority);
 };
 
-const createOwnerDomainForValue = (domainValue: string): DomainEntry => {
-	return domainValue ? createValueDomain(domainValue) : createNoOwnerDomain(false, 1);
+const createOwnerDomainForValue = (domainValue: string, priority: TaskPriorityValue): DomainEntry => {
+	return domainValue ? createValueDomain(domainValue, priority) : createNoOwnerDomain(false, 1, buildPriorityCounts(priority, 1));
 };
 
-const createDueDateDomainForValue = (domainValue: string): DomainEntry => {
+const createDueDateDomainForValue = (domainValue: string, priority: TaskPriorityValue): DomainEntry => {
 	return domainValue ?
-		createValueDomain(domainValue) :
+		createValueDomain(domainValue, priority) :
 		{
 			key: NO_DUE_DATE_KEY,
 			value: '',
 			labelKind: 'NO_DUE_DATE',
 			color: undefined,
 			persistent: false,
-			count: 1
+			count: 1,
+			priorityCounts: buildPriorityCounts(priority, 1)
 		};
 };
 
-const createTagDomainForValue = (domainValue: string): DomainEntry => {
+const createTagDomainForValue = (domainValue: string, priority: TaskPriorityValue): DomainEntry => {
 	return domainValue ?
-		createValueDomain(domainValue) :
+		createValueDomain(domainValue, priority) :
 		{
 			key: NO_TAGS_KEY,
 			value: '',
 			labelKind: 'NO_TAGS',
 			color: undefined,
 			persistent: false,
-			count: 1
+			count: 1,
+			priorityCounts: buildPriorityCounts(priority, 1)
 		};
 };
 
@@ -138,7 +187,7 @@ export const getInitialDomains = (): DomainsContainer => {
 		},
 		form: {
 			priorities: createPriorityDomains(),
-			owners: [ createNoOwnerDomain(true, 0) ],
+			owners: [ createNoOwnerDomain(true, 0, createEmptyPriorityCounts()) ],
 			tags: []
 		}
 	};
@@ -231,11 +280,12 @@ const sortAllDomains = (domainsContainer: DomainsContainer): void => {
 };
 
 /**
- * Removes a domain value from a domain list (either by removing the entry altogether or by cloning & updating the entry counter).
+ * Removes a domain value from a domain list (either by removing the entry altogether or by cloning & updating the entry counters).
  * @param domainsList Domain list to update.
  * @param oldDomainValue Domain value to remove.
+ * @param priority Priority the removed task carries, which is the counter it comes out of.
  */
-const removeDomain = (domainsList: DomainEntry[], oldDomainValue: string): void => {
+const removeDomain = (domainsList: DomainEntry[], oldDomainValue: string, priority: TaskPriorityValue): void => {
 	// Find old domain by value
 	const domainIndex = domainsList.findIndex((domain) => {
 		return domain.value === oldDomainValue;
@@ -250,21 +300,23 @@ const removeDomain = (domainsList: DomainEntry[], oldDomainValue: string): void 
 		domainsList.splice(domainIndex, 1);
 	}
 	else {
-		// Clone entry, update counter and update the list
+		// Clone entry, update counters and update the list
 		domain = { ...domain };
 		domain.count -= 1;
+		domain.priorityCounts = changePriorityCount(domain.priorityCounts, priority, -1);
 		domainsList[domainIndex] = domain;
 	}
 };
 
 /**
- * Adds a domain value to a domain list (either by creating a new entry or by cloning & updating an existing entry counter).
+ * Adds a domain value to a domain list (either by creating a new entry or by cloning & updating an existing entry counters).
  * @param domainsList Domain list to update.
  * @param newDomainValue Domain value to add.
+ * @param priority Priority the added task carries, which is the counter it goes into.
  * @param createDomain Builds the entry when the list does not carry the value yet.
  * @param offersEmptyValueDomains Whether the section this list belongs to offers an entry standing for "no value".
  */
-const addDomain = (domainsList: DomainEntry[], newDomainValue: string, createDomain: (domainValue: string) => DomainEntry, offersEmptyValueDomains: boolean): void => {
+const addDomain = (domainsList: DomainEntry[], newDomainValue: string, priority: TaskPriorityValue, createDomain: (domainValue: string, priority: TaskPriorityValue) => DomainEntry, offersEmptyValueDomains: boolean): void => {
 	// Find new domain by value
 	const domainIndex = domainsList.findIndex((domain) => {
 		return domain.value === newDomainValue;
@@ -278,13 +330,14 @@ const addDomain = (domainsList: DomainEntry[], newDomainValue: string, createDom
 	let domain;
 	if(domainIndex === -1) {
 		// Create new entry and add it to the list
-		domain = createDomain(newDomainValue);
+		domain = createDomain(newDomainValue, priority);
 		domainsList.push(domain);
 	}
 	else {
-		// Clone entry, update counter and update the list
+		// Clone entry, update counters and update the list
 		domain = { ...domainsList[domainIndex] };
 		domain.count += 1;
+		domain.priorityCounts = changePriorityCount(domain.priorityCounts, priority, 1);
 		domainsList[domainIndex] = domain;
 	}
 };
@@ -334,8 +387,11 @@ const updateDomainsForTaskInSection = (domainsSection: DomainsSection, oldTask: 
 			continue;
 		}
 
-		// If we have both old and new tasks but the domain value has not changed, no need to do anything
-		if(oldTask && newTask && !(handler.taskField in changedTaskValues!)) {
+		// If we have both old and new tasks but neither the domain value nor the priority has changed, no need to do anything.
+		// A task that only changes priority keeps every owner, due date and tag it had and still moves between their priority
+		// counters, so a handler runs on a priority change as well as on a change of its own field: removing the old task and
+		// adding the new one under the same value is what carries the count from one priority to the other.
+		if(oldTask && newTask && !(handler.taskField in changedTaskValues!) && !('priority' in changedTaskValues!)) {
 			continue;
 		}
 	
@@ -357,30 +413,30 @@ const updateDomainsForTaskInSection = (domainsSection: DomainsSection, oldTask: 
 			// An empty list is a value of its own, counted under the empty domain value like a missing owner or due date is
 			if(oldDomainValues && oldDomainValues.length > 0) {
 				for(const oldDomainValueElem of oldDomainValues) {
-					removeDomain(domainsList, oldDomainValueElem);
+					removeDomain(domainsList, oldDomainValueElem, oldTask!.priority);
 				}
 			}
 			else if(oldDomainValues) {
-				removeDomain(domainsList, '');
+				removeDomain(domainsList, '', oldTask!.priority);
 			}
 
 			if(newDomainValues && newDomainValues.length > 0) {
 				for(const newDomainValueElem of newDomainValues) {
-					addDomain(domainsList, newDomainValueElem, handler.createDomain, offersEmptyValueDomains);
+					addDomain(domainsList, newDomainValueElem, newTask!.priority, handler.createDomain, offersEmptyValueDomains);
 				}
 			}
 			else if(newDomainValues) {
-				addDomain(domainsList, '', handler.createDomain, offersEmptyValueDomains);
+				addDomain(domainsList, '', newTask!.priority, handler.createDomain, offersEmptyValueDomains);
 			}
 		}
 
 		// If the task value is not a list, simply update the domain list directly.
 		else {
 			if(oldTask) {
-				removeDomain(domainsList, typeof oldDomainValue === 'string' ? oldDomainValue : '');
+				removeDomain(domainsList, typeof oldDomainValue === 'string' ? oldDomainValue : '', oldTask.priority);
 			}
 			if(newTask) {
-				addDomain(domainsList, typeof newDomainValue === 'string' ? newDomainValue : '', handler.createDomain, offersEmptyValueDomains);
+				addDomain(domainsList, typeof newDomainValue === 'string' ? newDomainValue : '', newTask.priority, handler.createDomain, offersEmptyValueDomains);
 			}
 		}
 	}

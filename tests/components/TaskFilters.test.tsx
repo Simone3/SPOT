@@ -1,5 +1,5 @@
 import { fireEvent, screen } from '@testing-library/react';
-import { renderWithTranslations } from '../testUtils';
+import { makePriorityCounts, renderWithTranslations } from '../testUtils';
 import { TaskFilters } from 'src/components/tasks/TaskFilters';
 import { DateUtils } from 'src/framework/utils/DateUtils';
 import { getInitialFilters } from 'src/logic/FiltersLogic';
@@ -16,7 +16,8 @@ const domains: FilterDomains = {
 			labelKind: 'PRIORITY',
 			color: 'var(--colors-priority-high)',
 			persistent: true,
-			count: 1
+			count: 1,
+			priorityCounts: makePriorityCounts({ HIGH: 1 })
 		}
 	],
 	owners: [
@@ -26,7 +27,8 @@ const domains: FilterDomains = {
 			labelKind: 'VALUE',
 			color: undefined,
 			persistent: false,
-			count: 1
+			count: 1,
+			priorityCounts: makePriorityCounts({ NORMAL: 1 })
 		}
 	],
 	dueDates: [
@@ -36,7 +38,8 @@ const domains: FilterDomains = {
 			labelKind: 'VALUE',
 			color: undefined,
 			persistent: false,
-			count: 1
+			count: 1,
+			priorityCounts: makePriorityCounts({ NORMAL: 1 })
 		}
 	],
 	tags: [
@@ -46,7 +49,8 @@ const domains: FilterDomains = {
 			labelKind: 'VALUE',
 			color: undefined,
 			persistent: false,
-			count: 1
+			count: 1,
+			priorityCounts: makePriorityCounts({ NORMAL: 1 })
 		}
 	]
 };
@@ -58,7 +62,8 @@ const untaggedDomain: DomainEntry = {
 	labelKind: 'NO_TAGS',
 	color: undefined,
 	persistent: false,
-	count: 1
+	count: 1,
+	priorityCounts: makePriorityCounts({ URGENT: 1 })
 };
 
 describe('TaskFilters', () => {
@@ -80,10 +85,10 @@ describe('TaskFilters', () => {
 				value: 'report'
 			}
 		});
-		fireEvent.click(screen.getByRole('button', { name: 'High' }));
-		fireEvent.click(screen.getByRole('button', { name: 'Alice' }));
-		fireEvent.click(screen.getByRole('button', { name: 'Today' }));
-		fireEvent.click(screen.getByRole('button', { name: 'work' }));
+		fireEvent.click(screen.getByRole('button', { name: 'High, 1 task' }));
+		fireEvent.click(screen.getByRole('button', { name: 'Alice, 1 task' }));
+		fireEvent.click(screen.getByRole('button', { name: 'Today, 1 task' }));
+		fireEvent.click(screen.getByRole('button', { name: 'work, 1 task' }));
 		fireEvent.click(screen.getByLabelText('Show completed'));
 		fireEvent.click(screen.getByText('Reset to default'));
 
@@ -111,7 +116,7 @@ describe('TaskFilters', () => {
 			/>
 		);
 
-		fireEvent.click(screen.getByRole('button', { name: 'Untagged' }));
+		fireEvent.click(screen.getByRole('button', { name: 'Untagged, 1 task' }));
 
 		expect(onFilterChange).toHaveBeenCalledWith({ tags: [ '' ] });
 	});
@@ -130,7 +135,33 @@ describe('TaskFilters', () => {
 		);
 
 		expect(screen.getByText('Tags')).toBeTruthy();
-		expect(screen.getByRole('button', { name: 'Untagged' })).toBeTruthy();
+		expect(screen.getByRole('button', { name: 'Untagged, 1 task' })).toBeTruthy();
+	});
+
+	test('shows how many tasks are behind every filter option, tinted by the highest priority in it', () => {
+		const alice = {
+			...domains.owners[0],
+			count: 4,
+			priorityCounts: makePriorityCounts({ URGENT: 1, NORMAL: 3 })
+		};
+
+		renderWithTranslations(
+			<TaskFilters
+				domains={{
+					...domains,
+					owners: [ alice ]
+				}}
+				filters={getInitialFilters()}
+				onFilterChange={vi.fn()}
+				onResetDefaultFilters={vi.fn()}
+			/>
+		);
+
+		const option = screen.getByRole('button', { name: 'Alice, 4 tasks' });
+		const count = option.querySelector('.buttons-select-option-count');
+
+		expect(count?.textContent).toBe('4');
+		expect((count as HTMLElement).style.color).toBe('var(--colors-priority-urgent)');
 	});
 
 	test('shows the content search alone when no task matches any filter', () => {

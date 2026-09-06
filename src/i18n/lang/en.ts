@@ -113,7 +113,13 @@ export const EN_TRANSLATIONS = {
 		domains: {
 			noOwner: 'Me',
 			noDueDate: 'None',
-			noTags: 'Untagged'
+			noTags: 'Untagged',
+
+			// What names a filter option carrying a count: the number beside the label is read as a figure, and this is what says what it counts
+			withTaskCount: {
+				one: '{label}, {count} task',
+				other: '{label}, {count} tasks'
+			}
 		}
 	},
 

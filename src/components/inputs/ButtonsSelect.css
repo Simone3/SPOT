@@ -16,6 +16,15 @@
 .buttons-select-options .buttons-select-option {
 	align-items: center;
 	min-height: 30px;
+	gap: 6px;
+}
+
+/* The count reads as a figure beside the label rather than as part of it, and its digits are of one width so that a pane of
+   buttons does not shift as the counts change. It takes its colour from the option unless the caller tints it. */
+.buttons-select-option-count {
+	font-size: 0.75em;
+	font-weight: 500;
+	font-variant-numeric: tabular-nums;
 }
 
 .buttons-select-options .buttons-select-option-unselected:hover {
