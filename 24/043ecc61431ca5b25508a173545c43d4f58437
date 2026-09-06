@@ -1,0 +1,28 @@
+docs/technical/11-interface.md
+  s_1fc9622cad3999::t_8eb13e7d8c1b06 83-84
+src/components/inputs/ButtonsSelect.css
+  s_1fc9622cad3999::t_270f5a13cb0639 20-34,43-45
+src/components/inputs/ButtonsSelect.tsx
+  s_1fc9622cad3999::t_f00c6a83ded4a4 84-86
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "24043ecc61431ca5b25508a173545c43d4f58437",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_1fc9622cad3999": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "a143a7fb-04d0-4923-917e-3bdbd4f5510a",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
