@@ -1,0 +1,48 @@
+docs/technical/09-tasks.md
+  s_2e28b5a3d29680::t_76f1e35ed716e0 90-91,95-101
+docs/technical/11-interface.md
+  s_2e28b5a3d29680::t_456944257166a6 25-26,81-82
+src/components/inputs/Button.tsx
+  s_2e28b5a3d29680::t_d25f0ebe4fb3e6 9-11,14,19-20
+src/components/inputs/ButtonsSelect.css
+  s_2e28b5a3d29680::t_34285864c792e8 19-27
+src/components/inputs/ButtonsSelect.tsx
+  s_2e28b5a3d29680::t_6793358e535ef0 10-15,71-74,81-89
+src/components/tasks/DomainOptions.ts
+  s_2e28b5a3d29680::t_d87276b89abb1c 1,15-17,61-62,66-75
+src/i18n/lang/en.ts
+  s_2e28b5a3d29680::t_829c5b9af88195 116-122
+src/logic/DomainsLogic.ts
+  s_2e28b5a3d29680::t_c50fe324c8c27d 2,20,45-86,88,95-96,107-110,120,127-128,133-134,139,142-143,146,148,155-156,160,162,169-170,190,283,286,288,303,306,312,315,319,333,337,340,390-394,416,420,425,429,436,439
+src/types/DomainTypes.ts
+  s_2e28b5a3d29680::t_0d2ef43121b8f7 1-2,9-15,23
+tests/components/DomainOptions.test.ts
+  s_2e28b5a3d29680::t_e852a291f3bb2c 1,12-13,51-52,59-62,65-84
+tests/components/TaskFilters.test.tsx
+  s_2e28b5a3d29680::t_98960cdef51cef 2,19-20,30-31,41-42,52-53,65-66,88-91,119,138-164
+tests/logic/DomainsLogic.test.ts
+  s_2e28b5a3d29680::t_7dd4ba7c27c552 62-127
+tests/testUtils/TaskTestFactory.ts
+  s_2e28b5a3d29680::t_211708cd334d14 1,31-40,48-49,60-61
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.16",
+  "base_commit_sha": "c00f5795b786280a98a9ae73deea26cd093de2d0",
+  "prompts": {},
+  "humans": {
+    "h_08e8a5184a38af": {
+      "author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  },
+  "sessions": {
+    "s_2e28b5a3d29680": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "894596a1-9d7e-43eb-93b8-52ac5ba4302f",
+        "model": "unknown"
+      },
+      "human_author": "Simone Graziussi <simone.graziussi@gmail.com>"
+    }
+  }
+}
