@@ -102,15 +102,20 @@ const Task = ({ id, index, task: taskFromProps, inputDomains, onDelete, showDrag
 				onBlur={flushTaskChanges}
 			/>
 			<div className='task-content'>
-				<TextArea
-					placeholder={t('tasks.fields.contentPlaceholder')}
-					value={text}
-					onChange={(value) => {
-						setTaskValue('text', value, 'delayed');
-					}}
-					onBlur={flushTaskChanges}
-					disabled={isStateChangePending}
-				/>
+
+				{/* The field is only as tall as the text it holds, so the label around it takes the room left over above the
+				    chips: a click anywhere in that area then puts the cursor in the field, the way a label does on its own. */}
+				<label className='task-text'>
+					<TextArea
+						placeholder={t('tasks.fields.contentPlaceholder')}
+						value={text}
+						onChange={(value) => {
+							setTaskValue('text', value, 'delayed');
+						}}
+						onBlur={flushTaskChanges}
+						disabled={isStateChangePending}
+					/>
+				</label>
 				<TaskChips
 					inputDomains={inputDomains}
 					task={task}

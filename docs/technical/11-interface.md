@@ -41,6 +41,7 @@ The filter pane and the task lists are the two panes of a `ResizablePanes` split
 - fades out for 3 seconds before the buffered state change from the completion checkbox is saved; while fading, other task controls are disabled, and changing the checkbox back before the fade completes cancels the state change and restores full opacity
 - owns the generic task value setter and passes field-specific setters to the task chips
 - renders priority, text, owner, due date, tags, and a vertical action column with drag, completion and delete controls
+- **wraps the text field in a `<label>` that takes the room left over above the chips**, the same idiom the chip icons use. The card is as tall as its action column and the field only as tall as the text it holds, so the gap between the two was dead space; the label makes the whole area above the chips a click that puts the cursor in the field, with no handler of its own
 
 `TaskActions` toggles between active and completed state and opens a confirmation modal before deleting.
 

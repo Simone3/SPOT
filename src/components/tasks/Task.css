@@ -32,6 +32,14 @@
 	padding-top: 5px;
 }
 
+/* The card is as tall as the controls on its right, and the field is only as tall as the text it holds, so there is
+   usually room left between the field and the chips. The label takes it, which turns that whole gap into the field's
+   own click target instead of dead space on the card. */
+.task-text {
+	flex-grow: 1;
+	cursor: text;
+}
+
 @keyframes task-state-change-fade {
 	0% {
 		opacity: 1;
