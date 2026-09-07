@@ -1,27 +1,16 @@
 
 # current
 
-merge main, update readme with minimal instructions (xattr), release on github
+tag colors - show them in tasks too, maybe even change the whole background / border color for the tag (multiple tags tbd)? or put a right margin color similar to the left one - or just the actual tag input with color pill
 
 
-
-
-------------------------------------------------------------------------------------------------------
-
-
-# bugs
-
-very long domains are not great in the filter chips, ellipsis?
-
-multiple newlines in text are lost at restart
-
-scrollbar is ugly, especially on windows
 
 
 # maybe in the future
 
-
 ## ui
+
+scrollbar is ugly, especially on windows
 
 date picker with "free" text input like https://www.npmjs.com/package/native-datepicker
 	better date picker where you can insert dates in any format and/or that displays the formatted (today, tomorrow, etc.) value
@@ -64,12 +53,8 @@ working days should account for holidays (regional?) + customize working days (u
 let user change default filters
 let user change default priority (task creation)
 
-counters in filters (currently shown and total) - are they actually useful?
-
 tab to indent inside textareas
 simple format in textareas? MD-like?
-
-avoid many past due dates in filters when show completed = true with just an "overdue" option?
 
 
 ## notes page
